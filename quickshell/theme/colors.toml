@@ -1,0 +1,41 @@
+# ==============================================================================
+# QDeck Color Configuration
+# ==============================================================================
+# This file defines the active color tokens used across the shell.
+# Themes managed by qdeck-theme-switch provide their own colors.toml in ~/.config/themes/current/.
+# If running without a current theme symlink, this file serves as the default palette.
+
+# ── Primary Accents ───────────────────────────────────────────────────────────
+accent = "#7aa2f7"             # Primary accent color (active items, highlights, focus rings)
+selection = "#292e42"          # Selection / container hover backgrounds & card outlines
+muted = "#414868"              # Muted captions, subtext, inactive icons, subtle dividers
+
+# ── Surfaces & Backgrounds ────────────────────────────────────────────────────
+background = "#1a1b26"         # Primary surface background (bar, modal dialogs)
+dark_background = "#13141c"    # Secondary elevated surface (cards, popups, inputs)
+darker_background = "#0e0e14"  # Deep contrast background (scrims, badges, bottom sheets)
+lighter_background = "#24283b" # Elevated hover / active button surface
+
+# ── Typography & Foregrounds ──────────────────────────────────────────────────
+foreground = "#a9b1d6"         # Primary body text and standard icons
+dark_foreground = "#565f89"    # Subdued / secondary text
+light_foreground = "#b4bee6"   # Enhanced readability text
+bright_foreground = "#c0caf5"  # High-contrast headings and prominent values
+
+# ── Semantic & Accent Palette ─────────────────────────────────────────────────
+red = "#f7768e"                # Critical warnings, battery low, mute states, error flashes
+yellow = "#e0af68"             # Cautionary alerts, reboot actions, battery warning
+orange = "#eb927b"             # Notifications, secondary warnings
+green = "#9ece6a"              # Success states, normal battery charging, connected state
+cyan = "#449dab"               # Informational labels and highlights
+blue = "#7aa2f7"               # Alternate accent, primary actions
+magenta = "#ad8ee6"            # Special highlights, media player accents
+brown = "#75493d"              # Earthy accents
+
+# ── High-Vibrancy Variants ────────────────────────────────────────────────────
+bright_red = "#ff7a93"
+bright_yellow = "#ff9e64"
+bright_green = "#b9f27c"
+bright_cyan = "#0db9d7"
+bright_blue = "#7da6ff"
+bright_magenta = "#bb9af7"

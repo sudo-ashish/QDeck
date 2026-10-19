@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# QDeck: Dynamic Dual Alpha + Hyprland blur controller (qdeck-blur / qdeck blur)
+set -euo pipefail
+
+CMD="${1:-toggle}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+if command -v qs >/dev/null 2>&1; then
+  QS_BIN="qs"
+else
+  QS_BIN="quickshell"
+fi
+
+call_ipc() {
+  local target="$1"; shift
+  local method="$1"; shift
+  local out=""
+
+  # 1. Try generic IPC call first (directly connects to active running QuickShell)
+  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
+    printf '%s\n' "$out"
+    return 0
+  fi
+
+  # 2. Try explicit QUICKSHELL_DIR if set
+  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
+    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 3. Try standard user configuration ~/.config/quickshell
+  if [[ -d "$HOME/.config/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 4. Try repository quickshell path
+  if [[ -d "$REPO_DIR/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+case "$CMD" in
+  toggle)
+    res=$(call_ipc theme toggleBlur)
+    echo "Blur is now: $res"
+    ;;
+  on|enable|true|1)
+    res=$(call_ipc theme setBlur on)
+    echo "Blur is now: $res"
+    ;;
+  off|disable|false|0)
+    res=$(call_ipc theme setBlur off)
+    echo "Blur is now: $res"
+    ;;
+  status|get)
+    res=$(call_ipc theme getBlur)
+    echo "Blur is: $res"
+    ;;
+  *)
+    echo "Usage: qdeck-blur [toggle|on|off|status]" >&2
+    exit 1
+    ;;
+esac

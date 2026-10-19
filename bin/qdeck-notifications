@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# QDeck: Desktop Notification Manager & IPC CLI (qdeck-notifications / qdeck notify)
+# Supports DND toggling, dismissal, test toasts, and drop-in compatibility
+set -euo pipefail
+
+CMD="${1:-help}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+QS_DIR="${QUICKSHELL_DIR:-$HOME/quickshell}"
+
+# Choose CLI binary
+if command -v qs >/dev/null 2>&1; then
+  QS_BIN="qs"
+else
+  QS_BIN="quickshell"
+fi
+
+call_ipc() {
+  local target="$1"; shift
+  local method="$1"; shift
+  local out=""
+
+  # 1. Try generic IPC call first (directly connects to active running QuickShell)
+  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
+    printf '%s\n' "$out"
+    return 0
+  fi
+
+  # 2. Try explicit QUICKSHELL_DIR if set
+  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
+    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 3. Try standard user configuration ~/.config/quickshell
+  if [[ -d "$HOME/.config/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 4. Try workspace configuration in repository
+  if [[ -d "$REPO_DIR/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+case "$CMD" in
+  toggle-dnd|toggle-silence|dnd)
+    call_ipc notifications toggleDnd
+    ;;
+
+  dnd-status|status)
+    call_ipc notifications dndState
+    ;;
+
+  set-dnd)
+    VAL="${2:-on}"
+    call_ipc notifications setDnd "$VAL"
+    ;;
+
+  dismiss-all|clear)
+    call_ipc notifications dismissAll
+    ;;
+
+  dismiss-one)
+    call_ipc notifications dismissOne
+    ;;
+
+  dismiss)
+    SUMMARY="${2:-}"
+    if [[ -z "$SUMMARY" ]]; then
+      echo "Usage: qdeck-notifications dismiss <summary>" >&2
+      exit 1
+    fi
+    call_ipc notifications dismiss "$SUMMARY"
+    ;;
+
+  invoke-last)
+    call_ipc notifications invokeLast
+    ;;
+
+  count)
+    call_ipc notifications count
+    ;;
+
+  ping)
+    call_ipc notifications ping
+    ;;
+
+  test)
+    TITLE="${2:-QDeck Notification}"
+    BODY="${3:-Your QDeck desktop notification service is operating properly!}"
+    URGENCY="${4:-normal}"
+    ICON="${5:-}"
+    
+    # Try sending via IPC directly first
+    PAYLOAD=$(jq -cn \
+      --arg summary "$TITLE" \
+      --arg body "$BODY" \
+      --arg urgency "$URGENCY" \
+      --arg icon "$ICON" \
+      '{summary:$summary, body:$body, urgency:$urgency, icon:$icon, app:"QDeck", timeout:6000}')
+    
+    call_ipc notifications show "$PAYLOAD" >/dev/null 2>&1 || true
+    ;;
+
+  send)
+    shift
+    notify-send "$@"
+    ;;
+
+  help|--help|-h)
+    cat <<EOF
+Usage: qdeck-notifications <command> [args...]
+
+Commands:
+  toggle-dnd          Toggle Do Not Disturb mode
+  dnd-status          Print current DND status (on/off)
+  set-dnd <on|off>    Set Do Not Disturb state
+  dismiss-all         Dismiss all active notification popups
+  dismiss-one         Dismiss the newest notification popup
+  dismiss <summary>   Dismiss notifications matching summary text
+  invoke-last         Activate default action of newest notification
+  count               Print active notification count
+  test [title] [body] Show a test notification toast
+  send [args...]      Send notification via notify-send
+EOF
+    ;;
+
+  *)
+    echo "Unknown command: $CMD. Run 'qdeck-notifications help' for usage." >&2
+    exit 1
+    ;;
+esac

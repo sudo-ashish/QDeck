@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# QDeck: Unified CLI Suite & Runtime Daemon Orchestrator
+# ==============================================================================
+set -euo pipefail
+
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$BIN_DIR/.." && pwd)"
+
+QS_DIR="${QUICKSHELL_DIR:-$REPO_ROOT/quickshell}"
+if [[ ! -d "$QS_DIR" && -d "$HOME/.config/quickshell" ]]; then
+  QS_DIR="$HOME/.config/quickshell"
+elif [[ ! -d "$QS_DIR" && -d "$HOME/quickshell" ]]; then
+  QS_DIR="$HOME/quickshell"
+fi
+
+export PATH="$HOME/.local/bin:$BIN_DIR:$PATH"
+export QS_CONFIG_PATH="$QS_DIR"
+
+usage() {
+  cat <<'EOF'
+QDeck: Modern Desktop Shell Suite & System Control CLI
+
+Usage:
+  qdeck [command] [options...]
+
+Core Commands:
+  qdeck, qdeck run, qdeck start  Launch QDeck desktop shell runtime daemon
+  qdeck stop, qdeck kill         Terminate running QDeck instances cleanly
+  qdeck restart, qdeck reload    Restart QDeck daemon and refresh UI
+  qdeck status                   Display running status, PID, and IPC connection
+  qdeck help, --help, -h         Show this help information
+
+Control Center & Widgets:
+  qdeck launcher [action]        Toggle or control application launcher
+  qdeck powermenu [action]       Toggle power & session menu
+  qdeck wallpaper [action]       Toggle wallpaper picker or switch wallpaper
+  qdeck theme [action]           Toggle theme switcher or switch active theme
+  qdeck bar [mode|next|list]     Switch top bar layout (floating, islands, wide, compact)
+  qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
+  qdeck text-size [size]         Get or adjust system and shell font size
+
+Hardware & System Controls:
+  qdeck volume [up|down|mute]    Adjust volume or toggle audio mute
+  qdeck brightness [up|down]     Adjust screen backlight
+  qdeck osd [options]            Display custom On-Screen Display card
+  qdeck notify [options]         Manage desktop notifications & DND mode
+  qdeck trackpad [toggle|on|off] Toggle touchpad state via Hyprland IPC
+  qdeck wifi-qr                  Generate ASCII QR code for current WiFi network
+  qdeck refresh-rate [rate]      Query or toggle monitor refresh rate
+  qdeck screenshot [options]     Capture region, window, or monitor screenshot
+  qdeck terminal [args...]       Launch floating utility terminal
+
+Examples:
+  qdeck                          # Start shell daemon
+  qdeck launcher                 # Open application launcher
+  qdeck volume up 5              # Increase volume by 5%
+  qdeck notify test              # Show test notification
+EOF
+}
+
+CMD="${1:-start}"
+
+case "$CMD" in
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+
+  status)
+    echo "=== QDeck Status ==="
+    if pgrep -x qs >/dev/null 2>&1 || pgrep -x quickshell >/dev/null 2>&1; then
+      pids=$(pgrep -d, -x qs 2>/dev/null || pgrep -d, -x quickshell 2>/dev/null)
+      echo "  Status:  ACTIVE (running)"
+      echo "  PID(s):  $pids"
+      echo "  Config:  $QS_DIR"
+      if command -v qs >/dev/null 2>&1; then
+        if qs ipc call osd ping >/dev/null 2>&1; then
+          echo "  IPC:     CONNECTED (responsive)"
+        else
+          echo "  IPC:     CONNECTING / BUSY"
+        fi
+      fi
+    else
+      echo "  Status:  INACTIVE (not running)"
+    fi
+    exit 0
+    ;;
+
+  stop|kill)
+    echo "==> Terminating QDeck..."
+    killall -q qs quickshell 2>/dev/null || true
+    echo "    QDeck stopped."
+    exit 0
+    ;;
+
+  restart|reload)
+    echo "==> Restarting QDeck..."
+    killall -q qs quickshell 2>/dev/null || true
+    sleep 0.4
+    exec "$0" start
+    ;;
+
+  launcher)
+    shift
+    exec "$BIN_DIR/qdeck-launcher" "$@"
+    ;;
+
+  powermenu|power)
+    shift
+    exec "$BIN_DIR/qdeck-powermenu" "$@"
+    ;;
+
+  wallpaper|wallpaperswitcher)
+    shift
+    exec "$BIN_DIR/qdeck-wallpaperswitcher" "$@"
+    ;;
+
+  theme|themeswitcher)
+    shift
+    exec "$BIN_DIR/qdeck-themeswitcher" "$@"
+    ;;
+
+  bar|bar-style)
+    shift
+    exec "$BIN_DIR/qdeck-bar" "$@"
+    ;;
+
+  volume)
+    shift
+    exec "$BIN_DIR/qdeck-volume" "$@"
+    ;;
+
+  brightness)
+    shift
+    exec "$BIN_DIR/qdeck-brightness" "$@"
+    ;;
+
+  osd)
+    shift
+    exec "$BIN_DIR/qdeck-osd" "$@"
+    ;;
+
+  notify|notifications)
+    shift
+    exec "$BIN_DIR/qdeck-notifications" "$@"
+    ;;
+
+  blur)
+    shift
+    exec "$BIN_DIR/qdeck-blur" "$@"
+    ;;
+
+  text-size)
+    shift
+    exec "$BIN_DIR/qdeck-display-text-size" "$@"
+    ;;
+
+  trackpad)
+    shift
+    exec "$BIN_DIR/qdeck-trackpad" "$@"
+    ;;
+
+  wifi-qr|qr)
+    shift
+    exec "$BIN_DIR/qdeck-network-qr" "$@"
+    ;;
+
+  refresh-rate)
+    shift
+    exec "$BIN_DIR/qdeck-refresh-rate" "$@"
+    ;;
+
+  terminal)
+    shift
+    exec "$BIN_DIR/qdeck-launch-terminal" "$@"
+    ;;
+
+  screenshot|shot)
+    shift
+    exec "$BIN_DIR/qdeck-screenshot" "$@"
+    ;;
+
+  start|run|"")
+    # Launch QDeck runtime daemon below
+    ;;
+
+  *)
+    echo "Error: Unknown QDeck command '$CMD'." >&2
+    echo "Run 'qdeck --help' for usage." >&2
+    exit 1
+    ;;
+esac
+
+# ------------------------------------------------------------------------------
+# QDeck Daemon Startup
+# ------------------------------------------------------------------------------
+# 1. Terminate conflicting legacy bars, notification daemons, OSD servers, or polkit agents
+killall -q waybar swaync swayosd-server hyprpolkitagent polkit-kde-authentication-agent-1 polkit-gnome-authentication-agent-1 2>/dev/null || true
+systemctl --user stop hyprpolkitagent.service 2>/dev/null || true
+
+# 2. Terminate any previous or stale QuickShell instances cleanly
+killall -q qs quickshell 2>/dev/null || true
+sleep 0.3
+
+# 3. Ensure PipeWire audio server is running
+systemctl --user start pipewire pipewire-pulse wireplumber 2>/dev/null || true
+
+# 4. Sync helper scripts into ~/.local/bin
+mkdir -p "$HOME/.local/bin"
+for s in "$BIN_DIR"/*; do
+  [[ -f "$s" ]] || continue
+  base=$(basename "$s")
+  [[ "$base" == "install.sh" ]] && continue
+  chmod +x "$s"
+  if [[ -L "$HOME/.local/bin/$base" || ! -f "$HOME/.local/bin/$base" || "$s" -nt "$HOME/.local/bin/$base" ]]; then
+    rm -f "$HOME/.local/bin/$base"
+    cp -f "$s" "$HOME/.local/bin/$base"
+    chmod +x "$HOME/.local/bin/$base"
+  fi
+done
+
+# 5. Start Quickshell daemon attached to the workspace config
+if command -v qs >/dev/null 2>&1; then
+  qs -d -p "$QS_DIR"
+elif [[ -x "/usr/bin/qs" ]]; then
+  /usr/bin/qs -d -p "$QS_DIR"
+else
+  quickshell -d -p "$QS_DIR"
+fi
+
+# 6. Bridge IPC sockets so all commands (with or without -p) seamlessly reach the instance
+sleep 0.4
+uid=$(id -u)
+mkdir -p "/run/user/$uid/quickshell/by-shell/3bb4e7c6d4dad9dfd3f25bf68311dcd8" \
+  "/run/user/$uid/quickshell/by-shell/297537087f24e658cd0a0b2380d3bfef" \
+  "/run/user/$uid/quickshell/by-path"
+
+for id_dir in "/run/user/$uid/quickshell/by-id"/*; do
+  [[ -e "$id_dir" ]] || continue
+  b=$(basename "$id_dir")
+  ln -sf "$id_dir" "/run/user/$uid/quickshell/by-shell/3bb4e7c6d4dad9dfd3f25bf68311dcd8/$b"
+  ln -sf "$id_dir" "/run/user/$uid/quickshell/by-shell/297537087f24e658cd0a0b2380d3bfef/$b"
+done
+
+# Bridge by-path so standard config path searches find the running instance
+ln -sf "/run/user/$uid/quickshell/by-shell/297537087f24e658cd0a0b2380d3bfef" "/run/user/$uid/quickshell/by-path/3bb4e7c6d4dad9dfd3f25bf68311dcd8" 2>/dev/null || true
+
+# 7. Quick verification
+qs ipc call osd ping >/dev/null 2>&1 || true

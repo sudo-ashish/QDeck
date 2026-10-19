@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# QDeck: Power & Session Menu controller (qdeck-powermenu / qdeck powermenu)
+set -euo pipefail
+
+CMD="${1:-toggle}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Choose CLI binary
+if command -v qs >/dev/null 2>&1; then
+  QS_BIN="qs"
+else
+  QS_BIN="quickshell"
+fi
+
+call_ipc() {
+  local target="$1"; shift
+  local method="$1"; shift
+  local out=""
+
+  # 1. Try generic IPC call first (directly connects to active running QuickShell)
+  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
+    printf '%s\n' "$out"
+    return 0
+  fi
+
+  # 2. Try explicit QUICKSHELL_DIR if set
+  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
+    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 3. Try standard user configuration ~/.config/quickshell
+  if [[ -d "$HOME/.config/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 4. Try workspace configuration in repository
+  if [[ -d "$REPO_DIR/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+case "$CMD" in
+  toggle)
+    call_ipc powermenu toggle
+    ;;
+  open)
+    call_ipc powermenu open
+    ;;
+  close)
+    call_ipc powermenu close
+    ;;
+  next)
+    call_ipc powermenu next
+    ;;
+  prev)
+    call_ipc powermenu prev
+    ;;
+  select)
+    call_ipc powermenu select "${2:-0}"
+    ;;
+  state)
+    call_ipc powermenu getState
+    ;;
+  *)
+    call_ipc powermenu toggle
+    ;;
+esac

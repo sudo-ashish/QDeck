@@ -1,0 +1,467 @@
+#!/usr/bin/env bash
+#
+# screenshot - Fast Wayland screenshot utility powered by grim & slurp
+# Supports: Hyprland, Sway, and wlroots-based compositors
+#
+# Features:
+#   - Parameters: output, window, region, active
+#   - Clipboard-only mode: 'clipboard' command or -c/--clipboard flag
+#   - Single-instance limit: Kills any active screenshot/slurp instance when a new one arrives
+#
+
+set -euo pipefail
+
+# --- Configuration & Defaults ---
+APP_NAME="QDeck Screenshot"
+CLIPBOARD_ONLY=0
+SAVE_ONLY=0
+INCLUDE_CURSOR=0
+SEND_NOTIFY=1
+DELAY=0
+CUSTOM_FILE=""
+EXTRA_ARG=""
+MODE=""
+TMP_SHOT=""
+
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/screenshot.pid"
+
+# Resolve default screenshot directory
+if [[ -n "${XDG_SCREENSHOTS_DIR:-}" ]]; then
+    SCREENSHOT_DIR="$XDG_SCREENSHOTS_DIR"
+elif [[ -d "$HOME/Pictures/Screenshot" ]]; then
+    SCREENSHOT_DIR="$HOME/Pictures/Screenshot"
+elif [[ -d "$HOME/Pictures/Screenshots" ]]; then
+    SCREENSHOT_DIR="$HOME/Pictures/Screenshots"
+elif [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs" ]]; then
+    # shellcheck disable=SC1090
+    source "${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs" 2>/dev/null || true
+    SCREENSHOT_DIR="${XDG_SCREENSHOTS_DIR:-${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshot}"
+else
+    SCREENSHOT_DIR="$HOME/Pictures/Screenshot"
+fi
+
+# --- Process & Instance Management ---
+cleanup() {
+    local exit_code=$?
+    # Terminate any child processes of this script (subshells, slurp, sleep)
+    pkill -P "$BASHPID" 2>/dev/null || true
+
+    # Clean up PID file if it still belongs to this process
+    if [[ -f "$PID_FILE" ]]; then
+        local current_pid
+        current_pid=$(cat "$PID_FILE" 2>/dev/null || true)
+        if [[ "$current_pid" == "$BASHPID" ]]; then
+            rm -f "$PID_FILE"
+        fi
+    fi
+
+    # Clean up temporary clipboard file if still lingering
+    if [[ -n "$TMP_SHOT" && -f "$TMP_SHOT" ]]; then
+        rm -f "$TMP_SHOT" 2>/dev/null || true
+    fi
+
+    exit "$exit_code"
+}
+
+kill_previous_instance() {
+    # If another screenshot process is running, terminate it so the new one takes over
+    if [[ -f "$PID_FILE" ]]; then
+        local old_pid
+        old_pid=$(cat "$PID_FILE" 2>/dev/null || true)
+        if [[ -n "$old_pid" && "$old_pid" =~ ^[0-9]+$ ]] && kill -0 "$old_pid" 2>/dev/null; then
+            # Kill children of the old instance first (e.g. active slurp session or sleep)
+            pkill -P "$old_pid" 2>/dev/null || true
+            kill -TERM "$old_pid" 2>/dev/null || true
+            sleep 0.05
+            if kill -0 "$old_pid" 2>/dev/null; then
+                pkill -9 -P "$old_pid" 2>/dev/null || true
+                kill -9 "$old_pid" 2>/dev/null || true
+            fi
+        fi
+        rm -f "$PID_FILE"
+    fi
+
+    # Kill any lingering slurp processes to ensure the screen is clean
+    pkill -x slurp 2>/dev/null || true
+
+    # Record current instance PID
+    echo "$BASHPID" > "$PID_FILE"
+}
+
+# --- Helper Functions ---
+show_help() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS] [MODE] [EXTRA]
+
+Parameters (Modes):
+  output [MONITOR|select]  Take screenshot of an entire monitor
+                           - Default: captures currently focused monitor
+                           - Specific: name of monitor (e.g. eDP-1, HDMI-A-1)
+                           - 'select': interactive monitor picker via slurp
+  window                   Take screenshot of an open window (interactive click)
+  region                   Take screenshot of selected region (click & drag)
+  active                   Take screenshot of active window | output fallback
+
+Clipboard-Only Modes & Actions:
+  clipboard [MODE]         Capture directly to clipboard (default mode: region)
+  copy [MODE]              Alias for clipboard mode
+  -c, --clipboard          Copy to clipboard only (do not save to file)
+      --clipboard-only     Copy to clipboard only
+
+Options:
+  -s, --save               Save to file only (do not copy to clipboard)
+  -f, --file PATH          Specify custom save path for the screenshot image
+  -d, --delay SECONDS      Wait N seconds before taking screenshot
+      --cursor             Include mouse cursor in screenshot
+  -n, --no-notify          Disable desktop notifications
+  -h, --help               Display this help message and exit
+
+Single-Instance Limit:
+  If a screenshot tool request is already active (e.g. slurp waiting for selection),
+  triggering this script again will automatically kill the first instance and
+  start the second request immediately.
+
+Default Behavior:
+  Saves image to: $SCREENSHOT_DIR
+  Copies to clipboard (if wl-copy is installed)
+  Sends desktop notification (if notify-send is installed)
+
+Examples:
+  $(basename "$0") region                 # Select region, save file & copy to clipboard
+  $(basename "$0") clipboard              # Select region, copy to clipboard ONLY
+  $(basename "$0") clipboard active       # Active window to clipboard ONLY
+  $(basename "$0") -c window              # Click window to clipboard ONLY
+  $(basename "$0") -c output              # Full monitor to clipboard ONLY
+  $(basename "$0") active                 # Active window (or monitor fallback)
+  $(basename "$0") output select          # Pick monitor interactively
+  $(basename "$0") --delay 3 active       # 3-second delay before active capture
+EOF
+}
+
+notify() {
+    local title="$1"
+    local message="$2"
+    local icon="${3:-camera-photo}"
+
+    if [[ $SEND_NOTIFY -eq 1 ]] && command -v notify-send >/dev/null 2>&1; then
+        notify-send -a "$APP_NAME" -i "$icon" "$title" "$message" || true
+    fi
+}
+
+error_exit() {
+    local msg="$1"
+    local code="${2:-1}"
+    echo "Error: $msg" >&2
+    notify "$APP_NAME Error" "$msg" "dialog-error"
+    exit "$code"
+}
+
+check_dependencies() {
+    local missing=()
+    for cmd in grim slurp; do
+        if ! command -v "$cmd" >/dev/null 2>&1; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        error_exit "Missing required dependencies: ${missing[*]}" 1
+    fi
+}
+
+get_active_geometry() {
+    # Check Hyprland active window
+    if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        local win
+        win=$(hyprctl activewindow -j 2>/dev/null || true)
+        if [[ -n "$win" ]] && \
+           [[ "$(echo "$win" | jq -r '.address // empty' 2>/dev/null)" != "" ]] && \
+           [[ "$(echo "$win" | jq -r '.mapped // false' 2>/dev/null)" == "true" ]] && \
+           [[ "$(echo "$win" | jq -r '.size[0] // 0' 2>/dev/null)" -gt 0 ]]; then
+            echo "$win" | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"'
+            return 0
+        fi
+    fi
+
+    # Check Sway active window
+    if command -v swaymsg >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        local win
+        win=$(swaymsg -t get_tree 2>/dev/null | jq -r '
+            recurse(.nodes[], .floating_nodes[]) |
+            select(.focused and .pid) |
+            "\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)"
+        ' 2>/dev/null || true)
+        if [[ -n "$win" ]]; then
+            echo "$win"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+get_active_output() {
+    # Check Hyprland focused monitor
+    if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        local out
+        out=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused == true) | .name' 2>/dev/null | head -n1 || true)
+        if [[ -n "$out" ]]; then
+            echo "$out"
+            return 0
+        fi
+        # Fallback to first monitor if none explicitly focused
+        out=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].name // empty' 2>/dev/null || true)
+        if [[ -n "$out" ]]; then
+            echo "$out"
+            return 0
+        fi
+    fi
+
+    # Check Sway focused output
+    if command -v swaymsg >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        local out
+        out=$(swaymsg -t get_outputs 2>/dev/null | jq -r '.[] | select(.focused == true) | .name' 2>/dev/null | head -n1 || true)
+        if [[ -n "$out" ]]; then
+            echo "$out"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+get_window_boxes() {
+    # Query visible open windows in Hyprland
+    if command -v hyprctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        local active_ws
+        active_ws=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].activeWorkspace.id' 2>/dev/null || true)
+        if [[ -n "$active_ws" ]]; then
+            local boxes
+            boxes=$(hyprctl clients -j 2>/dev/null | jq -r --arg ws "$active_ws" '
+                ($ws | split("\n") | map(tonumber? // .)) as $visible |
+                .[] | select(.mapped == true and .hidden == false and (.workspace.id as $wid | $visible | index($wid))) |
+                "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1]) \((.title // .class // "") | gsub("[\r\n]"; " ") | .[0:40])"
+            ' 2>/dev/null || true)
+            if [[ -n "$boxes" ]]; then
+                echo "$boxes"
+                return 0
+            fi
+        fi
+
+        # Fallback to all mapped windows
+        hyprctl clients -j 2>/dev/null | jq -r '
+            .[] | select(.mapped == true and .hidden == false) |
+            "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1]) \((.title // .class // "") | gsub("[\r\n]"; " ") | .[0:40])"
+        ' 2>/dev/null || true
+        return 0
+    fi
+
+    # Query windows in Sway
+    if command -v swaymsg >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        swaymsg -t get_tree 2>/dev/null | jq -r '
+            recurse(.nodes[], .floating_nodes[]) |
+            select(.visible == true and .pid) |
+            "\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height) \((.name // .app_id // "") | gsub("[\r\n]"; " ") | .[0:40])"
+        ' 2>/dev/null || true
+        return 0
+    fi
+
+    return 1
+}
+
+# --- Parse Arguments ---
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -c|--clipboard|--clipboard-only)
+            CLIPBOARD_ONLY=1
+            shift
+            ;;
+        -s|--save)
+            SAVE_ONLY=1
+            shift
+            ;;
+        -f|--file)
+            CUSTOM_FILE="$2"
+            shift 2
+            ;;
+        -d|--delay)
+            DELAY="$2"
+            shift 2
+            ;;
+        --cursor)
+            INCLUDE_CURSOR=1
+            shift
+            ;;
+        -n|--no-notify)
+            SEND_NOTIFY=0
+            shift
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        clipboard|copy)
+            CLIPBOARD_ONLY=1
+            shift
+            ;;
+        save)
+            SAVE_ONLY=1
+            shift
+            ;;
+        output|window|region|active)
+            MODE="$1"
+            shift
+            ;;
+        select)
+            EXTRA_ARG="select"
+            shift
+            ;;
+        *)
+            if [[ -z "$EXTRA_ARG" ]]; then
+                EXTRA_ARG="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# If only clipboard or save action was passed without explicit mode, default to 'region'
+if [[ -z "$MODE" ]]; then
+    if [[ $CLIPBOARD_ONLY -eq 1 || $SAVE_ONLY -eq 1 ]]; then
+        MODE="region"
+    else
+        show_help >&2
+        exit 1
+    fi
+fi
+
+check_dependencies
+
+# Enforce single instance: kill previous running instance and claim PID
+kill_previous_instance
+trap cleanup EXIT INT TERM HUP
+
+# If extra arg looks like a file path and CUSTOM_FILE wasn't given, use it
+if [[ -n "$EXTRA_ARG" && "$EXTRA_ARG" =~ \.(png|jpg|jpeg|webp)$ && -z "$CUSTOM_FILE" ]]; then
+    CUSTOM_FILE="$EXTRA_ARG"
+    EXTRA_ARG=""
+fi
+
+# Determine target file path
+if [[ $CLIPBOARD_ONLY -eq 0 ]]; then
+    if [[ -n "$CUSTOM_FILE" ]]; then
+        TARGET_FILE="$CUSTOM_FILE"
+    else
+        mkdir -p "$SCREENSHOT_DIR"
+        TIMESTAMP=$(date +'%Y%m%d-%H%M%S')
+        TARGET_FILE="${SCREENSHOT_DIR}/screenshot-${TIMESTAMP}.png"
+    fi
+    mkdir -p "$(dirname "$TARGET_FILE")"
+fi
+
+# Delay if requested
+if (( DELAY > 0 )); then
+    sleep "$DELAY"
+fi
+
+# Prepare grim target parameters
+GRIM_TARGET_ARGS=()
+
+case "$MODE" in
+    output)
+        # Capture an entire monitor
+        if [[ -n "$EXTRA_ARG" && "$EXTRA_ARG" == "select" ]]; then
+            # Interactively select a monitor display output
+            GEOM=$(slurp -o 2>/dev/null) || exit 0
+            [[ -z "$GEOM" ]] && exit 0
+            GRIM_TARGET_ARGS=(-g "$GEOM")
+        elif [[ -n "$EXTRA_ARG" ]]; then
+            # Specific monitor output name passed (e.g. eDP-1, HDMI-A-1)
+            GRIM_TARGET_ARGS=(-o "$EXTRA_ARG")
+        else
+            # Default: capture currently active/focused monitor
+            ACTIVE_OUT=$(get_active_output || true)
+            if [[ -n "$ACTIVE_OUT" ]]; then
+                GRIM_TARGET_ARGS=(-o "$ACTIVE_OUT")
+            fi
+        fi
+        ;;
+
+    window)
+        # Take screenshot of an open window (interactive click)
+        BOXES=$(get_window_boxes || true)
+        if [[ -n "$BOXES" ]]; then
+            # Pass candidate open window boxes to slurp
+            GEOM=$(echo "$BOXES" | slurp 2>/dev/null) || exit 0
+        else
+            # Fallback to standard slurp
+            GEOM=$(slurp -d 2>/dev/null) || exit 0
+        fi
+        [[ -z "$GEOM" ]] && exit 0
+        GRIM_TARGET_ARGS=(-g "$GEOM")
+        ;;
+
+    region)
+        # Take screenshot of selected region (click & drag)
+        GEOM=$(slurp -d 2>/dev/null) || exit 0
+        [[ -z "$GEOM" ]] && exit 0
+        GRIM_TARGET_ARGS=(-g "$GEOM")
+        ;;
+
+    active)
+        # Take screenshot of active window, with active output as fallback
+        GEOM=$(get_active_geometry || true)
+        if [[ -n "$GEOM" ]]; then
+            # Active window exists
+            GRIM_TARGET_ARGS=(-g "$GEOM")
+        else
+            # No active window focused -> fallback to active monitor output
+            ACTIVE_OUT=$(get_active_output || true)
+            if [[ -n "$ACTIVE_OUT" ]]; then
+                GRIM_TARGET_ARGS=(-o "$ACTIVE_OUT")
+            fi
+        fi
+        ;;
+esac
+
+# Build final grim command
+GRIM_CMD=(grim)
+if [[ $INCLUDE_CURSOR -eq 1 ]]; then
+    GRIM_CMD+=(-c)
+fi
+if [[ ${#GRIM_TARGET_ARGS[@]} -gt 0 ]]; then
+    GRIM_CMD+=("${GRIM_TARGET_ARGS[@]}")
+fi
+
+# Execute capture
+if [[ $CLIPBOARD_ONLY -eq 1 ]]; then
+    if ! command -v wl-copy >/dev/null 2>&1; then
+        error_exit "wl-copy is required for clipboard mode." 1
+    fi
+
+    # Create temporary file in secure runtime ramfs for fast clipboard pipe & notification thumbnail
+    TMP_SHOT="$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/screenshot-clip.XXXXXX.png")"
+    if "${GRIM_CMD[@]}" "$TMP_SHOT"; then
+        wl-copy --type image/png < "$TMP_SHOT"
+        notify "Screenshot Copied" "Captured ${MODE} directly to clipboard" "$TMP_SHOT"
+        # Schedule cleanup of temp thumbnail in background after notification preview renders
+        ( sleep 4 && rm -f "$TMP_SHOT" ) >/dev/null 2>&1 &
+    else
+        error_exit "Failed to capture screenshot to clipboard." 1
+    fi
+else
+    if "${GRIM_CMD[@]}" "$TARGET_FILE"; then
+        # Copy to clipboard unless explicitly told save-only
+        if [[ $SAVE_ONLY -eq 0 ]] && command -v wl-copy >/dev/null 2>&1; then
+            wl-copy --type image/png < "$TARGET_FILE" || true
+        fi
+
+        NOTIFY_DESC="Mode: ${MODE}\nSaved to $(basename "$TARGET_FILE")"
+        [[ $SAVE_ONLY -eq 0 ]] && NOTIFY_DESC+="\nCopied to clipboard"
+        notify "Screenshot Saved" "$NOTIFY_DESC" "$TARGET_FILE"
+
+        echo "$TARGET_FILE"
+    else
+        error_exit "Failed to save screenshot to '$TARGET_FILE'." 1
+    fi
+fi

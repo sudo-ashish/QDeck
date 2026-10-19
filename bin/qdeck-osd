@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# QDeck: On-Screen Display CLI (qdeck-osd / qdeck osd)
+set -euo pipefail
+
+icon=""
+message=""
+progress=""
+progress_text=""
+max="100"
+duration=""
+
+if command -v qs >/dev/null 2>&1; then
+  QS_BIN="qs"
+else
+  QS_BIN="quickshell"
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+call_ipc() {
+  local target="$1"; shift
+  local method="$1"; shift
+  local out=""
+
+  # 1. Try generic IPC call first (directly connects to active running QuickShell)
+  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
+    printf '%s\n' "$out"
+    return 0
+  fi
+
+  # 2. Try explicit QUICKSHELL_DIR if set
+  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
+    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 3. Try standard user configuration ~/.config/quickshell
+  if [[ -d "$HOME/.config/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 4. Try workspace configuration in repository
+  if [[ -d "$REPO_DIR/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+json_escape() {
+  local s="${1:-}"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+while (($#)); do
+  case $1 in
+    -i|--icon)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: $1 requires an argument" >&2
+        exit 1
+      fi
+      icon="$2"
+      shift 2
+      ;;
+    -m|--message)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: $1 requires an argument" >&2
+        exit 1
+      fi
+      message="$2"
+      shift 2
+      ;;
+    -p|--progress)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: $1 requires an argument" >&2
+        exit 1
+      fi
+      progress="$2"
+      shift 2
+      ;;
+    --max)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: $1 requires an argument" >&2
+        exit 1
+      fi
+      max="$2"
+      shift 2
+      ;;
+    -d|--duration)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: $1 requires an argument" >&2
+        exit 1
+      fi
+      duration="$2"
+      shift 2
+      ;;
+    --close)
+      call_ipc osd close
+      exit 0
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+if [[ -n $progress ]]; then
+  progress_text="${progress}%"
+fi
+
+payload=$(printf '{"icon":"%s","message":"%s","value":"%s","progressText":"%s","max":"%s","duration":"%s"}' \
+  "$(json_escape "$icon")" \
+  "$(json_escape "$message")" \
+  "$(json_escape "$progress")" \
+  "$(json_escape "$progress_text")" \
+  "$(json_escape "$max")" \
+  "$(json_escape "$duration")")
+
+call_ipc osd display "$payload" 2>/dev/null || \
+call_ipc osd trigger "$icon" "$message" 2>/dev/null || true
