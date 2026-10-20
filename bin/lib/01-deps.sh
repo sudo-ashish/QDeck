@@ -28,12 +28,20 @@ CORE_PACKAGES=(
   grim 
   slurp
   libnotify
+  nautilus
+  wl-clipboard
 
   # Terminal, shell & monitor
   kitty
   zsh
+  zsh-autosuggestions
+  zsh-syntax-highlighting
   btop
-
+  awww
+  eza 
+  fzf
+  zoxide
+  
   # Icon Fonts & Material Symbols for QDeck
   ttf-material-symbols-variable
   ttf-material-icons
@@ -108,12 +116,15 @@ fi
 # 3. Optional AUR packages
 if [[ -n "$AUR_HELPER" ]]; then
   AUR_PACKAGES=(
+    localsend-bin
     bibata-cursor-theme-bin
+    brave-origin-bin
+    vscodium-bin
   )
   for pkg in "${AUR_PACKAGES[@]}"; do
     if ! pacman -Qi "$pkg" &>/dev/null; then
       echo "    Installing AUR package: $pkg"
-      "$AUR_HELPER" -S --needed --noconfirm "$pkg" 2>/dev/null || echo "    (Skipping optional AUR package $pkg)"
+      "$AUR_HELPER" -S --needed --noconfirm "$pkg" || echo "    (Skipping optional AUR package $pkg)"
     fi
   done
 fi

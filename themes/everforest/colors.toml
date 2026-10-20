@@ -1,0 +1,59 @@
+# ==============================================================================
+# Everforest Dark Color Configuration
+# ==============================================================================
+
+# ── Primary Accents ───────────────────────────────────────────────────────────
+accent = "#7fbbb3"
+selection = "#343f44"
+muted = "#7a8478"
+cursor = "#d3c6aa"
+
+# ── Surfaces & Backgrounds ────────────────────────────────────────────────────
+background = "#2d353b"
+dark_background = "#232a2e"
+darker_background = "#1e2326"
+lighter_background = "#343f44"
+selection_foreground = "#d3c6aa"
+selection_background = "#475258"
+
+# ── Typography & Foregrounds ──────────────────────────────────────────────────
+foreground = "#d3c6aa"
+dark_foreground = "#859289"
+light_foreground = "#e0d7c3"
+bright_foreground = "#f8f0dc"
+
+# ── Semantic & Accent Palette ─────────────────────────────────────────────────
+red = "#e67e80"
+yellow = "#dbbc7f"
+orange = "#e69875"
+green = "#a7c080"
+cyan = "#83c092"
+blue = "#7fbbb3"
+magenta = "#d699b6"
+brown = "#c6a068"
+
+# ── High-Vibrancy Variants ────────────────────────────────────────────────────
+bright_red = "#f27983"
+bright_yellow = "#e5c07b"
+bright_green = "#b2d184"
+bright_cyan = "#87c897"
+bright_blue = "#83c3bb"
+bright_magenta = "#de9fc0"
+
+# ── Base16 ANSI Terminal Palette ──────────────────────────────────────────────
+color0 = "#475258"
+color1 = "#e67e80"
+color2 = "#a7c080"
+color3 = "#dbbc7f"
+color4 = "#7fbbb3"
+color5 = "#d699b6"
+color6 = "#83c092"
+color7 = "#d3c6aa"
+color8 = "#56635f"
+color9 = "#e67e80"
+color10 = "#a7c080"
+color11 = "#dbbc7f"
+color12 = "#7fbbb3"
+color13 = "#d699b6"
+color14 = "#83c092"
+color15 = "#d3c6aa"

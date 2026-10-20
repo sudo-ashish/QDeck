@@ -97,6 +97,11 @@ QtObject {
     readonly property string palette: root.useMaterialSymbols ? "palette" : "󰏘"
     readonly property string wallpaper: root.useMaterialSymbols ? "wallpaper" : "󰋩"
 
+    // Workspaces (Active icon glyph)
+    property string workspace: ""
+    property string workspaceActive: root.workspace
+    property string workspaceInactive: ""
+
     // Battery icon resolver by capacity and charging state
     function battery(capacity, isCharging) {
         if (root.useMaterialSymbols) {

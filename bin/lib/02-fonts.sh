@@ -10,7 +10,6 @@ echo "==> [QDeck:02-fonts] Installing official repository fonts for QDeck..."
 
 PACMAN_FONTS=(
   ttf-jetbrains-mono-nerd
-  ttf-iosevka-nerd
   ttf-material-symbols-variable
   ttf-material-icons
   noto-fonts

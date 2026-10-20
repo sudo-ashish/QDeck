@@ -10,6 +10,17 @@ fi
 SWITCH_BIN="$HOME/.local/bin/wallpaper-switch"
 
 get_active_wallpaper() {
+    # 1. First check awww if running
+    if command -v awww >/dev/null 2>&1 && (pgrep -x awww-daemon >/dev/null 2>&1); then
+        local awww_cur
+        awww_cur="$(awww query 2>/dev/null | grep -oP 'currently displaying: image: \K.*' | head -n1 || true)"
+        if [[ -n "$awww_cur" && -f "$awww_cur" ]]; then
+            readlink -f "$awww_cur" 2>/dev/null || echo "$awww_cur"
+            return 0
+        fi
+    fi
+
+    # 2. Check default.png symlink
     local default_link="$CURRENT_DIR/default.png"
     if [[ -L "$default_link" || -f "$default_link" ]]; then
         readlink -f "$default_link" 2>/dev/null || echo ""
@@ -82,14 +93,61 @@ switch_wallpaper() {
         fi
     fi
 
-    if command -v wallpaper-switch >/dev/null 2>&1; then
-        wallpaper-switch "$img"
-    elif [[ -x "$SWITCH_BIN" ]]; then
-        "$SWITCH_BIN" "$img"
-    else
-        echo "error: wallpaper-switch not found" >&2
+    if [[ ! -f "$img" ]]; then
+        echo "error: wallpaper file '$img' does not exist" >&2
         exit 1
     fi
+
+    # 1. Update active theme default.png symlink
+    if [[ -d "$CURRENT_DIR" ]]; then
+        ln -sfn "$img" "$CURRENT_DIR/default.png"
+    fi
+
+    # 2. Prefer wallpaper-switch if available
+    if command -v wallpaper-switch >/dev/null 2>&1; then
+        wallpaper-switch "$img"
+        return 0
+    elif [[ -x "$SWITCH_BIN" ]]; then
+        "$SWITCH_BIN" "$img"
+        return 0
+    fi
+
+    # 3. Direct awww support
+    if command -v awww >/dev/null 2>&1; then
+        if ! pgrep -x awww-daemon >/dev/null 2>&1; then
+            awww-daemon &
+            sleep 0.2
+        fi
+        if awww img --transition-type wipe --transition-angle 30 "$img" >/dev/null 2>&1 || \
+           awww img "$img" >/dev/null 2>&1; then
+            echo "Wallpaper changed to: $(basename "$img")"
+            return 0
+        fi
+    fi
+
+    # 4. Direct swww support
+    if command -v swww >/dev/null 2>&1; then
+        if ! pgrep -x swww-daemon >/dev/null 2>&1; then
+            swww init >/dev/null 2>&1 || true
+            sleep 0.2
+        fi
+        if swww img "$img" --transition-type wipe --transition-angle 30 >/dev/null 2>&1 || \
+           swww img "$img" >/dev/null 2>&1; then
+            echo "Wallpaper changed to: $(basename "$img")"
+            return 0
+        fi
+    fi
+
+    # 5. Direct hyprpaper support
+    if command -v hyprpaper >/dev/null 2>&1 && command -v hyprctl >/dev/null 2>&1; then
+        hyprctl hyprpaper preload "$img" >/dev/null 2>&1 || true
+        hyprctl hyprpaper wallpaper ",$img" >/dev/null 2>&1 || true
+        echo "Wallpaper changed to: $(basename "$img")"
+        return 0
+    fi
+
+    echo "error: no wallpaper backend available" >&2
+    exit 1
 }
 
 CMD="${1:-list}"

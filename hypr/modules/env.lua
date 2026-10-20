@@ -4,6 +4,12 @@
 
 -- See https://wiki.hypr.land/Configuring/Advanced-and-Cool/Environment-variables/
 
+local home = os.getenv("HOME") or ""
+local current_path = os.getenv("PATH") or "/usr/local/bin:/usr/bin:/bin"
+if home ~= "" and not string.find(current_path, home .. "/.local/bin") then
+	hl.env("PATH", home .. "/.local/bin:/usr/local/bin:" .. current_path)
+end
+
 hl.env("XCURSOR_THEME", "Bibata-Modern-Ice")
 hl.env("XCURSOR_SIZE", "18")
 

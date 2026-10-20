@@ -98,33 +98,70 @@ switch_theme() {
         exit 1
     fi
 
-    # Verify/repair setup if current link or setup is needed
-    if [[ ! -L "$CURRENT_LINK" || ! -e "$CURRENT_LINK" ]]; then
-        if [[ -x "$SETUP_BIN" ]]; then
-            "$SETUP_BIN" >/dev/null 2>&1 || true
-        elif command -v theme-switch-setup >/dev/null 2>&1; then
-            theme-switch-setup >/dev/null 2>&1 || true
+    local target_dir="$THEMES_DIR/$theme"
+    if [[ ! -d "$target_dir" ]]; then
+        echo "error: theme '$theme' does not exist in $THEMES_DIR" >&2
+        exit 1
+    fi
+
+    mkdir -p "$THEMES_DIR"
+
+    # 1. Update active theme symlink atomically
+    ln -sfn "$target_dir" "$CURRENT_LINK"
+
+    # 2. If dedicated theme-switch utility exists, execute it for deep editor & app integrations
+    if command -v theme-switch >/dev/null 2>&1; then
+        theme-switch "$theme" 2>/dev/null || true
+    elif [[ -x "$SWITCH_BIN" ]]; then
+        "$SWITCH_BIN" "$theme" 2>/dev/null || true
+    fi
+
+    # 3. Synchronize active wallpaper if theme contains one
+    local wp=""
+    if [[ -d "$target_dir/backgrounds" ]]; then
+        for img in "$target_dir/backgrounds"/*; do
+            [[ -f "$img" ]] || continue
+            case "${img,,}" in
+                *.png|*.jpg|*.jpeg|*.webp|*.avif|*.bmp)
+                    wp="$img"
+                    break
+                    ;;
+            esac
+        done
+    fi
+    if [[ -z "$wp" && -f "$target_dir/default.png" ]]; then
+        wp="$target_dir/default.png"
+    fi
+
+    if [[ -n "$wp" ]]; then
+        if command -v qdeck-wallpaper >/dev/null 2>&1; then
+            qdeck-wallpaper apply "$wp" >/dev/null 2>&1 &
+        elif command -v awww >/dev/null 2>&1 && (pgrep -x awww-daemon >/dev/null 2>&1 || true); then
+            awww load "$wp" 2>/dev/null || true
         fi
     fi
 
-    if command -v theme-switch >/dev/null 2>&1; then
-        theme-switch "$theme"
-    elif [[ -x "$SWITCH_BIN" ]]; then
-        "$SWITCH_BIN" "$theme"
-    else
-        echo "error: theme-switch not found" >&2
-        exit 1
+    # 4. Reload Hyprland if running so color.conf changes take effect
+    if command -v hyprctl >/dev/null 2>&1; then
+        hyprctl reload >/dev/null 2>&1 || true
     fi
+
+    # 4b. Notify Quickshell to immediately re-read ~/.config/themes/current/colors.toml
+    if command -v qs >/dev/null 2>&1; then
+        qs ipc call theme reload >/dev/null 2>&1 || true
+    fi
+    if command -v quickshell >/dev/null 2>&1; then
+        quickshell ipc call theme reload >/dev/null 2>&1 || true
+    fi
+
+    echo "Switched to theme: $theme"
 }
 
 run_setup() {
     if command -v theme-switch-setup >/dev/null 2>&1; then
-        theme-switch-setup
+        theme-switch-setup 2>/dev/null || true
     elif [[ -x "$SETUP_BIN" ]]; then
-        "$SETUP_BIN"
-    else
-        echo "error: theme-switch-setup not found" >&2
-        exit 1
+        "$SETUP_BIN" 2>/dev/null || true
     fi
 }
 

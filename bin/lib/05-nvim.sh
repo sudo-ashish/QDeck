@@ -14,6 +14,9 @@ NVIM_PACKAGES=(
   ripgrep
   fd
   git
+  tar
+  unzip
+  curl
 )
 
 MISSING_NVIM=()
@@ -50,11 +53,11 @@ if [[ ! -d "$LAZY_DIR" ]]; then
   git clone --filter=blob:none --branch=stable https://github.com/folke/lazy.nvim.git "$LAZY_DIR" 2>/dev/null || true
 fi
 
-# 3. Headless plugin sync to prevent interactive terminal hangs
+# 3. Headless plugin sync to preload all LazyVim plugins and theme colorschemes
 if command -v nvim &>/dev/null && [[ -f "$NVIM_DIR/init.lua" ]]; then
-  echo "==> [QDeck:05-nvim] Running headless Lazy.nvim sync (timeout 60s)..."
-  timeout 60 nvim --headless "+Lazy! sync" +qa 2>/dev/null || \
-  timeout 60 nvim --headless "+Lazy! restore" +qa 2>/dev/null || true
+  echo "==> [QDeck:05-nvim] Running headless Lazy.nvim sync to preload all plugins..."
+  timeout 120 nvim --headless "+Lazy! sync" +qa 2>/dev/null || \
+  timeout 120 nvim --headless "+Lazy! restore" +qa 2>/dev/null || true
 fi
 
 echo "==> [QDeck:05-nvim] Neovim setup completed for QDeck."

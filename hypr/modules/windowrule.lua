@@ -66,3 +66,15 @@ hl.window_rule({
 })
 
 hl.window_rule({ match = { class = "org.gnome.Calculator" }, float = true, center = true })
+
+--------------------------------
+---- QUICKSHELL LAYER RULES ----
+--------------------------------
+hl.layer_rule({
+	name = "quickshell-blur",
+	match = { namespace = "^quickshell-.*" },
+	blur = true,
+	blur_popups = true,
+	ignore_alpha = 0.57,
+})
+

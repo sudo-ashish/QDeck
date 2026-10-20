@@ -7,11 +7,15 @@ set -euo pipefail
 BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$BIN_DIR/.." && pwd)"
 
-QS_DIR="${QUICKSHELL_DIR:-$REPO_ROOT/quickshell}"
-if [[ ! -d "$QS_DIR" && -d "$HOME/.config/quickshell" ]]; then
-  QS_DIR="$HOME/.config/quickshell"
-elif [[ ! -d "$QS_DIR" && -d "$HOME/quickshell" ]]; then
-  QS_DIR="$HOME/quickshell"
+QS_DIR="${QUICKSHELL_DIR:-}"
+if [[ -z "$QS_DIR" ]]; then
+  if [[ -d "$HOME/.config/quickshell" && -f "$HOME/.config/quickshell/shell.qml" ]]; then
+    QS_DIR="$HOME/.config/quickshell"
+  elif [[ -d "$REPO_ROOT/quickshell" && -f "$REPO_ROOT/quickshell/shell.qml" ]]; then
+    QS_DIR="$REPO_ROOT/quickshell"
+  elif [[ -d "$HOME/quickshell" ]]; then
+    QS_DIR="$HOME/quickshell"
+  fi
 fi
 
 export PATH="$HOME/.local/bin:$BIN_DIR:$PATH"
@@ -220,31 +224,42 @@ for s in "$BIN_DIR"/*; do
   fi
 done
 
-# 5. Start Quickshell daemon attached to the workspace config
-if command -v qs >/dev/null 2>&1; then
-  qs -d -p "$QS_DIR"
-elif [[ -x "/usr/bin/qs" ]]; then
-  /usr/bin/qs -d -p "$QS_DIR"
+# 5. Start Quickshell daemon attached to configuration
+if [[ "$QS_DIR" == "$HOME/.config/quickshell" ]]; then
+  # Standard default configuration does not require -p flag
+  if command -v qs >/dev/null 2>&1; then
+    qs -d
+  elif [[ -x "/usr/bin/qs" ]]; then
+    /usr/bin/qs -d
+  else
+    quickshell -d
+  fi
 else
-  quickshell -d -p "$QS_DIR"
+  # Explicit path configuration
+  if command -v qs >/dev/null 2>&1; then
+    qs -d -p "$QS_DIR"
+  elif [[ -x "/usr/bin/qs" ]]; then
+    /usr/bin/qs -d -p "$QS_DIR"
+  else
+    quickshell -d -p "$QS_DIR"
+  fi
 fi
 
 # 6. Bridge IPC sockets so all commands (with or without -p) seamlessly reach the instance
 sleep 0.4
 uid=$(id -u)
-mkdir -p "/run/user/$uid/quickshell/by-shell/3bb4e7c6d4dad9dfd3f25bf68311dcd8" \
-  "/run/user/$uid/quickshell/by-shell/297537087f24e658cd0a0b2380d3bfef" \
-  "/run/user/$uid/quickshell/by-path"
-
-for id_dir in "/run/user/$uid/quickshell/by-id"/*; do
-  [[ -e "$id_dir" ]] || continue
-  b=$(basename "$id_dir")
-  ln -sf "$id_dir" "/run/user/$uid/quickshell/by-shell/3bb4e7c6d4dad9dfd3f25bf68311dcd8/$b"
-  ln -sf "$id_dir" "/run/user/$uid/quickshell/by-shell/297537087f24e658cd0a0b2380d3bfef/$b"
-done
-
-# Bridge by-path so standard config path searches find the running instance
-ln -sf "/run/user/$uid/quickshell/by-shell/297537087f24e658cd0a0b2380d3bfef" "/run/user/$uid/quickshell/by-path/3bb4e7c6d4dad9dfd3f25bf68311dcd8" 2>/dev/null || true
+if [[ -n "$QS_DIR" && -f "$QS_DIR/shell.qml" ]]; then
+  cfg_hash=$(printf '%s/shell.qml' "$QS_DIR" | md5sum 2>/dev/null | awk '{print $1}' || true)
+  if [[ -n "$cfg_hash" ]]; then
+    mkdir -p "/run/user/$uid/quickshell/by-shell/$cfg_hash" "/run/user/$uid/quickshell/by-path" 2>/dev/null || true
+    for id_dir in "/run/user/$uid/quickshell/by-id"/*; do
+      [[ -e "$id_dir" ]] || continue
+      b=$(basename "$id_dir")
+      ln -sf "$id_dir" "/run/user/$uid/quickshell/by-shell/$cfg_hash/$b" 2>/dev/null || true
+    done
+    ln -sf "/run/user/$uid/quickshell/by-shell/$cfg_hash" "/run/user/$uid/quickshell/by-path/$cfg_hash" 2>/dev/null || true
+  fi
+fi
 
 # 7. Quick verification
 qs ipc call osd ping >/dev/null 2>&1 || true

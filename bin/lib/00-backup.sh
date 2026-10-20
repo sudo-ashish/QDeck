@@ -17,6 +17,8 @@ TARGETS=(
   "$HOME/.config/nvim"
   "$HOME/.config/quickshell"
   "$HOME/.config/zsh"
+  "$HOME/.local/bin/zsh"
+  "$HOME/.zshrc"
   "$HOME/.config/rofi"
   "$HOME/.config/swaync"
   "$HOME/.config/waybar"

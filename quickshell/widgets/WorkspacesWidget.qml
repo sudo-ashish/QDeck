@@ -67,14 +67,14 @@ Rectangle {
                     }
                 }
 
-                // Inactive workspace indicator: circular dot (bright when occupied, dimmed when empty)
+                // Inactive workspace indicator: circular dot (or custom inactive icon from Icons.qml)
                 Rectangle {
                     id: dot
                     anchors.centerIn: parent
                     width: Appearance.workspacesDotSize
                     height: Appearance.workspacesDotSize
                     radius: width / 2
-                    visible: !wsCapsule.isActive
+                    visible: !wsCapsule.isActive && (!Icons.workspaceInactive || Icons.workspaceInactive.length === 0)
                     color: "#ffffff"
                     opacity: wsCapsule.isOccupied ? 1.0 : 0.28
                     antialiasing: true
@@ -84,45 +84,34 @@ Rectangle {
                     }
                 }
 
-                // Active workspace indicator: 4-pointed concave star icon
-                Canvas {
-                    id: starCanvas
+                Text {
+                    id: inactiveIcon
                     anchors.centerIn: parent
-                    width: Appearance.workspacesStarSize
-                    height: Appearance.workspacesStarSize
+                    visible: !wsCapsule.isActive && (Icons.workspaceInactive && Icons.workspaceInactive.length > 0)
+                    text: Icons.workspaceInactive
+                    font.family: Icons.effectiveFont(text)
+                    font.pixelSize: Appearance.workspacesIconSize
+                    color: "#ffffff"
+                    opacity: wsCapsule.isOccupied ? 1.0 : 0.28
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: Appearance.animDurationNormal }
+                    }
+                }
+
+                // Active workspace indicator: user manual icon defined in Icons.qml
+                Text {
+                    id: activeIcon
+                    anchors.centerIn: parent
                     visible: wsCapsule.isActive
-                    renderTarget: Canvas.FramebufferObject
-                    antialiasing: true
-
-                    property color starColor: Theme.dark_background
-
-                    onStarColorChanged: requestPaint()
-
-                    Connections {
-                        target: wsCapsule
-                        function onIsActiveChanged() {
-                            if (wsCapsule.isActive) {
-                                starCanvas.requestPaint()
-                            }
-                        }
-                    }
-
-                    onPaint: {
-                        var ctx = getContext("2d");
-                        ctx.reset();
-                        var cx = width / 2;
-                        var cy = height / 2;
-                        var r = width / 2;
-                        ctx.fillStyle = starColor;
-                        ctx.beginPath();
-                        ctx.moveTo(cx, cy - r);
-                        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
-                        ctx.quadraticCurveTo(cx, cy, cx, cy + r);
-                        ctx.quadraticCurveTo(cx, cy, cx - r, cy);
-                        ctx.quadraticCurveTo(cx, cy, cx, cy - r);
-                        ctx.closePath();
-                        ctx.fill();
-                    }
+                    text: Icons.workspaceActive || Icons.workspace
+                    font.family: Icons.effectiveFont(text)
+                    font.pixelSize: Appearance.workspacesIconSize
+                    color: Theme.dark_background
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
                 }
 
                 MouseArea {

@@ -19,24 +19,24 @@ QtObject {
     // Bar widget display options
     property bool batteryShowPercentage: false
 
-    // Individual bar widget icon sizes (px)
+    // Individual bar widget icon sizes (px) - adaptively scaled with global text size
     property int barIconSize: Icons.barIconSize
-    property int batteryIconSize: 22
+    property int batteryIconSize: Math.max(14, Math.round(Fonts.baseTextSize * (22 / 12.0)))
     property int audioIconSize: root.barIconSize
     property int bluetoothIconSize: root.barIconSize
     property int networkIconSize: root.barIconSize
     property int monitorIconSize: root.barIconSize
 
-    // Hyprland Workspaces Indicator Controls
-    property int workspacesPaddingHorizontal: 4
-    property int workspacesPaddingVertical: 3
+    // Hyprland Workspaces Indicator Controls - adaptively scaled with global text size
+    property int workspacesPaddingHorizontal: Math.max(2, Math.round(Fonts.baseTextSize * (4 / 12.0)))
+    property int workspacesPaddingVertical: Math.max(2, Math.round(Fonts.baseTextSize * (3 / 12.0)))
     property int workspacesMargin: 0
-    property int workspacesSpacing: 4
-    property int workspacesDotSize: 7
-    property int workspacesStarSize: 14
+    property int workspacesSpacing: Math.max(2, Math.round(Fonts.baseTextSize * (4 / 12.0)))
+    property int workspacesDotSize: Math.max(4, Math.round(Fonts.baseTextSize * (7 / 12.0)))
+    property int workspacesStarSize: Math.max(8, Math.round(Fonts.baseTextSize * (14 / 12.0)))
     property int workspacesIconSize: root.workspacesStarSize
-    property int workspacesCapsuleWidth: 24
-    property int workspacesActiveCapsuleWidth: 46
+    property int workspacesCapsuleWidth: Math.max(16, Math.round(Fonts.baseTextSize * (24 / 12.0)))
+    property int workspacesActiveCapsuleWidth: Math.max(30, Math.round(Fonts.baseTextSize * (46 / 12.0)))
 
     // =========================================================================
     // Corner Radii
@@ -149,7 +149,7 @@ QtObject {
     property int launcherPadding: 30
     property int launcherItemHeight: 36
     property int launcherItemRadius: 10
-    property int launcherIconSize: 24
+    property int launcherIconSize: Math.max(16, Math.round(Fonts.baseTextSize * (24 / 12.0)))
 
     // =========================================================================
     // Power & Unified Menu

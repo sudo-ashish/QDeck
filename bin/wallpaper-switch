@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# QDeck: wallpaper-switch: updates ~/.config/themes/current/default.png and applies wallpaper via awww/swww/hyprpaper
+set -euo pipefail
+umask 077
+
+readonly APP_TITLE="Wallpaper Switcher"
+readonly CURRENT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/themes/current"
+
+emit_notification() {
+    local urgency="$1"
+    shift
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send --urgency="$urgency" "$APP_TITLE" "$*" >/dev/null 2>&1 || true
+    fi
+}
+
+error() {
+    printf 'error: %s\n' "$*" >&2
+    emit_notification critical "error: $*"
+}
+
+die() {
+    local status="$1"
+    shift
+    error "$*"
+    exit "$status"
+}
+
+if (( $# != 1 )); then
+    die 2 "usage: wallpaper-switch /absolute/path/to/image"
+fi
+
+image_path="$1"
+if [[ "$image_path" != /* ]]; then
+    if [[ -f "$CURRENT_DIR/backgrounds/$image_path" ]]; then
+        image_path="$CURRENT_DIR/backgrounds/$image_path"
+    elif [[ -f "$PWD/$image_path" ]]; then
+        image_path="$PWD/$image_path"
+    fi
+fi
+
+[[ -d "$CURRENT_DIR" ]] || die 1 "'$CURRENT_DIR' does not resolve to a valid theme directory"
+[[ -f "$image_path" ]] || die 1 "image is not a regular file or does not exist: '$image_path'"
+
+# Resolve symlinks so we have the canonical path
+canon_path="$(readlink -f "$image_path" 2>/dev/null || echo "$image_path")"
+
+readonly LINK_PATH="$CURRENT_DIR/default.png"
+ln -sfn "$canon_path" "$LINK_PATH"
+
+applied=0
+
+# 1. Primary backend: awww
+if command -v awww >/dev/null 2>&1; then
+    if ! pgrep -x awww-daemon >/dev/null 2>&1; then
+        awww-daemon &
+        sleep 0.2
+    fi
+    if awww img --transition-type wipe --transition-angle 30 "$canon_path" >/dev/null 2>&1 || \
+       awww img "$canon_path" >/dev/null 2>&1; then
+        applied=1
+    fi
+fi
+
+# 2. Secondary backend: swww
+if (( applied == 0 )) && command -v swww >/dev/null 2>&1; then
+    if ! pgrep -x swww-daemon >/dev/null 2>&1; then
+        swww init >/dev/null 2>&1 || true
+        sleep 0.2
+    fi
+    if swww img "$canon_path" --transition-type wipe --transition-angle 30 >/dev/null 2>&1 || \
+       swww img "$canon_path" >/dev/null 2>&1; then
+        applied=1
+    fi
+fi
+
+# 3. Tertiary backend: hyprpaper
+if (( applied == 0 )) && command -v hyprpaper >/dev/null 2>&1 && command -v hyprctl >/dev/null 2>&1; then
+    hyprctl hyprpaper preload "$canon_path" >/dev/null 2>&1 || true
+    hyprctl hyprpaper wallpaper ",$canon_path" >/dev/null 2>&1 || true
+    applied=1
+fi
+
+if (( applied == 1 )); then
+    local_name="$(basename "$canon_path")"
+    printf 'Wallpaper changed to `%s`.\n' "$local_name"
+    exit 0
+fi
+
+die 1 "no supported wallpaper daemon found or failed to apply (awww, swww, hyprpaper)"

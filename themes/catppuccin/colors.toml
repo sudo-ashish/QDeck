@@ -1,0 +1,59 @@
+# ==============================================================================
+# Catppuccin Mocha Color Configuration
+# ==============================================================================
+
+# ── Primary Accents ───────────────────────────────────────────────────────────
+accent = "#89b4fa"
+selection = "#45475a"
+muted = "#6c7086"
+cursor = "#f5e0dc"
+
+# ── Surfaces & Backgrounds ────────────────────────────────────────────────────
+background = "#1e1e2e"
+dark_background = "#181825"
+darker_background = "#11111b"
+lighter_background = "#313244"
+selection_foreground = "#1e1e2e"
+selection_background = "#45475a"
+
+# ── Typography & Foregrounds ──────────────────────────────────────────────────
+foreground = "#cdd6f4"
+dark_foreground = "#7f849c"
+light_foreground = "#bac2de"
+bright_foreground = "#f5e0dc"
+
+# ── Semantic & Accent Palette ─────────────────────────────────────────────────
+red = "#f38ba8"
+yellow = "#f9e2af"
+orange = "#fab387"
+green = "#a6e3a1"
+cyan = "#94e2d5"
+blue = "#89b4fa"
+magenta = "#f5c2e7"
+brown = "#b4befe"
+
+# ── High-Vibrancy Variants ────────────────────────────────────────────────────
+bright_red = "#f38ba8"
+bright_yellow = "#f9e2af"
+bright_green = "#a6e3a1"
+bright_cyan = "#89dceb"
+bright_blue = "#89b4fa"
+bright_magenta = "#cba6f7"
+
+# ── Base16 ANSI Terminal Palette ──────────────────────────────────────────────
+color0 = "#45475a"
+color1 = "#f38ba8"
+color2 = "#a6e3a1"
+color3 = "#f9e2af"
+color4 = "#89b4fa"
+color5 = "#f5c2e7"
+color6 = "#94e2d5"
+color7 = "#bac2de"
+color8 = "#585b70"
+color9 = "#f38ba8"
+color10 = "#a6e3a1"
+color11 = "#f9e2af"
+color12 = "#89b4fa"
+color13 = "#f5c2e7"
+color14 = "#94e2d5"
+color15 = "#a6adc8"

@@ -29,7 +29,7 @@ Usage: ./install.sh [OPTIONS]
 
 Modular, unattended installation & dotfiles bootstrap suite for Arch Linux.
 
-Options:
+Options
   -h, --help              Show this help message and exit.
   -s, --step <STEP>       Run only a specific module:
                           00, backup      - Pre-mutation backup
@@ -40,10 +40,12 @@ Options:
                           05, nvim        - Neovim & headless plugin sync
                           06, assets      - Wallpapers, themes & media
                           07, scripts     - QDeck binaries & PATH setup
+                          08, zsh         - Zsh shell, plugins & default shell configuration
   --skip-backup           Skip the configuration backup step.
   --skip-deps             Skip installing pacman and AUR dependencies.
   --skip-fonts            Skip font installations.
   --skip-nvim             Skip Neovim configuration and plugin sync.
+  --skip-zsh              Skip Zsh configuration and default shell setup.
   --dry-run               Print steps that would be executed without running them.
 
 Examples:
@@ -57,6 +59,7 @@ SKIP_BACKUP=false
 SKIP_DEPS=false
 SKIP_FONTS=false
 SKIP_NVIM=false
+SKIP_ZSH=false
 DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
@@ -89,6 +92,10 @@ while [[ $# -gt 0 ]]; do
       SKIP_NVIM=true
       shift
       ;;
+    --skip-zsh)
+      SKIP_ZSH=true
+      shift
+      ;;
     --dry-run)
       DRY_RUN=true
       shift
@@ -102,9 +109,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ------------------------------------------------------------------------------
-# Single-Prompt Sudo Authentication & Background Keep-Alive
-# ------------------------------------------------------------------------------
-if [[ "$DRY_RUN" == false ]]; then
+# Determine if target step requires administrative privileges
+NEEDS_SUDO=true
+if [[ -n "$TARGET_STEP" ]]; then
+  case "${TARGET_STEP,,}" in
+    00|backup|03|quickshell|04|dotfiles|05|nvim|06|assets|07|scripts)
+      NEEDS_SUDO=false
+      ;;
+  esac
+fi
+
+if [[ "$DRY_RUN" == false && "$NEEDS_SUDO" == true ]]; then
   echo "=========================================================================="
   echo "  QDeck Installation Suite - Non-Interactive Bootstrap"
   echo "=========================================================================="
@@ -160,6 +175,7 @@ resolve_step_script() {
     05|nvim) echo "$REPO_ROOT/bin/lib/05-nvim.sh" ;;
     06|assets) echo "$REPO_ROOT/bin/lib/06-assets.sh" ;;
     07|scripts) echo "$REPO_ROOT/bin/lib/07-scripts.sh" ;;
+    08|zsh) echo "$REPO_ROOT/bin/lib/08-zsh.sh" ;;
     *)
       echo "Error: Unrecognized step '$TARGET_STEP'." >&2
       exit 1
@@ -182,6 +198,15 @@ else
   [[ "$SKIP_NVIM" == false ]]   && execute_module "$REPO_ROOT/bin/lib/05-nvim.sh"
   execute_module "$REPO_ROOT/bin/lib/06-assets.sh"
   execute_module "$REPO_ROOT/bin/lib/07-scripts.sh"
+  [[ "$SKIP_ZSH" == false ]]    && execute_module "$REPO_ROOT/bin/lib/08-zsh.sh"
+fi
+
+# If Hyprland is currently active, reload its configuration and start QDeck immediately
+if command -v hyprctl >/dev/null 2>&1 && (pgrep -x Hyprland >/dev/null 2>&1 || [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]); then
+  echo ""
+  echo "==> [QDeck] Active Hyprland session detected: reloading config and starting QDeck daemon..."
+  hyprctl reload >/dev/null 2>&1 || true
+  "$HOME/.local/bin/qdeck" restart >/dev/null 2>&1 || "$HOME/.local/bin/qdeck" start >/dev/null 2>&1 || true
 fi
 
 END_TIME="$(date +%s)"
@@ -192,8 +217,10 @@ echo "==========================================================================
 echo "  ✓ QDeck Installation Suite Completed Successfully in ${DURATION}s"
 echo "=========================================================================="
 echo "  • QDeck unified CLI & runner: $HOME/.local/bin/qdeck"
-echo "  • Start QDeck immediately: qdeck"
-echo "  • Autostart in Hyprland: exec-once = qdeck"
+echo "  • Start QDeck shell: qdeck"
+echo "  • Autostart in Hyprland: ~/.config/hypr/modules/autostart.lua"
+echo "  • Keybindings: ~/.config/hypr/keybinds/rofi.lua"
+echo "  • Zsh shell configuration: ~/.zshrc (custom modules: ~/.local/bin/zsh/)"
 echo "  • QDeck CLI commands: qdeck --help"
 if [[ -n "${BACKUP_DIR:-}" && -d "$BACKUP_DIR" ]]; then
   echo "  • Pre-installation backups stored at: $BACKUP_DIR"

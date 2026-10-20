@@ -14,37 +14,41 @@ QtObject {
     // Raw parsed colors dictionary
     property var _c: ({})
 
-    // Strict color schema
-    readonly property color accent: _c.accent || "transparent"
-    readonly property color selection: _c.selection || "transparent"
-    readonly property color muted: _c.muted || "transparent"
+    // Surfaces & Backgrounds
+    readonly property color background: _c.background || "#1a1b26"
+    readonly property color dark_background: _c.dark_background || _c.color0 || Qt.darker(root.background, 1.25)
+    readonly property color darker_background: _c.darker_background || Qt.darker(root.background, 1.45)
+    readonly property color lighter_background: _c.lighter_background || Qt.lighter(root.background, 1.25)
 
-    readonly property color background: _c.background || "transparent"
-    readonly property color dark_background: _c.dark_background || "transparent"
-    readonly property color darker_background: _c.darker_background || "transparent"
-    readonly property color lighter_background: _c.lighter_background || "transparent"
+    // Primary Accents
+    readonly property color accent: _c.accent || _c.color4 || "#7aa2f7"
+    readonly property color selection: _c.selection || _c.color0 || "#292e42"
+    readonly property color muted: _c.muted || _c.color8 || "#585b70"
 
-    readonly property color foreground: _c.foreground || "transparent"
-    readonly property color dark_foreground: _c.dark_foreground || "transparent"
-    readonly property color light_foreground: _c.light_foreground || "transparent"
-    readonly property color bright_foreground: _c.bright_foreground || "transparent"
+    // Typography & Foregrounds
+    readonly property color foreground: _c.foreground || "#a9b1d6"
+    readonly property color dark_foreground: _c.dark_foreground || _c.color8 || Qt.darker(root.foreground, 1.35)
+    readonly property color light_foreground: _c.light_foreground || _c.color7 || Qt.lighter(root.foreground, 1.1)
+    readonly property color bright_foreground: _c.bright_foreground || _c.color15 || _c.cursor || "#ffffff"
 
-    readonly property color red: _c.red || "transparent"
+    // Semantic & Accent Palette
+    readonly property color red: _c.red || _c.color1 || "#f7768e"
     readonly property color urgent: root.red
-    readonly property color yellow: _c.yellow || "transparent"
-    readonly property color orange: _c.orange || "transparent"
-    readonly property color green: _c.green || "transparent"
-    readonly property color cyan: _c.cyan || "transparent"
-    readonly property color blue: _c.blue || "transparent"
-    readonly property color magenta: _c.magenta || "transparent"
-    readonly property color brown: _c.brown || "transparent"
+    readonly property color yellow: _c.yellow || _c.color3 || "#e0af68"
+    readonly property color orange: _c.orange || _c.color3 || "#eb927b"
+    readonly property color green: _c.green || _c.color2 || "#9ece6a"
+    readonly property color cyan: _c.cyan || _c.color6 || "#449dab"
+    readonly property color blue: _c.blue || _c.color4 || root.accent
+    readonly property color magenta: _c.magenta || _c.color5 || "#ad8ee6"
+    readonly property color brown: _c.brown || Qt.darker(root.yellow, 1.4)
 
-    readonly property color bright_red: _c.bright_red || "transparent"
-    readonly property color bright_yellow: _c.bright_yellow || "transparent"
-    readonly property color bright_green: _c.bright_green || "transparent"
-    readonly property color bright_cyan: _c.bright_cyan || "transparent"
-    readonly property color bright_blue: _c.bright_blue || "transparent"
-    readonly property color bright_magenta: _c.bright_magenta || "transparent"
+    // High-Vibrancy Variants
+    readonly property color bright_red: _c.bright_red || _c.color9 || root.red
+    readonly property color bright_yellow: _c.bright_yellow || _c.color11 || root.yellow
+    readonly property color bright_green: _c.bright_green || _c.color10 || root.green
+    readonly property color bright_cyan: _c.bright_cyan || _c.color14 || root.cyan
+    readonly property color bright_blue: _c.bright_blue || _c.color12 || root.blue
+    readonly property color bright_magenta: _c.bright_magenta || _c.color13 || root.magenta
 
     // ─────────────────────────────────────────────────────────────────────────
     // Dual Alpha + Compositor Blur Architecture
@@ -65,13 +69,8 @@ QtObject {
         var stateStr = enabled ? "on" : "off"
         var cmd = "mkdir -p \"$(dirname \"" + root.blurStatePath + "\")\" && printf '%s' \"" + stateStr + "\" > \"" + root.blurStatePath + "\""
         if (enabled) {
-            cmd += " && hyprctl keyword layerrule \"unset, ^(quickshell-.*)$\" 2>/dev/null || true"
-            cmd += " && hyprctl keyword layerrule \"blur, ^(quickshell-.*)$\" 2>/dev/null || true"
-            cmd += " && hyprctl keyword layerrule \"blurpopups, ^(quickshell-.*)$\" 2>/dev/null || true"
-            cmd += " && hyprctl keyword layerrule \"ignorealpha 0.57, ^(quickshell-.*)$\" 2>/dev/null || true"
             cmd += " && hyprctl eval 'hl.layer_rule({ name = \"qdeck-blur\", match = { namespace = \"^quickshell-.*\" }, blur = true, blur_popups = true, ignore_alpha = 0.57 })' 2>/dev/null || true"
         } else {
-            cmd += " && hyprctl keyword layerrule \"unset, ^(quickshell-.*)$\" 2>/dev/null || true"
             cmd += " && hyprctl eval 'hl.layer_rule({ name = \"qdeck-blur\", match = { namespace = \"^quickshell-.*\" }, blur = false, blur_popups = false })' 2>/dev/null || true"
         }
         Quickshell.execDetached(["sh", "-c", cmd])
@@ -80,6 +79,11 @@ QtObject {
     // IPC Interface for theme / blur control
     property IpcHandler ipcHandler: IpcHandler {
         target: "theme"
+
+        function reload(): string {
+            root.reloadTheme()
+            return "reloaded"
+        }
 
         function toggleBlur(): string {
             root.setBlurState(!root.blurEnabled)
@@ -194,7 +198,58 @@ QtObject {
         }
     }
 
+    property Process themeReaderProc: Process {
+        id: themeReaderProc
+        command: ["cat", root.colorsConfigPath]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                if (text && text.trim().length > 0) {
+                    root.parseThemeFile(text)
+                    if (root.blurEnabled) {
+                        root.setBlurState(true)
+                    }
+                }
+            }
+        }
+    }
+
+    function reloadTheme() {
+        if (!themeReaderProc.running) {
+            themeReaderProc.running = true
+        }
+    }
+
+    property string _lastCurrentTarget: ""
+    property Process linkCheckProc: Process {
+        id: linkCheckProc
+        command: ["readlink", "-f", Quickshell.env("HOME") + "/.config/themes/current"]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                var target = text.trim()
+                if (target && target !== root._lastCurrentTarget) {
+                    root._lastCurrentTarget = target
+                    root.reloadTheme()
+                }
+            }
+        }
+    }
+
+    property Timer symlinkWatcherTimer: Timer {
+        interval: 1500
+        running: true
+        repeat: true
+        onTriggered: {
+            if (!linkCheckProc.running) {
+                linkCheckProc.running = true
+            }
+        }
+    }
+
     Component.onCompleted: {
+        root.reloadTheme()
+
         if (colorsFile.text()) {
             root.parseThemeFile(colorsFile.text())
         } else if (fallbackColorsFile.text()) {

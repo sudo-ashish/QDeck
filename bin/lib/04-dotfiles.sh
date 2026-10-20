@@ -48,9 +48,34 @@ if [[ -f "$VSCODIUM_SETTINGS" ]]; then
   fi
 fi
 
+# 6. Themes configuration (~/.config/themes)
+THEMES_SRC=""
+if [[ -d "$REPO_ROOT/themes" && -n "$(ls -A "$REPO_ROOT/themes" 2>/dev/null)" ]]; then
+  THEMES_SRC="$REPO_ROOT/themes"
+elif [[ -d "$REPO_ROOT/dotfiles/themes" && -n "$(ls -A "$REPO_ROOT/dotfiles/themes" 2>/dev/null)" ]]; then
+  THEMES_SRC="$REPO_ROOT/dotfiles/themes"
+fi
+
+if [[ -n "$THEMES_SRC" ]]; then
+  echo "    Deploying themes suite to ~/.config/themes..."
+  mkdir -p "$HOME/.config/themes"
+  cp -rf "$THEMES_SRC/." "$HOME/.config/themes/"
+
+  # Initialize active theme symlink if missing
+  if [[ ! -e "$HOME/.config/themes/current" ]]; then
+    for t in catppuccin gruvbox everforest nord tokyo-night; do
+      if [[ -d "$HOME/.config/themes/$t" ]]; then
+        ln -sfn "$HOME/.config/themes/$t" "$HOME/.config/themes/current"
+        echo "    Initialized active theme symlink -> $t"
+        break
+      fi
+    done
+  fi
+fi
+
 # Ensure sensible permissions on deployed user configs
-find "$HOME/.config/hypr" "$HOME/.config/quickshell" -type f -exec chmod 644 {} + 2>/dev/null || true
-find "$HOME/.config/hypr" "$HOME/.config/quickshell" -type d -exec chmod 755 {} + 2>/dev/null || true
+find "$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/themes" -type f -exec chmod 644 {} + 2>/dev/null || true
+find "$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/themes" -type d -exec chmod 755 {} + 2>/dev/null || true
 
 echo "==> [QDeck:04-dotfiles] Configurations deployed successfully for QDeck."
 exit 0
