@@ -18,10 +18,11 @@ CORE_PACKAGES=(
   jq
   desktop-file-utils
 
-  # Wayland compositor & tools
+  # Wayland compositor, display manager & tools
   hyprland
   hyprlock
   hypridle
+  sddm
   xdg-desktop-portal-hyprland
   xdg-desktop-portal-gtk
   xdg-utils
@@ -132,6 +133,15 @@ fi
 # 4. Enable essential system & user services non-interactively
 echo "==> [01-deps] Enabling system services..."
 sudo systemctl enable --now bluetooth NetworkManager power-profiles-daemon 2>/dev/null || true
+
+# Display manager (SDDM)
+if command -v sddm &>/dev/null || pacman -Qi sddm &>/dev/null; then
+  echo "    Enabling and starting sddm display manager..."
+  sudo systemctl enable sddm 2>/dev/null || true
+  if ! systemctl is-active --quiet sddm 2>/dev/null; then
+    sudo systemctl start sddm 2>/dev/null || true
+  fi
+fi
 
 echo "==> [01-deps] Enabling user services..."
 systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
