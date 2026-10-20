@@ -6,7 +6,7 @@ QtObject {
     id: root
 
     // Icon fonts configuration
-    property string iconFont: Fonts.iconFont
+    property string iconFont: "JetBrainsMono Nerd Font Propo"
     property string symbolFont: (materialSymbolsLoader.name && materialSymbolsLoader.name.length > 0) ? materialSymbolsLoader.name : Fonts.symbolFont
     property bool useMaterialSymbols: true
 
@@ -97,10 +97,12 @@ QtObject {
     readonly property string palette: root.useMaterialSymbols ? "palette" : "󰏘"
     readonly property string wallpaper: root.useMaterialSymbols ? "wallpaper" : "󰋩"
 
-    // Workspaces (Active icon glyph)
+    // Workspaces
     property string workspace: ""
     property string workspaceActive: root.workspace
     property string workspaceInactive: ""
+    property string workspaceOccupied: ""
+    property string workspaceEmpty: ""
 
     // Battery icon resolver by capacity and charging state
     function battery(capacity, isCharging) {

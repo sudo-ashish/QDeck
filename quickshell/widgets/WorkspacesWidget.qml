@@ -67,14 +67,21 @@ Rectangle {
                     }
                 }
 
-                // Inactive workspace indicator: circular dot (or custom inactive icon from Icons.qml)
+                readonly property string resolvedInactiveIcon: {
+                    if (isOccupied && Icons.workspaceOccupied && Icons.workspaceOccupied.length > 0) return Icons.workspaceOccupied
+                    if (!isOccupied && Icons.workspaceEmpty && Icons.workspaceEmpty.length > 0) return Icons.workspaceEmpty
+                    return Icons.workspaceInactive || ""
+                }
+                readonly property bool hasCustomInactiveIcon: resolvedInactiveIcon.length > 0
+
+                // Inactive workspace indicator: circular dot (shown when no custom icon is configured)
                 Rectangle {
                     id: dot
                     anchors.centerIn: parent
                     width: Appearance.workspacesDotSize
                     height: Appearance.workspacesDotSize
                     radius: width / 2
-                    visible: !wsCapsule.isActive && (!Icons.workspaceInactive || Icons.workspaceInactive.length === 0)
+                    visible: !wsCapsule.isActive && !wsCapsule.hasCustomInactiveIcon
                     color: "#ffffff"
                     opacity: wsCapsule.isOccupied ? 1.0 : 0.28
                     antialiasing: true
@@ -84,13 +91,16 @@ Rectangle {
                     }
                 }
 
+                // Inactive workspace indicator: custom glyph defined in Icons.qml
                 Text {
                     id: inactiveIcon
                     anchors.centerIn: parent
-                    visible: !wsCapsule.isActive && (Icons.workspaceInactive && Icons.workspaceInactive.length > 0)
-                    text: Icons.workspaceInactive
+                    anchors.horizontalCenterOffset: Appearance.workspacesIconOffsetX
+                    anchors.verticalCenterOffset: Appearance.workspacesIconOffsetY
+                    visible: !wsCapsule.isActive && wsCapsule.hasCustomInactiveIcon
+                    text: wsCapsule.resolvedInactiveIcon
                     font.family: Icons.effectiveFont(text)
-                    font.pixelSize: Appearance.workspacesIconSize
+                    font.pixelSize: Appearance.workspacesInactiveIconSize
                     color: "#ffffff"
                     opacity: wsCapsule.isOccupied ? 1.0 : 0.28
                     verticalAlignment: Text.AlignVCenter
@@ -105,6 +115,8 @@ Rectangle {
                 Text {
                     id: activeIcon
                     anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: Appearance.workspacesIconOffsetX
+                    anchors.verticalCenterOffset: Appearance.workspacesIconOffsetY
                     visible: wsCapsule.isActive
                     text: Icons.workspaceActive || Icons.workspace
                     font.family: Icons.effectiveFont(text)

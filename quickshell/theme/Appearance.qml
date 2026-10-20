@@ -35,6 +35,9 @@ QtObject {
     property int workspacesDotSize: Math.max(4, Math.round(Fonts.baseTextSize * (7 / 12.0)))
     property int workspacesStarSize: Math.max(8, Math.round(Fonts.baseTextSize * (14 / 12.0)))
     property int workspacesIconSize: root.workspacesStarSize
+    property int workspacesInactiveIconSize: Math.max(6, Math.round(Fonts.baseTextSize * (11 / 12.0)))
+    property int workspacesIconOffsetX: 0
+    property int workspacesIconOffsetY: 0
     property int workspacesCapsuleWidth: Math.max(16, Math.round(Fonts.baseTextSize * (24 / 12.0)))
     property int workspacesActiveCapsuleWidth: Math.max(30, Math.round(Fonts.baseTextSize * (46 / 12.0)))
 

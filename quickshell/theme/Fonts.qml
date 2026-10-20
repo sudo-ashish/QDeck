@@ -16,7 +16,7 @@ QtObject {
     property string monoFont: "JetBrainsMono Nerd Font"
 
     // Primary font family for icon glyphs (e.g., Nerd Font or Material Symbols)
-    property string iconFont: "JetBrainsMono Nerd Font"
+    property string iconFont: "JetBrainsMono Nerd Font Propo"
 
     // Google Material Symbols font family (locally installed or system-provided)
     property string symbolFont: "Material Symbols Rounded"
