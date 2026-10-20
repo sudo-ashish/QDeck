@@ -73,10 +73,6 @@ copy_zsh() {
   local zsh_src="$REPO_ROOT/zsh"
   local zsh_target="$TARGET_BIN_DIR/zsh"
 
-  if [[ ! -d "$zsh_src" && -d "$REPO_ROOT/dotfiles/zsh" ]]; then
-    zsh_src="$REPO_ROOT/dotfiles/zsh"
-  fi
-
   if [[ -d "$zsh_src" ]]; then
     echo "==> [QDeck:07-scripts] Copying zsh folder to $zsh_target..."
     mkdir -p "$zsh_target"

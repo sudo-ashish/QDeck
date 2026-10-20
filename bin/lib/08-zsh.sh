@@ -54,8 +54,6 @@ if [[ ! -f "$CONFIG_DIR/aliases.zsh" || ! -f "$CONFIG_DIR/functions.zsh" ]]; the
   mkdir -p "$CONFIG_DIR"
   if [[ -d "$REPO_ROOT/zsh" ]]; then
     cp -rf "$REPO_ROOT/zsh/." "$CONFIG_DIR/"
-  elif [[ -d "$REPO_ROOT/dotfiles/zsh" ]]; then
-    cp -rf "$REPO_ROOT/dotfiles/zsh/." "$CONFIG_DIR/"
   fi
   chmod 644 "$CONFIG_DIR"/* 2>/dev/null || true
 fi

@@ -52,8 +52,6 @@ fi
 THEMES_SRC=""
 if [[ -d "$REPO_ROOT/themes" && -n "$(ls -A "$REPO_ROOT/themes" 2>/dev/null)" ]]; then
   THEMES_SRC="$REPO_ROOT/themes"
-elif [[ -d "$REPO_ROOT/dotfiles/themes" && -n "$(ls -A "$REPO_ROOT/dotfiles/themes" 2>/dev/null)" ]]; then
-  THEMES_SRC="$REPO_ROOT/dotfiles/themes"
 fi
 
 if [[ -n "$THEMES_SRC" ]]; then

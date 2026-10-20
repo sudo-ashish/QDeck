@@ -29,7 +29,7 @@ done
 
 # 3. Themes deployment
 THEMES_DEST="$HOME/.config/themes"
-for themes_src in "$REPO_ROOT/themes" "$REPO_ROOT/dotfiles/themes" "$REPO_ROOT/assets/themes"; do
+for themes_src in "$REPO_ROOT/themes" "$REPO_ROOT/assets/themes"; do
   if [[ -d "$themes_src" && -n "$(ls -A "$themes_src" 2>/dev/null)" ]]; then
     echo "    Deploying themes from $themes_src to $THEMES_DEST..."
     mkdir -p "$THEMES_DEST"
