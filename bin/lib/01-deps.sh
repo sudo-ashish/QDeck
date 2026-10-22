@@ -136,11 +136,8 @@ sudo systemctl enable --now bluetooth NetworkManager power-profiles-daemon 2>/de
 
 # Display manager (SDDM)
 if command -v sddm &>/dev/null || pacman -Qi sddm &>/dev/null; then
-  echo "    Enabling and starting sddm display manager..."
+  echo "    Enabling sddm display manager..."
   sudo systemctl enable sddm 2>/dev/null || true
-  if ! systemctl is-active --quiet sddm 2>/dev/null; then
-    sudo systemctl start sddm 2>/dev/null || true
-  fi
 fi
 
 echo "==> [01-deps] Enabling user services..."
