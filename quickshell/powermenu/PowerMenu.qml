@@ -963,8 +963,8 @@ PanelWindow {
                                         return Theme.withAlpha(Theme.darker_background, 0.45)
                                     }
 
-                                    border.color: actionBtn.isActive ? "transparent" : Theme.selection
-                                    border.width: actionBtn.isActive ? 0 : 1
+                                    border.color: (Appearance.powerMenuSwitchBorder && !actionBtn.isActive) ? Theme.selection : "transparent"
+                                    border.width: (Appearance.powerMenuSwitchBorder && !actionBtn.isActive) ? 1 : 0
 
                                     Behavior on color { ColorAnimation { duration: 160 } }
                                     Behavior on border.color { ColorAnimation { duration: 160 } }
@@ -1054,12 +1054,14 @@ PanelWindow {
                                         ? Theme.withAlpha(Theme.lighter_background, 0.45)
                                         : Theme.withAlpha(Theme.darker_background, 0.45))
 
-                                border.color: cardItem.isSelected
-                                    ? cardItem.themeAccent
-                                    : (cardItem.isCurrentTheme
-                                        ? Theme.withAlpha(Theme.green, 0.6)
-                                        : Theme.withAlpha(Theme.selection, 0.6))
-                                border.width: cardItem.isSelected ? 2 : 1
+                                border.color: Appearance.themeSwitcherCardBorder
+                                    ? (cardItem.isSelected
+                                        ? cardItem.themeAccent
+                                        : (cardItem.isCurrentTheme
+                                            ? Theme.withAlpha(Theme.green, 0.6)
+                                            : Theme.withAlpha(Theme.selection, 0.6)))
+                                    : "transparent"
+                                border.width: Appearance.themeSwitcherCardBorder ? (cardItem.isSelected ? 2 : 1) : 0
 
                                 Behavior on color { ColorAnimation { duration: 160 } }
                                 Behavior on border.color { ColorAnimation { duration: 160 } }
@@ -1084,7 +1086,7 @@ PanelWindow {
                                     anchors.top: parent.top
                                     anchors.left: parent.left
                                     anchors.right: parent.right
-                                    anchors.margins: 1
+                                    anchors.margins: Appearance.themeSwitcherCardBorder ? 1 : 0
                                     height: 110
 
                                     layer.enabled: true
@@ -1297,12 +1299,14 @@ PanelWindow {
                                 anchors.fill: parent
                                 radius: Appearance.powerMenuRadiusActive
                                 color: "transparent"
-                                border.color: wallCardItem.isSelected
-                                    ? Theme.accent
-                                    : (wallCardItem.isActiveWall
-                                        ? Theme.withAlpha(Theme.green, 0.6)
-                                        : Theme.withAlpha(Theme.selection, 0.6))
-                                border.width: wallCardItem.isSelected ? 2 : 1
+                                border.color: Appearance.wallpaperSwitcherCardBorder
+                                    ? (wallCardItem.isSelected
+                                        ? Theme.accent
+                                        : (wallCardItem.isActiveWall
+                                            ? Theme.withAlpha(Theme.green, 0.6)
+                                            : Theme.withAlpha(Theme.selection, 0.6)))
+                                    : "transparent"
+                                border.width: Appearance.wallpaperSwitcherCardBorder ? (wallCardItem.isSelected ? 2 : 1) : 0
                                 Behavior on border.color { ColorAnimation { duration: 160 } }
                             }
 

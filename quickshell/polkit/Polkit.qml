@@ -261,8 +261,8 @@ Item {
             anchors.centerIn: parent
             anchors.horizontalCenterOffset: root.shakeOffset
             color: Theme.withAlpha(Theme.background, Theme.elevatedOpacity)
-            border.color: root.errorFlash ? Theme.red : (passwordInput.activeFocus ? Theme.accent : Theme.selection)
-            border.width: Appearance.borderWidthThin
+            border.color: "transparent"
+            border.width: Appearance.borderWidthNone
 
             // Consume clicks inside card so scrim doesn't trigger
             MouseArea {
@@ -346,8 +346,12 @@ Item {
                     height: 44
                     radius: Appearance.radiusMedium
                     color: Theme.withAlpha(Theme.darker_background, Theme.layerOpacity)
-                    border.color: root.errorFlash ? Theme.red : (passwordInput.activeFocus ? Theme.accent : Theme.selection)
-                    border.width: Appearance.borderWidthThin
+                    border.color: Appearance.polkitInputBorder
+                        ? (root.errorFlash ? Theme.red : (passwordInput.activeFocus ? Theme.accent : Theme.selection))
+                        : (root.errorFlash ? Theme.red : "transparent")
+                    border.width: (Appearance.polkitInputBorder || root.errorFlash)
+                        ? Appearance.borderWidthThin
+                        : Appearance.borderWidthNone
 
                     RowLayout {
                         anchors.fill: parent

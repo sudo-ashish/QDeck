@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Wayland
 import "../theme"
 import "../components"
 import "../services"
@@ -13,6 +14,18 @@ Item {
     property bool showPasswordInput: false
     property bool showQrView: false
     property int iconSize: Appearance.networkIconSize
+
+    onSelectedSsidChanged: {
+        pwInput.text = ""
+    }
+
+    onShowPasswordInputChanged: {
+        if (root.showPasswordInput) {
+            Qt.callLater(function() {
+                pwInput.forceActiveFocus()
+            })
+        }
+    }
 
     implicitWidth: netButton.implicitWidth
     implicitHeight: netButton.implicitHeight
@@ -45,7 +58,15 @@ Item {
         anchorItem: netButton
         showDefaultHeader: false
         contentWidth: 360
-        contentHeight: root.showQrView ? 420 : 450
+        contentHeight: root.showQrView ? 420 : (root.showPasswordInput ? 525 : 450)
+        keyboardFocus: root.showPasswordInput ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+        onOpenChanged: {
+            if (!open) {
+                root.showPasswordInput = false
+                pwInput.text = ""
+            }
+        }
 
         Column {
             anchors.fill: parent
@@ -390,18 +411,39 @@ Item {
                                 height: 28
                                 radius: Appearance.radiusSmall
                                 color: Theme.dark_background
-                                border.color: Theme.selection
+                                border.color: pwInput.activeFocus ? Theme.accent : Theme.selection
+                                border.width: 1
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.IBeamCursor
+                                    onClicked: pwInput.forceActiveFocus()
+                                }
 
                                 TextInput {
                                     id: pwInput
                                     anchors.fill: parent
-                                    anchors.margins: 6
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    verticalAlignment: TextInput.AlignVCenter
                                     echoMode: TextInput.Password
                                     font.family: Fonts.monoFont
                                     font.pixelSize: 11
                                     color: Theme.foreground
+                                    selectionColor: Theme.selection
+                                    selectedTextColor: Theme.bright_foreground
+                                    cursorVisible: activeFocus
+                                    activeFocusOnPress: true
                                     clip: true
                                     onAccepted: joinBtn.join()
+
+                                    Keys.onPressed: function(event) {
+                                        if (event.key === Qt.Key_Escape) {
+                                            root.showPasswordInput = false
+                                            pwInput.text = ""
+                                            event.accepted = true
+                                        }
+                                    }
                                 }
                             }
 

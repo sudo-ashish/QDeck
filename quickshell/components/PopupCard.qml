@@ -16,6 +16,7 @@ PanelWindow {
     property int contentHeight: 280
     property bool showDefaultHeader: true
     property double lastClearedTime: 0
+    property int keyboardFocus: WlrKeyboardFocus.None
 
     function toggle() {
         if (Date.now() - root.lastClearedTime < 250) {
@@ -35,7 +36,7 @@ PanelWindow {
 
     WlrLayershell.namespace: "quickshell-surface"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: root.open ? root.keyboardFocus : WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
 
     HyprlandFocusGrab {

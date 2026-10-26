@@ -13,8 +13,29 @@ QtObject {
     property int barSectionSpacing: 8
     property int barButtonHeight: barHeight - 4
 
-    // Bar border toggle (off by default)
+    // =========================================================================
+    // Border Toggles (off by default)
+    // =========================================================================
+    // Bar border toggle
     property bool barBorder: false
+
+    // Polkit password input border toggle (off by default)
+    property bool polkitInputBorder: false
+    property alias polkitBorder: root.polkitInputBorder
+
+    // PowerMenu power switch / action buttons border toggle (off by default)
+    property bool powerMenuSwitchBorder: false
+    property alias powerMenuPowerSwitchBorder: root.powerMenuSwitchBorder
+    property alias powerSwitchBorder: root.powerMenuSwitchBorder
+
+    // Theme Switcher individual theme card border toggle (off by default)
+    property bool themeSwitcherCardBorder: false
+    property alias themeCardBorder: root.themeSwitcherCardBorder
+    property alias themeSwitcherThemeBorder: root.themeSwitcherCardBorder
+
+    // Wallpaper Switcher card border toggle (off by default)
+    property bool wallpaperSwitcherCardBorder: false
+    property alias wallpaperCardBorder: root.wallpaperSwitcherCardBorder
 
     // Bar widget display options
     property bool batteryShowPercentage: false
@@ -178,7 +199,7 @@ QtObject {
     // =========================================================================
     // Opacity & Transparency Tokens
     // =========================================================================
-    property real baseOpacity: 0.82
+    property real baseOpacity: 0.62
     property real elevatedOpacity: 0.88
     property real layerOpacity: 0.28
     property real scrimOpacity: 0.35
