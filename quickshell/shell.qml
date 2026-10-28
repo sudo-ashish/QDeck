@@ -10,6 +10,7 @@ import "notifications"
 import "components"
 import "polkit"
 import "powermenu"
+import "theme"
 
 ShellRoot {
     id: root
@@ -24,6 +25,29 @@ ShellRoot {
     property PowerService powerService: PowerService { }
     property ThemeSwitcherService themeSwitcherService: ThemeSwitcherService { }
     property WallpaperSwitcherService wallpaperSwitcherService: WallpaperSwitcherService { }
+
+    IpcHandler {
+        target: "bar"
+
+        function toggle(): string {
+            Appearance.barVisible = !Appearance.barVisible
+            return Appearance.barVisible ? "visible" : "hidden"
+        }
+
+        function hide(): string {
+            Appearance.barVisible = false
+            return "hidden"
+        }
+
+        function show(): string {
+            Appearance.barVisible = true
+            return "visible"
+        }
+
+        function isVisible(): string {
+            return Appearance.barVisible ? "true" : "false"
+        }
+    }
 
     IpcHandler {
         target: "powerconfirm"

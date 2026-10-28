@@ -40,7 +40,7 @@ Control Center & Widgets:
   qdeck powermenu [action]       Toggle power & session menu
   qdeck wallpaper [action]       Toggle wallpaper picker or switch wallpaper
   qdeck theme [action]           Toggle theme switcher or switch active theme
-  qdeck bar [mode|next|list]     Switch top bar layout (floating, islands, wide, compact)
+  qdeck bar [action|mode]        Toggle, hide, show, or switch layout (floating, islands, wide, compact)
   qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
   qdeck text-size [size]         Get or adjust system and shell font size
 

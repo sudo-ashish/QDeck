@@ -58,6 +58,19 @@ Item {
         // Remove any existing toast with the same originalId
         removePopupsByOriginalId(snapshot.originalId)
 
+        // Replace existing notification if same app and summary to avoid pileup
+        for (var p = popupModel.count - 1; p >= 0; p--) {
+            var existing = popupModel.get(p)
+            if (existing && existing.app === snapshot.app && existing.summary === snapshot.summary) {
+                root.dismissPopup(p)
+            }
+        }
+
+        // Limit maximum concurrent visible toasts
+        while (popupModel.count >= 4) {
+            root.dismissPopup(popupModel.count - 1)
+        }
+
         // Add new notification to top of list
         snapshot.remainingLifetime = 1.0
         popupModel.insert(0, snapshot)
@@ -432,10 +445,9 @@ Item {
 
             ColumnLayout {
                 id: popupColumn
-                anchors.right: parent.right
+                anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top
                 anchors.topMargin: Appearance.notificationTopMargin
-                anchors.rightMargin: Appearance.notificationRightMargin
                 spacing: Appearance.notificationSpacing
 
                 Repeater {
@@ -458,14 +470,14 @@ Item {
                         required property real remainingLifetime
 
                         Layout.preferredWidth: card.implicitWidth
-                        Layout.alignment: Qt.AlignRight
+                        Layout.alignment: Qt.AlignHCenter
                         implicitHeight: card.implicitHeight
 
                         readonly property real lifetime: root.durationFor(cardSlot.urgency, cardSlot.expireTimeout)
 
                         NotificationCard {
                             id: card
-                            anchors.right: parent.right
+                            anchors.horizontalCenter: parent.horizontalCenter
                             app: cardSlot.app
                             appIcon: cardSlot.appIcon
                             summary: cardSlot.summary

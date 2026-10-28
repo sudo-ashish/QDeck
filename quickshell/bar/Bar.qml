@@ -10,6 +10,8 @@ import "../components"
 PanelWindow {
     id: root
 
+    visible: Appearance.barVisible
+
     required property WorkspacesService workspacesService
     required property AudioService audioService
     required property BrightnessService brightnessService
@@ -32,6 +34,21 @@ PanelWindow {
                 root.barMode = raw
             } else {
                 root.barMode = "floating"
+            }
+        }
+    }
+
+    // Configuration file watcher for bar visibility
+    property FileView barVisibilityFile: FileView {
+        path: Quickshell.env("HOME") + "/.config/quickshell/bar-visibility"
+        watchChanges: true
+        printErrors: false
+        onLoaded: {
+            var raw = String(text() || "").trim().toLowerCase()
+            if (raw === "hidden" || raw === "false" || raw === "hide" || raw === "off") {
+                Appearance.barVisible = false
+            } else if (raw === "visible" || raw === "true" || raw === "show" || raw === "on") {
+                Appearance.barVisible = true
             }
         }
     }
@@ -227,6 +244,25 @@ PanelWindow {
 
         function getMode(): string {
             return root.barMode
+        }
+
+        function toggleBar(): string {
+            Appearance.barVisible = !Appearance.barVisible
+            return Appearance.barVisible ? "visible" : "hidden"
+        }
+
+        function hideBar(): string {
+            Appearance.barVisible = false
+            return "hidden"
+        }
+
+        function showBar(): string {
+            Appearance.barVisible = true
+            return "visible"
+        }
+
+        function isBarVisible(): string {
+            return Appearance.barVisible ? "true" : "false"
         }
     }
 }

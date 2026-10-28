@@ -12,6 +12,7 @@ QtObject {
     property int barSpacing: 4
     property int barSectionSpacing: 8
     property int barButtonHeight: barHeight - 4
+    property bool barVisible: true
 
     // =========================================================================
     // Border Toggles (off by default)
@@ -158,7 +159,7 @@ QtObject {
     property int notificationWidth: 380
     property int notificationRadius: root.radiusLarge
     property int notificationRightMargin: 16
-    property int notificationTopMargin: root.barHeight + 12
+    property int notificationTopMargin: (root.barVisible ? root.barHeight : 0) + 12
     property int notificationSpacing: 8
     property int notificationUrgencyStripWidth: 4
 

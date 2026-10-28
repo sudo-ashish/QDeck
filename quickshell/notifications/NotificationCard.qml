@@ -62,17 +62,6 @@ Rectangle {
 
     HoverHandler { id: hoverTracker }
 
-    // Left accent strip indicating urgency
-    Rectangle {
-        id: urgencyStrip
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        width: Appearance.notificationUrgencyStripWidth
-        color: root.accentColor
-        radius: Appearance.radiusXs
-    }
-
     // Main clickable surface
     MouseArea {
         anchors.fill: parent
@@ -93,7 +82,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.topMargin: Appearance.spacingLarge
-        anchors.leftMargin: Appearance.spacingXl
+        anchors.leftMargin: Appearance.spacingLarge + 2
         anchors.rightMargin: Appearance.spacingLarge + 2
         spacing: Appearance.spacingMedium
 
@@ -235,18 +224,5 @@ Rectangle {
         }
     }
 
-    // Bottom subtle lifetime progress bar
-    Rectangle {
-        id: progressBar
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        height: Appearance.borderWidthMedium
-        visible: root.hasTimeout
-        color: root.accentColor
-        width: parent.width * Math.max(0.0, Math.min(1.0, root.progress))
 
-        Behavior on width {
-            NumberAnimation { duration: 50 }
-        }
-    }
 }

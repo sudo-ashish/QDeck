@@ -90,4 +90,4 @@ hl.bind("SUPER + CTRL + RIGHT", hl.dsp.group.next())
 hl.bind("SUPER + ALT + mouse_down", hl.dsp.group.next())
 hl.bind("SUPER + ALT + mouse_up", hl.dsp.group.prev())
 
-hl.bind("CTRL + SHIFT + W", hl.dsp.exec_cmd("killall -SIGUSR1 waybar"))
+hl.bind("CTRL + SHIFT + W", hl.dsp.exec_cmd("qdeck bar toggle"))
