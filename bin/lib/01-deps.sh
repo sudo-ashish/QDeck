@@ -31,6 +31,9 @@ CORE_PACKAGES=(
   libnotify
   nautilus
   wl-clipboard
+  imv
+  pinta 
+  nwg-look
 
   # Terminal, shell & monitor
   kitty
