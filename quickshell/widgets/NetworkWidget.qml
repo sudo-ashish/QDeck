@@ -37,6 +37,7 @@ Item {
         icon: root.service.icon
         iconSize: root.iconSize
         accentActive: root.service.wifiEnabled && root.service.currentSsid !== ""
+        customColor: !root.service.wifiEnabled ? Theme.muted : ""
         active: netPopup.open
         onClicked: {
             root.toggle()
@@ -52,7 +53,7 @@ Item {
         anchorItem: netButton
         showDefaultHeader: false
         contentWidth: 360
-        contentHeight: !root.service.wifiEnabled ? 130 : (root.showQrView ? 420 : (root.showPasswordInput ? 530 : 470))
+        contentHeight: !root.service.wifiEnabled ? 110 : (root.showQrView ? 420 : (root.showPasswordInput ? 530 : 470))
         keyboardFocus: root.showPasswordInput ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
         Binding {
@@ -97,10 +98,11 @@ Item {
                     spacing: 10
 
                     Text {
-                        text: root.service.icon
-                        font.family: Icons.effectiveFont(root.service.icon)
-                        font.pixelSize: 26
-                        color: Theme.foreground
+                        text: !root.service.wifiEnabled ? Icons.wifiOff : root.service.icon
+                        font.family: Icons.effectiveFont(text)
+                        font.pixelSize: 24
+                        color: !root.service.wifiEnabled ? Theme.muted : Theme.foreground
+                        opacity: !root.service.wifiEnabled ? 0.6 : 1.0
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
@@ -110,7 +112,7 @@ Item {
 
                         Text {
                             text: {
-                                if (!root.service.wifiEnabled) return "Wi-Fi Off"
+                                if (!root.service.wifiEnabled) return "Wi-Fi"
                                 if (root.service.connectingSsid) return root.service.connectingSsid
                                 return root.service.currentSsid || "Not Connected"
                             }
@@ -124,7 +126,7 @@ Item {
 
                         Text {
                             text: {
-                                if (!root.service.wifiEnabled) return "DISABLED"
+                                if (!root.service.wifiEnabled) return "TURNED OFF"
                                 if (root.service.connectingSsid) return "CONNECTING..."
                                 if (root.service.currentSsid) return root.service.connectionPhrase
                                 return "DISCONNECTED"
@@ -222,6 +224,7 @@ Item {
 
                     // QR Code Button
                     Rectangle {
+                        visible: root.service.wifiEnabled && root.service.currentSsid !== "" && !root.showQrView
                         width: 28
                         height: 28
                         radius: Appearance.radiusSmall
@@ -368,41 +371,26 @@ Item {
                 }
             }
 
-            // ================= MAIN NETWORK CONTENT =================
+            // ================= 2. WI-FI TURNED OFF MESSAGE =================
+            Item {
+                visible: !root.service.wifiEnabled && !root.showQrView
+                width: parent.width
+                height: 44
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Turn Wi-Fi on to search networks"
+                    font.family: Fonts.uiFont
+                    font.pixelSize: 11
+                    color: Theme.muted
+                }
+            }
+
+            // ================= 3. MAIN NETWORK CONTENT =================
             Column {
-                visible: !root.showQrView
+                visible: root.service.wifiEnabled && !root.showQrView
                 width: parent.width
                 spacing: 12
-
-                // --- Wi-Fi Disabled Banner ---
-                Rectangle {
-                    visible: !root.service.wifiEnabled
-                    width: parent.width
-                    height: 48
-                    radius: Appearance.radiusSmall
-                    color: Theme.dark_background
-
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: 8
-
-                        Text {
-                            text: "󰤭"
-                            font.family: Icons.effectiveFont("󰤭")
-                            font.pixelSize: 16
-                            color: Theme.muted
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            text: "Wi-Fi is turned off"
-                            font.family: Fonts.uiFont
-                            font.pixelSize: 11
-                            color: Theme.muted
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                }
 
                 // --- 2. DNS PROVIDER Section (Segmented Buttons) ---
                 Column {

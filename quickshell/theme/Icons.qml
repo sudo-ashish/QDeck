@@ -153,8 +153,9 @@ QtObject {
     // Dynamic network status icon helper
     function network(connectionType, wifiEnabled, currentSsid, signalStrength) {
         var isMat = root.useMaterialSymbols || (typeof root.wifi === "string" && root.wifi.length > 0 && root.wifi.charCodeAt(0) < 128)
+        if (!wifiEnabled) return isMat ? (root.wifiOff && root.wifiOff.charCodeAt(0) < 128 ? root.wifiOff : "wifi_off") : root.wifiOff
         if (connectionType === "ethernet") return isMat ? "lan" : root.ethernet
-        if (!wifiEnabled || !currentSsid) return isMat ? (root.wifiOff && root.wifiOff.charCodeAt(0) < 128 ? root.wifiOff : "wifi_off") : root.wifiOff
+        if (!currentSsid) return isMat ? (root.wifiOff && root.wifiOff.charCodeAt(0) < 128 ? root.wifiOff : "wifi_off") : root.wifiOff
         return root.wifiSignal(signalStrength)
     }
 

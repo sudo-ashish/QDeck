@@ -26,7 +26,7 @@ if [[ -n "$iface" && -r "/sys/class/net/$iface/statistics/rx_bytes" ]]; then
 fi
 
 # Connection Type & WiFi Details
-conn_type="ethernet"
+conn_type="none"
 ssid=""
 signal_dbm=""
 if [[ -n "$iface" && -d "/sys/class/net/$iface/wireless" ]] || (command -v nmcli >/dev/null 2>&1 && nmcli -t -f DEVICE,TYPE device 2>/dev/null | grep -q "^$iface:wifi"); then
@@ -38,6 +38,15 @@ if [[ -n "$iface" && -d "/sys/class/net/$iface/wireless" ]] || (command -v nmcli
     if [[ -n "$sig_pct" ]]; then
       signal_dbm=$(( (sig_pct / 2) - 100 ))
     fi
+  fi
+elif [[ -n "$iface" && -n "$ip_addr" ]]; then
+  conn_type="ethernet"
+else
+  # Default to wifi type if machine has wireless device
+  if [[ -d "/sys/class/net/wlo1" || -d "/sys/class/net/wlan0" ]] || (command -v nmcli >/dev/null 2>&1 && nmcli -t -f TYPE device 2>/dev/null | grep -q "^wifi"); then
+    conn_type="wifi"
+  else
+    conn_type="ethernet"
   fi
 fi
 
