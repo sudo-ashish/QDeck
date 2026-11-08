@@ -101,6 +101,7 @@ PanelWindow {
     // Navigation & View Switching Helpers
     // ─────────────────────────────────────────────────────────────────────────
     function openApps(initialQuery) {
+        var wasOpen = root.isOpen
         closeAnim.stop()
         root.loadHistory()
         root.loadApps()
@@ -109,27 +110,30 @@ PanelWindow {
         root.filterItems()
         listView.currentIndex = 0
         root.isOpen = true
-        openAnim.restart()
+        if (!wasOpen) {
+            openAnim.restart()
+        }
         Qt.callLater(function() {
             searchInput.forceActiveFocus()
         })
     }
 
     function openPower() {
+        var wasOpen = root.isOpen
         closeAnim.stop()
-        openAnim.stop()
-        root.animProgress = 1.0
         root.currentView = "power"
         root.powerIndex = 0
         if (root.powerService) root.powerService.powerMenuOpen = true
         root.isOpen = true
+        if (!wasOpen) {
+            openAnim.restart()
+        }
         Qt.callLater(function() { keyCatcher.forceActiveFocus() })
     }
 
     function openTheme() {
+        var wasOpen = root.isOpen
         closeAnim.stop()
-        openAnim.stop()
-        root.animProgress = 1.0
         if (root.themeService) {
             root.themeService.refresh()
             root.themeService.isOpen = true
@@ -139,6 +143,9 @@ PanelWindow {
             ? root.themeService.middleIndex
             : Math.floor(root.themesCount / 2)
         root.isOpen = true
+        if (!wasOpen) {
+            openAnim.restart()
+        }
         Qt.callLater(function() {
             keyCatcher.forceActiveFocus()
             if (themesList) themesList.positionViewAtIndex(root.themeIndex, ListView.Center)
@@ -146,9 +153,8 @@ PanelWindow {
     }
 
     function openWallpaper() {
+        var wasOpen = root.isOpen
         closeAnim.stop()
-        openAnim.stop()
-        root.animProgress = 1.0
         if (root.wallpaperService) {
             root.wallpaperService.refresh()
             root.wallpaperService.isOpen = true
@@ -158,6 +164,9 @@ PanelWindow {
             ? root.wallpaperService.middleIndex
             : Math.floor(root.wallpapersCount / 2)
         root.isOpen = true
+        if (!wasOpen) {
+            openAnim.restart()
+        }
         Qt.callLater(function() {
             keyCatcher.forceActiveFocus()
             if (wallpapersList) wallpapersList.positionViewAtIndex(root.wallpaperIndex, ListView.Center)
@@ -167,15 +176,6 @@ PanelWindow {
     function close() {
         if (!root.isOpen && !openAnim.running) return
         openAnim.stop()
-        if (root.currentView !== "apps") {
-            root.isOpen = false
-            root.animProgress = 0.0
-            if (root.powerService) root.powerService.powerMenuOpen = false
-            if (root.themeService) root.themeService.isOpen = false
-            if (root.wallpaperService) root.wallpaperService.isOpen = false
-            root.currentView = "apps"
-            return
-        }
         root.isOpen = false
         closeAnim.restart()
     }
@@ -673,6 +673,7 @@ PanelWindow {
 
         // Material Design 3 (M3) Container Transform: synchronized dimensions morph
         Behavior on width {
+            enabled: root.viewTransitionsEnabled
             NumberAnimation {
                 duration: Motion.containerTransformDuration
                 easing.type: Easing.BezierSpline
@@ -680,6 +681,7 @@ PanelWindow {
             }
         }
         Behavior on height {
+            enabled: root.viewTransitionsEnabled
             NumberAnimation {
                 duration: Motion.containerTransformDuration
                 easing.type: Easing.BezierSpline
@@ -694,12 +696,10 @@ PanelWindow {
 
         // M3 Shared Axis Y (Translate) + Z (Scale)
         transform: Translate {
-            y: (root.currentView === "apps") ? ((1.0 - root.animProgress) * (launcherCard.height + 64)) : 0
+            y: (1.0 - root.animProgress) * (launcherCard.height + 64)
         }
-        opacity: (root.currentView === "apps") ? Math.min(1.0, root.animProgress * 1.5) : 1.0
-        scale: (root.currentView === "apps")
-            ? (Motion.enterZScaleStart + (1.0 - Motion.enterZScaleStart) * Math.max(0, Math.min(1.0, root.animProgress)))
-            : 1.0
+        opacity: Math.min(1.0, root.animProgress * 1.5)
+        scale: Motion.enterZScaleStart + (1.0 - Motion.enterZScaleStart) * Math.max(0, Math.min(1.0, root.animProgress))
 
         MouseArea {
             anchors.fill: parent
