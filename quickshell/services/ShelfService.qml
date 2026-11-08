@@ -71,6 +71,31 @@ QtObject {
         return "folder"
     }
 
+    function resolveFastXdgIcon(cleanPath, filename, isImg) {
+        if (isImg) return "image-x-generic"
+        var lower = (filename || "").toLowerCase()
+        var dotIdx = lower.lastIndexOf(".")
+        var ext = (dotIdx !== -1) ? lower.slice(dotIdx + 1) : ""
+
+        if (["png", "jpg", "jpeg", "webp", "gif", "svg", "avif", "bmp", "ico", "tiff"].indexOf(ext) !== -1) return "image-x-generic"
+        if (["mp4", "mkv", "webm", "avi", "mov", "flv", "wmv", "m4v"].indexOf(ext) !== -1) return "video-x-generic"
+        if (["mp3", "flac", "wav", "ogg", "m4a", "opus", "aac", "wma"].indexOf(ext) !== -1) return "audio-x-generic"
+        if (["zip", "tar", "gz", "bz2", "xz", "7z", "rar", "zst", "tgz", "tbz2"].indexOf(ext) !== -1) return "package-x-generic"
+        if (ext === "pdf") return "application-pdf"
+        if (["md", "markdown"].indexOf(ext) !== -1) return "text-markdown"
+        if (["doc", "docx", "odt", "rtf", "pages"].indexOf(ext) !== -1) return "x-office-document"
+        if (["xls", "xlsx", "ods", "csv"].indexOf(ext) !== -1) return "x-office-spreadsheet"
+        if (["ppt", "pptx", "odp", "key"].indexOf(ext) !== -1) return "x-office-presentation"
+        if (["sh", "bash", "zsh", "fish"].indexOf(ext) !== -1) return "text-x-script"
+        if (["html", "htm"].indexOf(ext) !== -1) return "text-html"
+        if (["py", "js", "ts", "jsx", "tsx", "qml", "json", "toml", "yaml", "yml", "c", "cpp", "h", "hpp", "rs", "go", "java", "lua", "php", "css", "scss"].indexOf(ext) !== -1) return "text-x-script"
+        if (["txt", "conf", "config", "ini", "log"].indexOf(ext) !== -1) return "text-x-generic"
+        if (["iso", "img", "bin", "deb", "rpm", "pkg"].indexOf(ext) !== -1) return "package-x-generic"
+        if (["makefile", "dockerfile", "gemfile", "vagrantfile"].indexOf(lower) !== -1) return "text-x-script"
+        if (!ext || (cleanPath && cleanPath.endsWith("/"))) return "folder"
+        return "text-x-generic"
+    }
+
     function resolveFileIcon(cleanPath, filename) {
         var ext = ""
         var dotIdx = filename.lastIndexOf(".")
@@ -86,6 +111,85 @@ QtObject {
         if (["txt", "md", "doc", "docx", "odt", "rtf", "conf", "log"].indexOf(ext) !== -1) return "description"
         if (cleanPath && (cleanPath.indexOf("/bin/") !== -1 || ["makefile", "dockerfile", "gemfile", "vagrantfile"].indexOf(filename.toLowerCase()) !== -1)) return Icons.terminal
         return Icons.folder
+    }
+
+    // Async GIO process for querying native XDG MIME icons matching Nautilus
+    property var pendingGioQueue: []
+
+    property Process gioProc: Process {
+        id: gioProc
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                var raw = text.trim()
+                if (raw) {
+                    var blocks = raw.split("uri: ")
+                    for (var b = 0; b < blocks.length; b++) {
+                        var blk = blocks[b].trim()
+                        if (!blk) continue
+                        var firstLine = blk.split("\n")[0].trim()
+                        var m = blk.match(/standard::icon:\s*([^\n]+)/)
+                        if (m && m[1]) {
+                            var cands = m[1].split(",")
+                            var chosen = ""
+                            for (var c = 0; c < cands.length; c++) {
+                                var cand = cands[c].trim()
+                                if (cand.indexOf("-symbolic") === -1 && cand.length > 0) {
+                                    chosen = cand
+                                    break
+                                }
+                            }
+                            if (!chosen && cands.length > 0) {
+                                chosen = cands[0].trim().replace(/-symbolic$/, "")
+                            }
+                            if (chosen === "inode-directory") chosen = "folder"
+                            if (chosen) {
+                                for (var i = 0; i < root.items.count; i++) {
+                                    var it = root.items.get(i)
+                                    if (it.filePath === firstLine || it.filePath === ("file://" + firstLine)) {
+                                        root.items.setProperty(i, "iconName", chosen)
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (root.pendingGioQueue.length > 0) {
+                    var nextBatch = root.pendingGioQueue.slice()
+                    root.pendingGioQueue = []
+                    root.executeGioQuery(nextBatch)
+                }
+            }
+        }
+    }
+
+    function queueGioQuery(uris) {
+        if (!uris || uris.length === 0) return
+        if (gioProc.running) {
+            for (var i = 0; i < uris.length; i++) {
+                if (root.pendingGioQueue.indexOf(uris[i]) === -1) {
+                    root.pendingGioQueue.push(uris[i])
+                }
+            }
+        } else {
+            root.executeGioQuery(uris)
+        }
+    }
+
+    function executeGioQuery(uris) {
+        if (!uris || uris.length === 0) return
+        var paths = []
+        for (var i = 0; i < uris.length; i++) {
+            var p = decodeURIComponent(uris[i].replace(/^file:\/\//, ""))
+            if (p && paths.indexOf(p) === -1) {
+                paths.push(p)
+            }
+        }
+        if (paths.length === 0) return
+        gioProc.command = ["gio", "info", "-a", "standard::icon"].concat(paths)
+        gioProc.running = true
     }
 
     function hasUrl(cleanUrl) {
@@ -104,31 +208,57 @@ QtObject {
         var name = unquoted.split("/").pop() || unquoted
         var isImg = root.isImageFile(name)
         var icon = root.resolveFileIcon(cleanUrl, name)
+        var iconName = root.resolveFastXdgIcon(cleanUrl, name, isImg)
         var category = root.resolveFileCategory(cleanUrl, name)
 
         items.append({
             filePath: cleanUrl,
             fileName: name,
             isImage: isImg,
+            iconName: iconName,
             fileIcon: icon,
             fileCategory: category,
             selected: false
         })
         root.updateSelectedCount()
+        root.queueGioQuery([cleanUrl])
         return true
     }
 
     function addUrls(urlList) {
         if (!urlList) return false
         var addedAny = false
+        var addedUris = []
         for (var i = 0; i < urlList.length; i++) {
             var item = urlList[i]
             var urlStr = (item && item.toString) ? item.toString() : String(item || "")
             if (urlStr.trim().length > 0) {
-                if (root.addUrl(urlStr)) {
+                var cleanUrl = root.normalizeUrl(urlStr)
+                if (cleanUrl && !root.hasUrl(cleanUrl)) {
+                    var unquoted = decodeURIComponent(cleanUrl.replace(/^file:\/\//, ""))
+                    var name = unquoted.split("/").pop() || unquoted
+                    var isImg = root.isImageFile(name)
+                    var icon = root.resolveFileIcon(cleanUrl, name)
+                    var iconName = root.resolveFastXdgIcon(cleanUrl, name, isImg)
+                    var category = root.resolveFileCategory(cleanUrl, name)
+
+                    items.append({
+                        filePath: cleanUrl,
+                        fileName: name,
+                        isImage: isImg,
+                        iconName: iconName,
+                        fileIcon: icon,
+                        fileCategory: category,
+                        selected: false
+                    })
+                    addedUris.push(cleanUrl)
                     addedAny = true
                 }
             }
+        }
+        if (addedAny) {
+            root.updateSelectedCount()
+            root.queueGioQuery(addedUris)
         }
         return addedAny
     }
@@ -248,6 +378,7 @@ QtObject {
                     filePath: it.filePath,
                     fileName: it.fileName,
                     isImage: it.isImage,
+                    iconName: it.iconName || root.resolveFastXdgIcon(it.filePath, it.fileName, it.isImage),
                     fileIcon: it.fileIcon,
                     fileCategory: it.fileCategory || "folder"
                 })
@@ -276,6 +407,7 @@ QtObject {
                 filePath: it.filePath,
                 fileName: it.fileName,
                 isImage: it.isImage,
+                iconName: it.iconName || root.resolveFastXdgIcon(it.filePath, it.fileName, it.isImage),
                 fileIcon: it.fileIcon,
                 fileCategory: it.fileCategory || "folder"
             })

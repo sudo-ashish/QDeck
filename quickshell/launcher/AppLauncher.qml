@@ -529,7 +529,7 @@ PanelWindow {
                 root.openWallpaper()
                 return
             } else if (item.id === "act-shelf") {
-                if (root.shelfService) root.shelfService.toggle()
+                root.openShelf()
                 return
             } else if (item.cmd) {
                 Quickshell.execDetached(["bash", "-c", item.cmd])

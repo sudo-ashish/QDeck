@@ -20,6 +20,7 @@ fi
 
 export PATH="$HOME/.local/bin:$BIN_DIR:$PATH"
 export QS_CONFIG_PATH="$QS_DIR"
+export QS_ICON_THEME="${QS_ICON_THEME:-$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'" || echo Adwaita)}"
 
 usage() {
   cat <<'EOF'

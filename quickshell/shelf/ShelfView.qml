@@ -17,19 +17,8 @@ Item {
     property string dragBadgeImageSource: ""
     property string badgeThumb: ""
     property bool badgeIsImage: false
-    property string badgeIcon: Icons.folder
-    property color badgeColor: Theme.accent
+    property string badgeIconName: "folder"
     property int badgeCount: 1
-
-    function categoryColor(cat) {
-        if (cat === "code") return Theme.orange
-        if (cat === "document") return Theme.cyan
-        if (cat === "archive") return Theme.yellow
-        if (cat === "video" || cat === "audio") return Theme.magenta
-        if (cat === "pdf") return Theme.urgent
-        if (cat === "image") return Theme.cyan
-        return Theme.accent
-    }
 
     function getDragUris(index) {
         if (!shelfService || index < 0 || index >= shelfService.items.count) return []
@@ -51,8 +40,7 @@ Item {
 
         root.badgeThumb = item.isImage ? item.filePath : ""
         root.badgeIsImage = item.isImage
-        root.badgeIcon = item.fileIcon || Icons.folder
-        root.badgeColor = root.categoryColor(item.fileCategory)
+        root.badgeIconName = item.iconName || "folder"
         root.badgeCount = count
 
         Qt.callLater(function() {
@@ -103,8 +91,8 @@ Item {
     // ─────────────────────────────────────────────────────────────────────────
     Item {
         id: dragBadgeProxy
-        x: -300
-        y: -300
+        x: -400
+        y: -400
         width: 80
         height: 80
         visible: true
@@ -181,14 +169,15 @@ Item {
                 visible: !root.badgeIsImage || root.badgeThumb === ""
                 anchors.fill: parent
                 radius: 10
-                color: Theme.withAlpha(root.badgeColor, 0.22)
+                color: Qt.rgba(1, 1, 1, 0.04)
 
-                Text {
+                Image {
                     anchors.centerIn: parent
-                    text: root.badgeIcon
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: 26
-                    color: root.badgeColor
+                    source: Quickshell.iconPath(root.badgeIconName || "folder", "text-x-generic")
+                    sourceSize: Qt.size(64, 64)
+                    width: 32
+                    height: 32
+                    fillMode: Image.PreserveAspectFit
                 }
             }
         }
@@ -249,9 +238,7 @@ Item {
                 }
             }
             if (urls.length > 0 && root.shelfService) {
-                for (var k = 0; k < urls.length; k++) {
-                    root.shelfService.addUrl(urls[k])
-                }
+                root.shelfService.addUrls(urls)
                 drop.acceptProposedAction()
             }
         }
@@ -260,49 +247,81 @@ Item {
     readonly property bool hasSelection: root.shelfService ? root.shelfService.selectedCount > 0 : false
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Shelf Action Bar (Selection Pills & Batch Actions)
+    // Consolidated Single Top Header
     // ─────────────────────────────────────────────────────────────────────────
     RowLayout {
-        id: shelfActionRow
+        id: shelfHeader
         anchors {
             top: parent.top
             left: parent.left
             right: parent.right
-            topMargin: 4
+            topMargin: 2
             leftMargin: 4
             rightMargin: 4
         }
-        height: 26
+        height: 28
         spacing: 8
 
-        // Selection Pill or Info Hint on Left
+        // Left Side: Title & Dynamic Count / Selection Pill
         Row {
-            visible: root.hasSelection
-            spacing: 6
             Layout.alignment: Qt.AlignVCenter
+            spacing: 8
 
+            Text {
+                text: "Staging Shelf"
+                font.family: root.fontFamily
+                font.pixelSize: 13
+                font.weight: Fonts.weightBold
+                color: Theme.foreground
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            // Idle State: Compact item count badge pill
             Rectangle {
-                width: selBadgeRow.implicitWidth + 14
+                visible: !root.hasSelection && (root.shelfService ? root.shelfService.count > 0 : false)
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(22, countText.implicitWidth + 10)
+                height: 20
+                radius: 10
+                color: Theme.withAlpha(Theme.lighter_background, 0.40)
+
+                Text {
+                    id: countText
+                    anchors.centerIn: parent
+                    text: root.shelfService ? String(root.shelfService.count) : "0"
+                    font.family: root.fontFamily
+                    font.pixelSize: 10
+                    font.weight: Fonts.weightBold
+                    color: Theme.muted
+                }
+            }
+
+            // Selection State: Accent pill badge "3 / 4 selected"
+            Rectangle {
+                visible: root.hasSelection
+                anchors.verticalCenter: parent.verticalCenter
+                width: selCountRow.implicitWidth + 14
                 height: 22
                 radius: 11
                 color: Theme.withAlpha(Theme.accent, 0.22)
-                border.width: 0
+                border.color: Theme.withAlpha(Theme.accent, 0.50)
+                border.width: 1
 
                 Row {
-                    id: selBadgeRow
+                    id: selCountRow
                     anchors.centerIn: parent
                     spacing: 5
 
                     Text {
                         text: Icons.check || "✓"
                         font.family: Icons.effectiveFont(text)
-                        font.pixelSize: 11
+                        font.pixelSize: 10
                         color: Theme.accent
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
                     Text {
-                        text: (root.shelfService ? root.shelfService.selectedCount : 0) + " selected"
+                        text: (root.shelfService ? root.shelfService.selectedCount : 0) + " / " + (root.shelfService ? root.shelfService.count : 0) + " selected"
                         font.family: root.fontFamily
                         font.pixelSize: 11
                         font.weight: Fonts.weightBold
@@ -313,244 +332,110 @@ Item {
             }
         }
 
-        Row {
-            visible: !root.hasSelection
-            spacing: 6
-            Layout.alignment: Qt.AlignVCenter
-
-            Text {
-                text: (root.shelfService && root.shelfService.count > 0)
-                    ? (root.shelfService.count + (root.shelfService.count === 1 ? " staged file" : " staged files"))
-                    : "Drag files here to stage"
-                font.family: root.fontFamily
-                font.pixelSize: 11
-                color: Theme.muted
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-
         Item { Layout.fillWidth: true }
 
-        // Normal state: "Select" (Select All)
-        Rectangle {
-            visible: !root.hasSelection && (root.shelfService ? root.shelfService.count > 0 : false)
-            width: selectAllRow.implicitWidth + 14
-            height: 24
-            radius: 12
-            color: selectAllMouse.containsMouse
-                ? Theme.withAlpha(Theme.accent, 0.28)
-                : Theme.withAlpha(Theme.lighter_background, 0.30)
-            border.width: 0
+        // Right Side: Action Pills (Only visible when items exist)
+        Row {
+            visible: root.shelfService ? root.shelfService.count > 0 : false
             Layout.alignment: Qt.AlignVCenter
+            spacing: 6
 
-            Behavior on color { ColorAnimation { duration: 120 } }
+            // Dynamic Selection Toggle: "Select All" vs "Deselect"
+            Rectangle {
+                readonly property bool allSelected: root.shelfService && root.shelfService.count > 0 && root.shelfService.selectedCount === root.shelfService.count
+                width: toggleSelRow.implicitWidth + 16
+                height: 24
+                radius: 12
+                color: toggleSelMouse.containsMouse
+                    ? (allSelected ? Theme.withAlpha(Theme.lighter_background, 0.45) : Theme.withAlpha(Theme.accent, 0.28))
+                    : Theme.withAlpha(Theme.lighter_background, 0.25)
+                border.width: 0
 
-            Row {
-                id: selectAllRow
-                anchors.centerIn: parent
-                spacing: 4
+                Behavior on color { ColorAnimation { duration: 120 } }
 
-                Text {
-                    text: Icons.check || "✓"
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: 10
-                    color: selectAllMouse.containsMouse ? Theme.accent : Theme.muted
-                    anchors.verticalCenter: parent.verticalCenter
+                Row {
+                    id: toggleSelRow
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    Text {
+                        text: parent.parent.allSelected ? "Deselect" : "Select All"
+                        font.family: root.fontFamily
+                        font.pixelSize: 10
+                        font.weight: Fonts.weightMedium
+                        color: toggleSelMouse.containsMouse
+                            ? (parent.parent.allSelected ? Theme.bright_foreground : Theme.accent)
+                            : Theme.muted
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
 
-                Text {
-                    text: "Select"
-                    font.family: root.fontFamily
-                    font.pixelSize: 10
-                    font.weight: Fonts.weightMedium
-                    color: selectAllMouse.containsMouse ? Theme.accent : Theme.muted
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            MouseArea {
-                id: selectAllMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (root.shelfService) root.shelfService.selectAll()
-                }
-            }
-        }
-
-        // Normal state: "Clear"
-        Rectangle {
-            visible: !root.hasSelection && (root.shelfService ? root.shelfService.count > 0 : false)
-            width: clearRow.implicitWidth + 14
-            height: 24
-            radius: 12
-            color: clearMouse.containsMouse
-                ? Theme.withAlpha(Theme.urgent, 0.28)
-                : Theme.withAlpha(Theme.lighter_background, 0.30)
-            border.width: 0
-            Layout.alignment: Qt.AlignVCenter
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Row {
-                id: clearRow
-                anchors.centerIn: parent
-                spacing: 4
-
-                Text {
-                    text: Icons.close
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: 11
-                    color: clearMouse.containsMouse ? Theme.urgent : Theme.muted
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Text {
-                    text: "Clear"
-                    font.family: root.fontFamily
-                    font.pixelSize: 10
-                    font.weight: Fonts.weightMedium
-                    color: clearMouse.containsMouse ? Theme.urgent : Theme.muted
-                    anchors.verticalCenter: parent.verticalCenter
+                MouseArea {
+                    id: toggleSelMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (!root.shelfService) return
+                        if (parent.allSelected) {
+                            root.shelfService.clearSelection()
+                        } else {
+                            root.shelfService.selectAll()
+                        }
+                    }
                 }
             }
 
-            MouseArea {
-                id: clearMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (root.shelfService) root.shelfService.clear()
-                }
-            }
-        }
+            // Destructive Action: "Remove (N)" when items selected, or "Clear" when idle
+            Rectangle {
+                width: destrRow.implicitWidth + 16
+                height: 24
+                radius: 12
+                color: destrMouse.containsMouse
+                    ? Theme.withAlpha(Theme.urgent, 0.35)
+                    : (root.hasSelection ? Theme.withAlpha(Theme.urgent, 0.20) : Theme.withAlpha(Theme.lighter_background, 0.25))
+                border.width: 0
 
-        // Selection state: "All"
-        Rectangle {
-            visible: root.hasSelection && (root.shelfService ? root.shelfService.selectedCount < root.shelfService.count : false)
-            width: selAllInSelRow.implicitWidth + 14
-            height: 24
-            radius: 12
-            color: selAllInSelMouse.containsMouse
-                ? Theme.withAlpha(Theme.accent, 0.28)
-                : Theme.withAlpha(Theme.lighter_background, 0.25)
-            border.width: 0
-            Layout.alignment: Qt.AlignVCenter
+                Behavior on color { ColorAnimation { duration: 120 } }
 
-            Behavior on color { ColorAnimation { duration: 120 } }
+                Row {
+                    id: destrRow
+                    anchors.centerIn: parent
+                    spacing: 4
 
-            Row {
-                id: selAllInSelRow
-                anchors.centerIn: parent
-                spacing: 4
+                    Text {
+                        text: Icons.close
+                        font.family: Icons.effectiveFont(text)
+                        font.pixelSize: 10
+                        color: destrMouse.containsMouse || root.hasSelection ? Theme.urgent : Theme.muted
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
 
-                Text {
-                    text: "All"
-                    font.family: root.fontFamily
-                    font.pixelSize: 10
-                    font.weight: Fonts.weightMedium
-                    color: selAllInSelMouse.containsMouse ? Theme.accent : Theme.muted
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            MouseArea {
-                id: selAllInSelMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (root.shelfService) root.shelfService.selectAll()
-                }
-            }
-        }
-
-        // Selection state: "Deselect"
-        Rectangle {
-            visible: root.hasSelection
-            width: deselectRow.implicitWidth + 14
-            height: 24
-            radius: 12
-            color: deselectMouse.containsMouse
-                ? Theme.withAlpha(Theme.lighter_background, 0.45)
-                : Theme.withAlpha(Theme.lighter_background, 0.25)
-            border.width: 0
-            Layout.alignment: Qt.AlignVCenter
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Row {
-                id: deselectRow
-                anchors.centerIn: parent
-                spacing: 4
-
-                Text {
-                    text: "Deselect"
-                    font.family: root.fontFamily
-                    font.pixelSize: 10
-                    font.weight: Fonts.weightMedium
-                    color: deselectMouse.containsMouse ? Theme.bright_foreground : Theme.muted
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            MouseArea {
-                id: deselectMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (root.shelfService) root.shelfService.clearSelection()
-                }
-            }
-        }
-
-        // Selection state: "Remove"
-        Rectangle {
-            visible: root.hasSelection
-            width: removeSelRow.implicitWidth + 14
-            height: 24
-            radius: 12
-            color: removeSelMouse.containsMouse
-                ? Theme.withAlpha(Theme.urgent, 0.35)
-                : Theme.withAlpha(Theme.urgent, 0.20)
-            border.width: 0
-            Layout.alignment: Qt.AlignVCenter
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Row {
-                id: removeSelRow
-                anchors.centerIn: parent
-                spacing: 4
-
-                Text {
-                    text: Icons.close
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: 11
-                    color: Theme.urgent
-                    anchors.verticalCenter: parent.verticalCenter
+                    Text {
+                        text: root.hasSelection
+                            ? ("Remove (" + (root.shelfService ? root.shelfService.selectedCount : 0) + ")")
+                            : "Clear"
+                        font.family: root.fontFamily
+                        font.pixelSize: 10
+                        font.weight: root.hasSelection ? Fonts.weightBold : Fonts.weightMedium
+                        color: destrMouse.containsMouse || root.hasSelection ? Theme.urgent : Theme.muted
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
 
-                Text {
-                    text: "Remove"
-                    font.family: root.fontFamily
-                    font.pixelSize: 10
-                    font.weight: Fonts.weightBold
-                    color: Theme.urgent
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            MouseArea {
-                id: removeSelMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (root.shelfService) root.shelfService.removeSelected()
+                MouseArea {
+                    id: destrMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (!root.shelfService) return
+                        if (root.hasSelection) {
+                            root.shelfService.removeSelected()
+                        } else {
+                            root.shelfService.clear()
+                        }
+                    }
                 }
             }
         }
@@ -562,12 +447,12 @@ Item {
     ListView {
         id: shelfListView
         anchors {
-            top: shelfActionRow.bottom
-            bottom: footerRow.top
+            top: shelfHeader.bottom
+            bottom: parent.bottom
             left: parent.left
             right: parent.right
-            topMargin: 8
-            bottomMargin: 8
+            topMargin: 6
+            bottomMargin: 6
             leftMargin: 4
             rightMargin: 4
         }
@@ -582,7 +467,7 @@ Item {
             readonly property bool isSelected: !!(delegateRoot.model && delegateRoot.model.selected)
 
             width: ListView.view.width
-            height: 58
+            height: 56
 
             Item {
                 id: dragSensor
@@ -609,16 +494,33 @@ Item {
 
                 Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
+                // Modern tonal background without harsh 1px borders
                 color: delegateRoot.isSelected
-                    ? (dragArea.containsMouse ? Theme.withAlpha(Theme.accent, 0.28) : Theme.withAlpha(Theme.accent, 0.20))
-                    : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.38) : Theme.withAlpha(Theme.dark_background, 0.90))
+                    ? (dragArea.containsMouse ? Theme.withAlpha(Theme.accent, 0.22) : Theme.withAlpha(Theme.accent, 0.14))
+                    : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.35) : Theme.withAlpha(Theme.dark_background, 0.85))
 
-                border.width: delegateRoot.isSelected ? 1 : 0
-                border.color: Theme.accent
+                border.width: 0
 
                 Behavior on color { ColorAnimation { duration: 140 } }
-                Behavior on border.width { NumberAnimation { duration: 140 } }
-                Behavior on border.color { ColorAnimation { duration: 140 } }
+
+                // Soft left accent pill indicator on selection
+                Rectangle {
+                    id: leftAccentPill
+                    anchors {
+                        left: parent.left
+                        verticalCenter: parent.verticalCenter
+                        leftMargin: 3
+                    }
+                    width: 3
+                    height: delegateRoot.isSelected ? 22 : 0
+                    radius: 1.5
+                    color: Theme.accent
+                    visible: height > 0
+                    opacity: delegateRoot.isSelected ? 1.0 : 0.0
+
+                    Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                }
 
                 MouseArea {
                     id: dragArea
@@ -660,7 +562,10 @@ Item {
                     }
                 }
 
-                // Selection Checkbox Target on Left
+                // Progressive Disclosure: Selection Checkbox on Left
+                // Only rendered/visible when hovered OR when shelf has active selection
+                readonly property bool showCheckbox: delegateRoot.isSelected || root.hasSelection || dragArea.containsMouse || selMouse.containsMouse
+
                 Item {
                     id: selIndicatorBox
                     z: 20
@@ -668,22 +573,28 @@ Item {
                         left: parent.left
                         top: parent.top
                         bottom: parent.bottom
+                        leftMargin: 8
                     }
-                    width: 36
+                    width: card.showCheckbox ? 24 : 0
+                    opacity: card.showCheckbox ? 1.0 : 0.0
+                    visible: width > 0
+
+                    Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
                     Rectangle {
                         id: selIndicator
                         anchors.centerIn: parent
-                        width: 20
-                        height: 20
-                        radius: 10
+                        width: 18
+                        height: 18
+                        radius: 9
                         color: delegateRoot.isSelected
                             ? Theme.accent
-                            : (selMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.40) : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.25) : "transparent"))
+                            : (selMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.40) : "transparent")
                         border.color: delegateRoot.isSelected
                             ? Theme.accent
-                            : (selMouse.containsMouse ? Theme.withAlpha(Theme.border, 0.60) : (dragArea.containsMouse ? Theme.withAlpha(Theme.border, 0.40) : Theme.withAlpha(root.categoryColor(delegateRoot.model.fileCategory), 0.6)))
-                        border.width: delegateRoot.isSelected ? 0 : 1
+                            : (selMouse.containsMouse ? Theme.withAlpha(Theme.border, 0.80) : Theme.withAlpha(Theme.border, 0.55))
+                        border.width: delegateRoot.isSelected ? 0 : 1.5
 
                         scale: selMouse.pressed ? 0.88 : (selMouse.containsMouse ? 1.10 : 1.0)
 
@@ -695,7 +606,7 @@ Item {
                             anchors.centerIn: parent
                             text: delegateRoot.isSelected ? (Icons.check || "✓") : ""
                             font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 11
+                            font.pixelSize: 10
                             font.weight: Fonts.weightBold
                             color: Theme.darker_background
                         }
@@ -717,19 +628,31 @@ Item {
                     }
                 }
 
+                // Card Content: Icon, Filename, Path & Remove Button
                 RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 38
-                    anchors.rightMargin: 8
-                    anchors.topMargin: 6
-                    anchors.bottomMargin: 6
-                    spacing: 10
+                    id: contentRow
+                    anchors {
+                        top: parent.top
+                        bottom: parent.bottom
+                        left: parent.left
+                        right: parent.right
+                        rightMargin: 8
+                        topMargin: 5
+                        bottomMargin: 5
+                    }
+                    anchors.leftMargin: card.showCheckbox ? 38 : 12
+                    spacing: 12
 
-                    // Thumbnail / Icon (44x44)
-                    Item {
-                        Layout.preferredWidth: 44
-                        Layout.preferredHeight: 44
+                    Behavior on anchors.leftMargin { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+
+                    // Native File Manager Icon or Thumbnail Container (38x38)
+                    Rectangle {
+                        Layout.preferredWidth: 38
+                        Layout.preferredHeight: 38
                         Layout.alignment: Qt.AlignVCenter
+                        radius: 8
+                        color: Qt.rgba(1, 1, 1, 0.04)
+                        border.width: 0
 
                         Rectangle {
                             id: thumbMask
@@ -740,6 +663,7 @@ Item {
                             visible: false
                         }
 
+                        // Image Thumbnail (when item is an image)
                         Image {
                             id: thumbImg
                             visible: delegateRoot.model.isImage
@@ -757,20 +681,18 @@ Item {
                             }
                         }
 
-                        Rectangle {
+                        // Native XDG MIME-type icon (matching Nautilus / GNOME)
+                        Image {
+                            id: mimeIconImg
                             visible: !delegateRoot.model.isImage || thumbImg.status === Image.Error
-                            anchors.fill: parent
-                            radius: 8
-                            color: Theme.withAlpha(root.categoryColor(delegateRoot.model.fileCategory), 0.22)
-                            border.width: 0
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: delegateRoot.model.fileIcon || Icons.folder
-                                font.family: Icons.effectiveFont(text)
-                                font.pixelSize: 20
-                                color: root.categoryColor(delegateRoot.model.fileCategory)
-                            }
+                            anchors.centerIn: parent
+                            source: Quickshell.iconPath(delegateRoot.model.iconName || "text-x-generic", "text-x-generic")
+                            sourceSize: Qt.size(64, 64)
+                            width: 26
+                            height: 26
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                            cache: true
                         }
                     }
 
@@ -778,13 +700,13 @@ Item {
                     Column {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
-                        spacing: 3
+                        spacing: 2
 
                         Text {
                             width: parent.width
                             text: delegateRoot.model.fileName || ""
                             font.family: root.fontFamily
-                            font.pixelSize: 12
+                            font.pixelSize: 13
                             font.weight: Fonts.weightMedium
                             color: Theme.bright_foreground
                             elide: Text.ElideMiddle
@@ -798,28 +720,33 @@ Item {
                                 return parts.length > 2 ? (".../" + parts.slice(-2).join("/")) : p
                             }
                             font.family: root.fontFamily
-                            font.pixelSize: 10
-                            color: Theme.muted
+                            font.pixelSize: 11
+                            color: Theme.withAlpha(Theme.foreground, 0.60)
                             elide: Text.ElideMiddle
                         }
                     }
 
-                    // Remove button (✕)
+                    // Progressive Disclosure: Remove button (✕)
+                    // Only visible on hover of this card
                     Rectangle {
                         z: 20
-                        Layout.preferredWidth: 26
-                        Layout.preferredHeight: 26
+                        Layout.preferredWidth: 28
+                        Layout.preferredHeight: 28
                         Layout.alignment: Qt.AlignVCenter
-                        radius: 6
-                        color: removeMouse.containsMouse ? Theme.withAlpha(Theme.urgent, 0.25) : "transparent"
+                        radius: 14
+                        color: removeMouse.containsMouse ? Theme.withAlpha(Theme.urgent, 0.22) : "transparent"
 
+                        opacity: (dragArea.containsMouse || removeMouse.containsMouse) ? 1.0 : 0.0
+                        visible: opacity > 0
+
+                        Behavior on opacity { NumberAnimation { duration: 120 } }
                         Behavior on color { ColorAnimation { duration: 120 } }
 
                         Text {
                             anchors.centerIn: parent
                             text: Icons.close
                             font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 13
+                            font.pixelSize: 12
                             color: removeMouse.containsMouse ? Theme.urgent : Theme.muted
                         }
 
@@ -850,18 +777,19 @@ Item {
 
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
-            width: 64
-            height: 64
-            radius: 32
+            width: 60
+            height: 60
+            radius: 30
             color: Theme.withAlpha(Theme.lighter_background, 0.32)
             border.width: 0
 
-            Text {
+            Image {
                 anchors.centerIn: parent
-                text: Icons.folder
-                font.family: Icons.effectiveFont(text)
-                font.pixelSize: 28
-                color: Theme.muted
+                source: Quickshell.iconPath("folder", "text-x-generic")
+                sourceSize: Qt.size(64, 64)
+                width: 32
+                height: 32
+                fillMode: Image.PreserveAspectFit
             }
         }
 
@@ -907,12 +835,13 @@ Item {
                 anchors.centerIn: parent
                 spacing: 8
 
-                Text {
+                Image {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: Icons.folder
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: 34
-                    color: Theme.accent
+                    source: Quickshell.iconPath("folder", "text-x-generic")
+                    sourceSize: Qt.size(64, 64)
+                    width: 36
+                    height: 36
+                    fillMode: Image.PreserveAspectFit
                 }
 
                 Text {
@@ -924,48 +853,6 @@ Item {
                     color: Theme.bright_foreground
                 }
             }
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Footer Row
-    // ─────────────────────────────────────────────────────────────────────────
-    RowLayout {
-        id: footerRow
-        anchors {
-            bottom: parent.bottom
-            left: parent.left
-            right: parent.right
-            margins: 4
-        }
-        height: 22
-
-        Text {
-            text: {
-                if (!root.shelfService) return "Ready"
-                if (root.shelfService.count === 0) return "Ready for drops"
-                if (root.shelfService.selectedCount > 0) {
-                    return root.shelfService.selectedCount + " of " + root.shelfService.count + " selected"
-                }
-                return root.shelfService.count + (root.shelfService.count === 1 ? " file staged" : " files staged")
-            }
-            font.family: root.fontFamily
-            font.pixelSize: 11
-            color: (root.shelfService && root.shelfService.selectedCount > 0) ? Theme.accent : Theme.muted
-            Layout.alignment: Qt.AlignVCenter
-        }
-
-        Item { Layout.fillWidth: true }
-
-        Text {
-            visible: root.shelfService ? root.shelfService.count > 0 : false
-            text: (root.shelfService && root.shelfService.selectedCount > 1)
-                ? "Drag batch to export (" + root.shelfService.selectedCount + ")"
-                : "Drag card to export"
-            font.family: root.fontFamily
-            font.pixelSize: 11
-            color: Theme.withAlpha(Theme.accent, 0.85)
-            Layout.alignment: Qt.AlignVCenter
         }
     }
 }
