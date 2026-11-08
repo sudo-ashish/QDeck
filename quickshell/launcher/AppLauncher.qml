@@ -49,21 +49,21 @@ PanelWindow {
     // Dynamic target dimensions per view
     readonly property real targetWidth: {
         if (root.currentView === "apps") return Appearance.launcherWidth
-        if (root.currentView === "power") return 520
+        if (root.currentView === "power") return 400
         if (root.currentView === "theme") {
             var tCount = Math.min(5, Math.max(1, root.themesCount))
             return Math.min(root.width - 48, Math.max(580, (tCount * 196) + ((tCount - 1) * 12) + 28))
         }
         // wallpaper view
         var wCount = Math.min(5, Math.max(1, root.wallpapersCount))
-        return Math.min(root.width - 48, Math.max(580, (wCount * 196) + ((wCount - 1) * 12) + 28))
+        return Math.min(root.width - 48, Math.max(580, (wCount * 210) + ((wCount - 1) * 12) + 28))
     }
 
     readonly property real targetHeight: {
         if (root.currentView === "apps") return Appearance.launcherHeight
-        if (root.currentView === "power") return 170
-        if (root.currentView === "wallpaper") return 240
-        return 290 // theme view
+        if (root.currentView === "power") return 116
+        if (root.currentView === "wallpaper") return 210
+        return 260 // theme view
     }
 
     // Spring pop-up & retraction physics from bottom
@@ -677,235 +677,19 @@ PanelWindow {
             }
         }
 
-        // ── Top: Unified Navigation Tabs Bar ─────────────────────────────────
-        RowLayout {
-            id: navHeader
-            anchors {
-                top: parent.top
-                left: parent.left
-                right: parent.right
-                topMargin: 12
-                leftMargin: 14
-                rightMargin: 14
-            }
-            height: 28
-            spacing: 8
-
-            // Segmented View Switcher Tabs
-            Row {
-                spacing: 4
-                Layout.alignment: Qt.AlignVCenter
-
-                // Tab 1: Apps
-                Rectangle {
-                    width: appsTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "apps")
-                        ? Theme.accent
-                        : (appsTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: appsTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.apps
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "apps") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Apps"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "apps") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "apps") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: appsTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("apps")
-                    }
-                }
-
-                // Tab 2: Session (Power)
-                Rectangle {
-                    width: sessionTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "power")
-                        ? Theme.accent
-                        : (sessionTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: sessionTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.power
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "power") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Session"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "power") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "power") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: sessionTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("power")
-                    }
-                }
-
-                // Tab 3: Themes
-                Rectangle {
-                    width: themeTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "theme")
-                        ? Theme.accent
-                        : (themeTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: themeTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.palette
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "theme") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Themes"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "theme") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "theme") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: themeTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("theme")
-                    }
-                }
-
-                // Tab 4: Wallpapers
-                Rectangle {
-                    width: wallpaperTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "wallpaper")
-                        ? Theme.accent
-                        : (wallpaperTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: wallpaperTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.wallpaper
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "wallpaper") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Wallpapers"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "wallpaper") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "wallpaper") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: wallpaperTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("wallpaper")
-                    }
-                }
-            }
-
-            Item { Layout.fillWidth: true }
-
-            // Right View Context Status / Hint
-            Text {
-                text: {
-                    if (root.currentView === "apps") {
-                        return root.filteredItems ? (root.filteredItems.length + " items") : ""
-                    } else if (root.currentView === "power") {
-                        return root.powerActions[root.powerIndex] ? root.powerActions[root.powerIndex].name : "Power"
-                    } else if (root.currentView === "theme") {
-                        return root.currentTheme ? ("Active: " + root.currentTheme) : "Themes"
-                    } else if (root.currentView === "wallpaper") {
-                        return root.wallpapersCount ? (root.wallpapersCount + " wallpapers") : "Wallpapers"
-                    }
-                    return ""
-                }
-                font.family: root.fontFamily
-                font.pixelSize: 11
-                color: Theme.muted
-                Layout.alignment: Qt.AlignVCenter
-            }
-        }
-
         // ─────────────────────────────────────────────────────────────────────
         // VIEW 1: Apps & Actions Launcher
         // ─────────────────────────────────────────────────────────────────────
         Item {
             id: appsViewContainer
-            anchors {
-                top: navHeader.bottom
-                topMargin: 8
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-            }
+            anchors.fill: parent
             visible: root.currentView === "apps"
 
             // Items List
             Item {
                 anchors {
                     top: parent.top
+                    topMargin: 14
                     left: parent.left
                     leftMargin: 10
                     right: parent.right
@@ -1193,22 +977,16 @@ PanelWindow {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // VIEW 2: Power Session Menu
+        // VIEW 2: Power Session Menu (Google Material 3 Shape-Morphing Dock)
         // ─────────────────────────────────────────────────────────────────────
         Item {
             id: powerViewContainer
-            anchors {
-                top: navHeader.bottom
-                topMargin: 8
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-            }
+            anchors.fill: parent
             visible: root.currentView === "power"
 
             Row {
                 anchors.centerIn: parent
-                spacing: 20
+                spacing: 16
 
                 Repeater {
                     model: root.powerActions
@@ -1220,31 +998,44 @@ PanelWindow {
 
                         readonly property bool isActive: (root.currentView === "power") && (root.powerIndex === index)
 
-                        width: 72
-                        height: 72
-                        scale: powerActionBtn.isActive ? 1.08 : (powerBtnMouse.containsMouse ? 1.03 : 1.0)
+                        width: isActive ? 80 : 64
+                        height: 64
 
+                        Behavior on width {
+                            NumberAnimation { duration: 240; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+                        }
+
+                        scale: isActive ? 1.08 : (powerBtnMouse.containsMouse ? 1.04 : 1.0)
                         Behavior on scale {
-                            NumberAnimation { duration: 180; easing.type: Easing.OutBack; easing.overshoot: 1.15 }
+                            NumberAnimation { duration: 200; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
                         }
 
                         Rectangle {
+                            id: powerBtnBg
                             anchors.fill: parent
-                            radius: 16
+                            // Google Material 3 Shape: Circle (32) morphs to Squircle (16) on select
+                            radius: powerActionBtn.isActive ? 16 : 32
+
+                            Behavior on radius {
+                                NumberAnimation { duration: 260; easing.type: Easing.OutBack; easing.overshoot: 1.25 }
+                            }
 
                             color: {
                                 if (powerActionBtn.isActive) {
                                     return powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.accent
                                 }
                                 if (powerBtnMouse.containsMouse) {
-                                    return Theme.withAlpha(Theme.lighter_background, 0.5)
+                                    return Theme.withAlpha(Theme.lighter_background, 0.45)
                                 }
-                                return Theme.withAlpha(Theme.dark_background, 0.6)
+                                return Theme.withAlpha(Theme.dark_background, 0.65)
                             }
-                            border.color: powerActionBtn.isActive ? "transparent" : Theme.withAlpha(Theme.border, 0.25)
+                            border.color: powerActionBtn.isActive
+                                ? "transparent"
+                                : (powerBtnMouse.containsMouse ? Theme.withAlpha(Theme.accent, 0.4) : Theme.withAlpha(Theme.border, 0.2))
                             border.width: 1
 
-                            Behavior on color { ColorAnimation { duration: 160 } }
+                            Behavior on color { ColorAnimation { duration: 180 } }
+                            Behavior on border.color { ColorAnimation { duration: 180 } }
 
                             MouseArea {
                                 id: powerBtnMouse
@@ -1255,30 +1046,20 @@ PanelWindow {
                                 onClicked: powerActionBtn.modelData.exec()
                             }
 
-                            Column {
+                            // Only Logo inside (no text)
+                            Text {
                                 anchors.centerIn: parent
-                                spacing: 4
+                                text: powerActionBtn.modelData.icon
+                                font.family: Icons.effectiveFont(text)
+                                font.pixelSize: powerActionBtn.isActive ? 28 : 24
+                                color: powerActionBtn.isActive
+                                    ? Theme.darker_background
+                                    : (powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.foreground)
 
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: powerActionBtn.modelData.icon
-                                    font.family: Icons.effectiveFont(text)
-                                    font.pixelSize: 26
-                                    color: powerActionBtn.isActive
-                                        ? Theme.darker_background
-                                        : (powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.foreground)
+                                Behavior on font.pixelSize {
+                                    NumberAnimation { duration: 180; easing.type: Easing.OutBack }
                                 }
-
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: powerActionBtn.modelData.name
-                                    font.family: root.fontFamily
-                                    font.pixelSize: 10
-                                    font.weight: powerActionBtn.isActive ? Fonts.weightBold : Fonts.weightMedium
-                                    color: powerActionBtn.isActive
-                                        ? Theme.darker_background
-                                        : Theme.muted
-                                }
+                                Behavior on color { ColorAnimation { duration: 180 } }
                             }
                         }
                     }
@@ -1291,14 +1072,8 @@ PanelWindow {
         // ─────────────────────────────────────────────────────────────────────
         Item {
             id: themeViewContainer
-            anchors {
-                top: navHeader.bottom
-                topMargin: 8
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-                margins: 12
-            }
+            anchors.fill: parent
+            anchors.margins: 14
             visible: root.currentView === "theme"
 
             ListView {
@@ -1448,14 +1223,8 @@ PanelWindow {
         // ─────────────────────────────────────────────────────────────────────
         Item {
             id: wallpaperViewContainer
-            anchors {
-                top: navHeader.bottom
-                topMargin: 8
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-                margins: 12
-            }
+            anchors.fill: parent
+            anchors.margins: 14
             visible: root.currentView === "wallpaper"
 
             ListView {
