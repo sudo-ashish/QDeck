@@ -35,7 +35,7 @@ QtObject {
     property alias themeSwitcherThemeBorder: root.themeSwitcherCardBorder
 
     // Wallpaper Switcher card border toggle (off by default)
-    property bool wallpaperSwitcherCardBorder: false
+    property bool wallpaperSwitcherCardBorder: true
     property alias wallpaperCardBorder: root.wallpaperSwitcherCardBorder
 
     // Bar widget display options
