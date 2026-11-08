@@ -9,6 +9,16 @@ QtObject {
     property bool isOpen: false
     property ListModel items: ListModel { id: shelfModel }
     readonly property int count: items.count
+    property int selectedCount: 0
+    property int lastSelectedIndex: -1
+
+    function updateSelectedCount() {
+        var c = 0
+        for (var i = 0; i < items.count; i++) {
+            if (items.get(i).selected) c++
+        }
+        root.selectedCount = c
+    }
 
     // Normalize input to a clean file:// URI string (file:///absolute/path/to/file)
     function normalizeUrl(rawUrl) {
@@ -101,8 +111,10 @@ QtObject {
             fileName: name,
             isImage: isImg,
             fileIcon: icon,
-            fileCategory: category
+            fileCategory: category,
+            selected: false
         })
+        root.updateSelectedCount()
         return true
     }
 
@@ -124,11 +136,109 @@ QtObject {
     function removeAt(index) {
         if (index >= 0 && index < items.count) {
             items.remove(index)
+            if (root.lastSelectedIndex >= items.count) {
+                root.lastSelectedIndex = items.count - 1
+            }
+            root.updateSelectedCount()
         }
     }
 
     function clear() {
         items.clear()
+        root.lastSelectedIndex = -1
+        root.selectedCount = 0
+    }
+
+    function setSelected(index, val) {
+        if (index >= 0 && index < items.count) {
+            items.setProperty(index, "selected", !!val)
+            root.updateSelectedCount()
+        }
+    }
+
+    function selectAll() {
+        for (var i = 0; i < items.count; i++) {
+            items.setProperty(i, "selected", true)
+        }
+        root.updateSelectedCount()
+    }
+
+    function clearSelection() {
+        for (var i = 0; i < items.count; i++) {
+            items.setProperty(i, "selected", false)
+        }
+        root.lastSelectedIndex = -1
+        root.updateSelectedCount()
+    }
+
+    function toggleSelection(index, modifiers) {
+        if (index < 0 || index >= items.count) return
+        var isShift = !!(modifiers & Qt.ShiftModifier)
+        var isCtrl = !!(modifiers & Qt.ControlModifier)
+
+        if (isShift && root.lastSelectedIndex >= 0 && root.lastSelectedIndex < items.count) {
+            var start = Math.min(root.lastSelectedIndex, index)
+            var end = Math.max(root.lastSelectedIndex, index)
+            if (!isCtrl) {
+                for (var i = 0; i < items.count; i++) {
+                    items.setProperty(i, "selected", i >= start && i <= end)
+                }
+            } else {
+                for (var j = start; j <= end; j++) {
+                    items.setProperty(j, "selected", true)
+                }
+            }
+        } else if (isCtrl) {
+            var cur = !!items.get(index).selected
+            items.setProperty(index, "selected", !cur)
+            root.lastSelectedIndex = index
+        } else {
+            // Plain click: clear other selections and select this index
+            for (var k = 0; k < items.count; k++) {
+                items.setProperty(k, "selected", k === index)
+            }
+            root.lastSelectedIndex = index
+        }
+        root.updateSelectedCount()
+    }
+
+    function removeSelected() {
+        for (var i = items.count - 1; i >= 0; i--) {
+            if (items.get(i).selected) {
+                items.remove(i)
+            }
+        }
+        root.lastSelectedIndex = -1
+        root.updateSelectedCount()
+    }
+
+    function getSelectedUris() {
+        var uris = []
+        for (var i = 0; i < items.count; i++) {
+            var it = items.get(i)
+            if (it.selected) {
+                uris.push(it.filePath)
+            }
+        }
+        return uris
+    }
+
+    function getSelectedItems() {
+        var list = []
+        for (var i = 0; i < items.count; i++) {
+            var it = items.get(i)
+            if (it.selected) {
+                list.push({
+                    index: i,
+                    filePath: it.filePath,
+                    fileName: it.fileName,
+                    isImage: it.isImage,
+                    fileIcon: it.fileIcon,
+                    fileCategory: it.fileCategory || "folder"
+                })
+            }
+        }
+        return list
     }
 
     function open() {
@@ -193,6 +303,29 @@ QtObject {
         function remove(indexStr: string): string {
             root.removeAt(parseInt(indexStr))
             return "ok"
+        }
+
+        function removeSelected(): string {
+            root.removeSelected()
+            return "ok"
+        }
+
+        function selectAll(): string {
+            root.selectAll()
+            return "ok"
+        }
+
+        function clearSelection(): string {
+            root.clearSelection()
+            return "ok"
+        }
+
+        function selectedCount(): string {
+            return String(root.selectedCount)
+        }
+
+        function selectedUris(): string {
+            return JSON.stringify(root.getSelectedUris())
         }
 
         function add(path: string): string {

@@ -42,6 +42,12 @@ hl.window_rule({
 })
 
 hl.window_rule({
+	name = "nautilus",
+	match = { class = "org.gnome.Nautilus" },
+	opacity = "1.0 override",
+})
+
+hl.window_rule({
 	name = "localsend-rule",
 	match = { class = "^(org.localsend.localsend_app|org.pulseaudio.pavucontrol)" },
 	float = true,

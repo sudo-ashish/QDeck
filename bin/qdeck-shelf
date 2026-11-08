@@ -80,6 +80,18 @@ case "$CMD" in
     shift
     call_ipc shelf remove "$1"
     ;;
+  select-all)
+    call_ipc shelf selectAll
+    ;;
+  deselect|clear-selection)
+    call_ipc shelf clearSelection
+    ;;
+  remove-selected)
+    call_ipc shelf removeSelected
+    ;;
+  selected-count)
+    call_ipc shelf selectedCount
+    ;;
   *)
     call_ipc shelf "$CMD" "${@:2}"
     ;;
