@@ -61,23 +61,18 @@ ShellRoot {
         }
     }
 
-    // App Launcher (Rofi-style Quickshell application launcher)
+    // Unified Launcher: App Launcher, Power Session Menu, Theme Switcher & Wallpaper Picker
     AppLauncher {
         id: launcher
+        powerService: root.powerService
+        themeService: root.themeSwitcherService
+        wallpaperService: root.wallpaperSwitcherService
     }
 
     // Power Confirmation Dialog (centered overlay)
     PowerConfirmDialog {
         id: powerConfirm
         powerService: root.powerService
-    }
-
-    // Bottom Pop-up Unified Menu (Power Session + Theme Switcher + Wallpaper Switcher)
-    PowerMenu {
-        id: bottomMenu
-        powerService: root.powerService
-        themeService: root.themeSwitcherService
-        wallpaperService: root.wallpaperSwitcherService
     }
 
     // Polkit Authentication Agent (centered overlay)
