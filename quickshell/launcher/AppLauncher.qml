@@ -1316,22 +1316,23 @@ PanelWindow {
 
                                 ShapePath {
                                     id: shapePath
-                                    strokeWidth: powerActionBtn.isActive ? 0 : 1
-                                    strokeColor: powerBtnMouse.containsMouse
-                                        ? Theme.withAlpha(Theme.accent, 0.45)
-                                        : Theme.withAlpha(Theme.border, 0.25)
+                                    strokeWidth: 0
+                                    strokeColor: "transparent"
 
                                     fillColor: {
                                         if (powerActionBtn.isActive) {
                                             return powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.accent
                                         }
                                         if (powerBtnMouse.containsMouse) {
-                                            return Theme.withAlpha(Theme.lighter_background, 0.45)
+                                            return powerActionBtn.modelData.isUrgent
+                                                ? Theme.withAlpha(Theme.urgent, 0.36)
+                                                : Theme.withAlpha(Theme.accent, 0.34)
                                         }
-                                        return Theme.withAlpha(Theme.dark_background, 0.65)
+                                        return powerActionBtn.modelData.isUrgent
+                                            ? Theme.withAlpha(Theme.urgent, 0.22)
+                                            : Theme.withAlpha(Theme.accent, 0.20)
                                     }
 
-                                    Behavior on strokeColor { ColorAnimation { duration: 180 } }
                                     Behavior on fillColor { ColorAnimation { duration: 180 } }
 
                                     PathSvg {
@@ -1348,7 +1349,7 @@ PanelWindow {
                                 font.pixelSize: powerActionBtn.isActive ? 27 : 23
                                 color: powerActionBtn.isActive
                                     ? Theme.darker_background
-                                    : (powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.foreground)
+                                    : (powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.accent)
 
                                 Behavior on font.pixelSize {
                                     NumberAnimation { duration: 180; easing.type: Easing.OutBack }
