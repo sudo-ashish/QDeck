@@ -1373,7 +1373,7 @@ PanelWindow {
                             height: 80
                             anchors.centerIn: parent
 
-                            scale: powerActionBtn.isActive ? 0.98 : (powerBtnMouse.containsMouse ? 0.88 : 0.82)
+                            scale: powerActionBtn.isActive ? 1.14 : (powerBtnMouse.containsMouse ? 1.05 : 1.00)
                             rotation: powerActionBtn.isActive ? ((powerActionBtn.index % 2 === 0) ? 5 : -5) : 0
 
                             Behavior on scale {
@@ -1441,7 +1441,7 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 text: powerActionBtn.modelData.icon
                                 font.family: Icons.effectiveFont(text)
-                                font.pixelSize: powerActionBtn.isActive ? 28 : 22
+                                font.pixelSize: powerActionBtn.isActive ? 36 : 30
                                 color: powerActionBtn.isActive
                                     ? Theme.darker_background
                                     : (powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.accent)
