@@ -387,8 +387,14 @@ QtObject {
         return list
     }
 
+    signal openRequested()
+
     function open() {
-        root.isOpen = true
+        if (!root.isOpen) {
+            root.isOpen = true
+        } else {
+            root.openRequested()
+        }
     }
 
     function close() {

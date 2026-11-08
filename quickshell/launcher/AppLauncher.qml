@@ -134,6 +134,10 @@ PanelWindow {
     function openApps(initialQuery) {
         var wasOpen = root.isOpen
         closeAnim.stop()
+        if (root.powerService) root.powerService.powerMenuOpen = false
+        if (root.themeService) root.themeService.isOpen = false
+        if (root.wallpaperService) root.wallpaperService.isOpen = false
+        if (root.shelfService) root.shelfService.isOpen = false
         root.loadHistory()
         root.loadApps()
         root.currentView = "apps"
@@ -152,6 +156,9 @@ PanelWindow {
     function openPower() {
         var wasOpen = root.isOpen
         closeAnim.stop()
+        if (root.themeService) root.themeService.isOpen = false
+        if (root.wallpaperService) root.wallpaperService.isOpen = false
+        if (root.shelfService) root.shelfService.isOpen = false
         root.currentView = "power"
         root.powerIndex = 0
         if (root.powerService) root.powerService.powerMenuOpen = true
@@ -165,6 +172,9 @@ PanelWindow {
     function openTheme() {
         var wasOpen = root.isOpen
         closeAnim.stop()
+        if (root.powerService) root.powerService.powerMenuOpen = false
+        if (root.wallpaperService) root.wallpaperService.isOpen = false
+        if (root.shelfService) root.shelfService.isOpen = false
         if (root.themeService) {
             root.themeService.refresh()
             root.themeService.isOpen = true
@@ -191,6 +201,9 @@ PanelWindow {
     function openWallpaper() {
         var wasOpen = root.isOpen
         closeAnim.stop()
+        if (root.powerService) root.powerService.powerMenuOpen = false
+        if (root.themeService) root.themeService.isOpen = false
+        if (root.shelfService) root.shelfService.isOpen = false
         if (root.wallpaperService) {
             root.wallpaperService.refresh()
             root.wallpaperService.isOpen = true
@@ -255,6 +268,9 @@ PanelWindow {
     function openShelf() {
         var wasOpen = root.isOpen
         closeAnim.stop()
+        if (root.powerService) root.powerService.powerMenuOpen = false
+        if (root.themeService) root.themeService.isOpen = false
+        if (root.wallpaperService) root.wallpaperService.isOpen = false
         if (root.shelfService) {
             root.shelfService.isOpen = true
         }
@@ -275,7 +291,12 @@ PanelWindow {
     }
 
     function switchToView(viewName) {
-        if (root.currentView === viewName) return
+        if (root.currentView === viewName) {
+            if (viewName === "shelf") {
+                root.close()
+            }
+            return
+        }
         if (viewName === "apps") {
             root.openApps("")
         } else if (viewName === "power") {
@@ -573,8 +594,20 @@ PanelWindow {
 
     WlrLayershell.namespace: "quickshell-launcher"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: (root.isOpen && !closeAnim.running) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: {
+        if (!root.isOpen || closeAnim.running) return WlrKeyboardFocus.None
+        if (root.currentView === "shelf") return WlrKeyboardFocus.OnDemand
+        return WlrKeyboardFocus.Exclusive
+    }
     exclusionMode: ExclusionMode.Ignore
+
+    // Pass-through input region: When in shelf view, all mouse clicks outside launcherCard pass directly to the screen
+    Region {
+        id: shelfInputRegion
+        item: launcherCard
+    }
+
+    mask: (root.currentView === "shelf") ? shelfInputRegion : null
 
     onIsOpenChanged: {
         if (root.isOpen) {
@@ -677,18 +710,24 @@ PanelWindow {
         }
     }
 
-    // Backdrop Scrim
+    // Backdrop Scrim (Active only on apps, power, theme, wallpaper - completely disabled on shelf)
     Rectangle {
         anchors.fill: parent
         color: Theme.withAlpha(Theme.darker_background, 0.45)
-        opacity: root.isOpen ? 1.0 : 0.0
+        opacity: (root.isOpen && root.currentView !== "shelf") ? 1.0 : 0.0
+        visible: root.currentView !== "shelf"
         Behavior on opacity {
             NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
         }
 
         MouseArea {
             anchors.fill: parent
-            onClicked: root.close()
+            enabled: root.currentView !== "shelf"
+            onClicked: {
+                if (root.currentView !== "shelf") {
+                    root.close()
+                }
+            }
         }
     }
 
@@ -718,6 +757,9 @@ PanelWindow {
                     root.close()
                 }
             }
+        }
+        function onOpenRequested() {
+            root.openShelf()
         }
     }
 
@@ -1473,6 +1515,39 @@ PanelWindow {
                             }
                         }
                     }
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            // Close button when in shelf view
+            Rectangle {
+                visible: root.currentView === "shelf"
+                Layout.alignment: Qt.AlignVCenter
+                width: 24
+                height: 24
+                radius: 12
+                color: closeNavMouse.containsMouse
+                    ? Theme.withAlpha(Theme.urgent, 0.22)
+                    : Theme.withAlpha(Theme.lighter_background, 0.20)
+                border.width: 0
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: Icons.close
+                    font.family: Icons.effectiveFont(text)
+                    font.pixelSize: 11
+                    color: closeNavMouse.containsMouse ? Theme.urgent : Theme.muted
+                }
+
+                MouseArea {
+                    id: closeNavMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.close()
                 }
             }
         }
