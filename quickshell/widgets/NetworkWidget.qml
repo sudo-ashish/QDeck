@@ -14,6 +14,7 @@ Item {
     property bool showPasswordInput: false
     property bool showQrView: false
     property int iconSize: Appearance.networkIconSize
+    readonly property bool hasNetworks: (root.service.knownNetworks.length > 0 || root.service.otherNetworks.length > 0)
 
     onSelectedSsidChanged: {
         pwInput.text = ""
@@ -53,7 +54,13 @@ Item {
         anchorItem: netButton
         showDefaultHeader: false
         contentWidth: 360
-        contentHeight: !root.service.wifiEnabled ? 128 : (root.showQrView ? 420 : (root.showPasswordInput ? 530 : 470))
+        contentHeight: {
+            if (!root.service.wifiEnabled) return 128
+            if (root.showQrView) return 420
+            if (root.showPasswordInput) return 530
+            if (!root.hasNetworks) return 132
+            return 470
+        }
         keyboardFocus: root.showPasswordInput ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
         Binding {
@@ -403,6 +410,7 @@ Item {
 
                 // Divider
                 Rectangle {
+                    visible: root.hasNetworks || root.showPasswordInput
                     width: parent.width
                     height: 1
                     color: Theme.selection

@@ -122,6 +122,11 @@ PanelWindow {
         border.width: Appearance.borderWidthNone
         radius: Appearance.popupRadius
 
+        Behavior on height {
+            enabled: root.open
+            NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+        }
+
         // Prevent clicks inside the card from closing the popup
         MouseArea {
             anchors.fill: parent
@@ -181,6 +186,7 @@ PanelWindow {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: root.showDefaultHeader ? Appearance.paddingMedium : Appearance.popupPadding
+            clip: true
         }
     }
 }
