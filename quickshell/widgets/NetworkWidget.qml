@@ -53,7 +53,7 @@ Item {
         anchorItem: netButton
         showDefaultHeader: false
         contentWidth: 360
-        contentHeight: !root.service.wifiEnabled ? 110 : (root.showQrView ? 420 : (root.showPasswordInput ? 530 : 470))
+        contentHeight: !root.service.wifiEnabled ? 128 : (root.showQrView ? 420 : (root.showPasswordInput ? 530 : 470))
         keyboardFocus: root.showPasswordInput ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
         Binding {
@@ -84,12 +84,12 @@ Item {
 
         Column {
             anchors.fill: parent
-            spacing: 12
+            spacing: 8
 
             // ================= 1. HEADER ROW =================
             Item {
                 width: parent.width
-                height: 42
+                height: 38
 
                 // Left: Wi-Fi Icon + SSID + Phrase
                 Row {
@@ -100,7 +100,7 @@ Item {
                     Text {
                         text: !root.service.wifiEnabled ? Icons.wifiOff : root.service.icon
                         font.family: Icons.effectiveFont(text)
-                        font.pixelSize: 24
+                        font.pixelSize: 22
                         color: !root.service.wifiEnabled ? Theme.muted : Theme.foreground
                         opacity: !root.service.wifiEnabled ? 0.6 : 1.0
                         anchors.verticalCenter: parent.verticalCenter
@@ -117,7 +117,7 @@ Item {
                                 return root.service.currentSsid || "Not Connected"
                             }
                             font.family: Fonts.uiFont
-                            font.pixelSize: 15
+                            font.pixelSize: 14
                             font.bold: true
                             color: Theme.foreground
                             elide: Text.ElideRight
@@ -139,61 +139,11 @@ Item {
                     }
                 }
 
-                // Right Actions: Reload, QR, Quick Disconnect, Toggle Switch
+                // Right Actions: QR, Quick Disconnect, Toggle Switch
                 Row {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
-
-                    // Manual Rescan / Reload Button
-                    Rectangle {
-                        visible: root.service.wifiEnabled && !root.showQrView
-                        width: 28
-                        height: 28
-                        radius: Appearance.radiusSmall
-                        color: refreshMouse.containsMouse ? Theme.lighter_background : Theme.dark_background
-                        border.color: root.service.scanning ? Theme.accent : (refreshMouse.containsMouse ? Theme.muted : Theme.selection)
-                        border.width: 1
-
-                        Text {
-                            id: refreshIcon
-                            anchors.centerIn: parent
-                            text: Icons.refresh
-                            font.family: Icons.effectiveFont(Icons.refresh)
-                            font.pixelSize: 14
-                            color: root.service.scanning ? Theme.accent : (refreshMouse.containsMouse ? Theme.accent : Theme.foreground)
-                            transformOrigin: Item.Center
-                            rotation: 0
-
-                            NumberAnimation {
-                                id: spinAnim
-                                target: refreshIcon
-                                property: "rotation"
-                                from: 0
-                                to: 360
-                                duration: 900
-                                loops: Animation.Infinite
-                                running: root.service.scanning
-                                onRunningChanged: {
-                                    if (!running) {
-                                        refreshIcon.rotation = 0
-                                    }
-                                }
-                            }
-                        }
-
-                        MouseArea {
-                            id: refreshMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: root.service.scanning ? Qt.ArrowCursor : Qt.PointingHandCursor
-                            enabled: !root.service.scanning
-                            onClicked: {
-                                root.service.scanWifi()
-                                root.service.refresh()
-                            }
-                        }
-                    }
 
                     // Quick Disconnect Button (visible when connected)
                     Rectangle {
@@ -375,7 +325,7 @@ Item {
             Item {
                 visible: !root.service.wifiEnabled && !root.showQrView
                 width: parent.width
-                height: 44
+                height: 48
 
                 Text {
                     anchors.centerIn: parent
@@ -767,65 +717,18 @@ Item {
                 Column {
                     width: parent.width
                     spacing: 6
-                    visible: root.service.wifiEnabled
+                    visible: root.service.otherNetworks.length > 0
 
-                    // Section Title Row with scanning state
-                    Row {
-                        width: parent.width
-                        spacing: 6
-
-                        Text {
-                            text: "OTHER NETWORKS"
-                            font.family: Fonts.uiFont
-                            font.pixelSize: 11
-                            font.bold: true
-                            color: Theme.muted
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Text {
-                            visible: root.service.scanning
-                            text: "(searching…)"
-                            font.family: Fonts.uiFont
-                            font.pixelSize: 10
-                            color: Theme.accent
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    // Placeholder when no other networks are available
-                    Rectangle {
-                        visible: root.service.otherNetworks.length === 0
-                        width: parent.width
-                        height: 42
-                        radius: Appearance.radiusSmall
-                        color: Theme.dark_background
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 8
-
-                            Text {
-                                text: root.service.scanning ? Icons.refresh : "󰤮"
-                                font.family: Icons.effectiveFont(text)
-                                font.pixelSize: 13
-                                color: root.service.scanning ? Theme.accent : Theme.muted
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Text {
-                                text: root.service.scanning ? "Searching for networks…" : "No other networks found"
-                                font.family: Fonts.uiFont
-                                font.pixelSize: 11
-                                color: Theme.muted
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
+                    Text {
+                        text: "OTHER NETWORKS"
+                        font.family: Fonts.uiFont
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: Theme.muted
                     }
 
                     // Scrollable list for other networks
                     Rectangle {
-                        visible: root.service.otherNetworks.length > 0
                         width: parent.width
                         height: Math.min(140, root.service.otherNetworks.length * 36)
                         color: "transparent"
