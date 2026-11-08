@@ -92,3 +92,4 @@ QtObject {
     readonly property int pressDuration: 100
     readonly property int colorDuration: 180
 }
+

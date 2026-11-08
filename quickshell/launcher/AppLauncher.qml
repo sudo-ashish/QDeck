@@ -62,7 +62,7 @@ PanelWindow {
 
     readonly property real targetHeight: {
         if (root.currentView === "apps") return Appearance.launcherHeight
-        if (root.currentView === "power") return 170
+        if (root.currentView === "power") return 178
         if (root.currentView === "wallpaper") return 250
         return 290 // theme view
     }
@@ -117,16 +117,19 @@ PanelWindow {
 
     function openPower() {
         closeAnim.stop()
+        openAnim.stop()
+        root.animProgress = 1.0
         root.currentView = "power"
         root.powerIndex = 0
         if (root.powerService) root.powerService.powerMenuOpen = true
         root.isOpen = true
-        openAnim.restart()
         Qt.callLater(function() { keyCatcher.forceActiveFocus() })
     }
 
     function openTheme() {
         closeAnim.stop()
+        openAnim.stop()
+        root.animProgress = 1.0
         if (root.themeService) {
             root.themeService.refresh()
             root.themeService.isOpen = true
@@ -136,7 +139,6 @@ PanelWindow {
             ? root.themeService.middleIndex
             : Math.floor(root.themesCount / 2)
         root.isOpen = true
-        openAnim.restart()
         Qt.callLater(function() {
             keyCatcher.forceActiveFocus()
             if (themesList) themesList.positionViewAtIndex(root.themeIndex, ListView.Center)
@@ -145,6 +147,8 @@ PanelWindow {
 
     function openWallpaper() {
         closeAnim.stop()
+        openAnim.stop()
+        root.animProgress = 1.0
         if (root.wallpaperService) {
             root.wallpaperService.refresh()
             root.wallpaperService.isOpen = true
@@ -154,7 +158,6 @@ PanelWindow {
             ? root.wallpaperService.middleIndex
             : Math.floor(root.wallpapersCount / 2)
         root.isOpen = true
-        openAnim.restart()
         Qt.callLater(function() {
             keyCatcher.forceActiveFocus()
             if (wallpapersList) wallpapersList.positionViewAtIndex(root.wallpaperIndex, ListView.Center)
@@ -164,6 +167,15 @@ PanelWindow {
     function close() {
         if (!root.isOpen && !openAnim.running) return
         openAnim.stop()
+        if (root.currentView !== "apps") {
+            root.isOpen = false
+            root.animProgress = 0.0
+            if (root.powerService) root.powerService.powerMenuOpen = false
+            if (root.themeService) root.themeService.isOpen = false
+            if (root.wallpaperService) root.wallpaperService.isOpen = false
+            root.currentView = "apps"
+            return
+        }
         root.isOpen = false
         closeAnim.restart()
     }
@@ -682,10 +694,12 @@ PanelWindow {
 
         // M3 Shared Axis Y (Translate) + Z (Scale)
         transform: Translate {
-            y: (1.0 - root.animProgress) * (launcherCard.height + 64)
+            y: (root.currentView === "apps") ? ((1.0 - root.animProgress) * (launcherCard.height + 64)) : 0
         }
-        opacity: Math.min(1.0, root.animProgress * 1.5)
-        scale: Motion.enterZScaleStart + (1.0 - Motion.enterZScaleStart) * Math.max(0, Math.min(1.0, root.animProgress))
+        opacity: (root.currentView === "apps") ? Math.min(1.0, root.animProgress * 1.5) : 1.0
+        scale: (root.currentView === "apps")
+            ? (Motion.enterZScaleStart + (1.0 - Motion.enterZScaleStart) * Math.max(0, Math.min(1.0, root.animProgress)))
+            : 1.0
 
         MouseArea {
             anchors.fill: parent
@@ -706,8 +720,8 @@ PanelWindow {
                 left: parent.left
                 right: parent.right
                 topMargin: 12
-                leftMargin: 14
-                rightMargin: 14
+                leftMargin: 16
+                rightMargin: 16
             }
             height: 28
             spacing: 8
@@ -1224,7 +1238,7 @@ PanelWindow {
 
             Row {
                 anchors.centerIn: parent
-                spacing: 16
+                spacing: 17
 
                 Repeater {
                     model: root.powerActions
@@ -1236,8 +1250,8 @@ PanelWindow {
 
                         readonly property bool isActive: (root.currentView === "power") && (root.powerIndex === index)
 
-                        width: 64
-                        height: 64
+                        width: 80
+                        height: 80
 
                         // Random shape from {gem, oval, pill, square, arrow, sunny} for selected, cookie4 for unselected
                         readonly property var selectedShapePool: ["gem", "oval", "pill", "square", "arrow", "sunny"]
@@ -1266,13 +1280,13 @@ PanelWindow {
                         }
 
                         readonly property var m3ShapePaths: ({
-                            "cookie4": "M55.8 55.7C51.9 59.6 45.8 61.4 39.8 58.8C38.9 58.4 38.1 58 37.2 57.7C33.9 56.2 30.1 56.2 26.8 57.7C26 58 25.1 58.4 24.2 58.8C12.2 64 0 51.8 5.2 39.8C5.6 38.9 6 38.1 6.3 37.2C7.8 33.9 7.8 30.1 6.3 26.8C6 26 5.6 25.1 5.2 24.2C0 12.2 12.2 0 24.2 5.2C25.1 5.6 26 6 26.8 6.3C30.1 7.8 33.9 7.8 37.2 6.3C38.1 6 38.9 5.6 39.8 5.2C51.8 0 64 12.2 58.8 24.2C58.4 25.1 58 25.9 57.7 26.8C56.2 30.1 56.2 33.9 57.7 37.2C58.1 38 58.4 38.9 58.8 39.8C61.4 45.8 59.7 51.8 55.8 55.7Z",
-                            "gem": "M32 64C31.4 64 30.9 64 30.4 63.9C27.9 63.7 25.4 62.5 20.6 60.3C16.6 58.5 12.7 56.7 8.8 54.9C3.4 52.4 0.3 46.7 1.1 40.9C2 34.8 2.9 28.7 3.8 22.7C4.4 18.7 6.5 15.2 9.7 12.9C14.5 9.4 19.4 6 24.2 2.5C26.5 0.9 29.3 0 32.1 0C34.9 0 37.7 0.9 40 2.6C44.8 6 49.6 9.5 54.4 13C57.6 15.3 59.8 18.8 60.3 22.8C61.2 28.8 62 34.9 62.9 41C63.7 46.8 60.6 52.5 55.2 55C51.3 56.8 47.3 58.6 43.4 60.4C38.5 62.6 36.1 63.7 33.5 63.9C33 64 32.5 64 32 64Z",
-                            "oval": "M58.1 5.9C60.3 8 61.8 10.9 62.6 14.3C64 21 62.2 29.3 57.5 37.5C52.8 45.6 45.6 52.8 37.5 57.5C29.3 62.2 21 64 14.3 62.6C7.5 61.1 2.9 56.5 1.4 49.7C0 43 1.8 34.7 6.5 26.5C11.2 18.4 18.4 11.2 26.5 6.5C34.7 1.8 43 0 49.7 1.4C53.1 2.2 56 3.7 58.1 5.9Z",
-                            "pill": "M55.9 8.1C60.2 12.4 63 18.2 63.7 24.6C63.8 25.5 63.9 26.5 64 27.4C64 34.8 61 41.9 55.8 47.1C52.9 50 50 52.9 47.1 55.8C41.9 61 34.8 64 27.4 64C26.5 63.9 25.5 63.8 24.6 63.7C11.7 62.4 1.6 52.3 0.3 39.4C0.2 38.5 0.1 37.5 0 36.6C0 29.2 3 22.1 8.2 16.9C11.1 14 14 11.1 16.9 8.2C22.1 3 29.2 0 36.6 0C37.5 0.1 38.5 0.2 39.4 0.3C45.8 1 51.6 3.8 55.9 8.1Z",
-                            "square": "M58.4 58.4C54.9 61.9 50.1 64 44.8 64C36.3 64 27.7 64 19.2 64C8.6 64 0 55.4 0 44.8C0 36.3 0 27.7 0 19.2C0 8.6 8.6 0 19.2 0C27.7 0 36.3 0 44.8 0C55.4 0 64 8.6 64 19.2C64 27.7 64 36.3 64 44.8C64 50.1 61.9 54.9 58.4 58.4Z",
-                            "arrow": "M32 53.6C30.7 53.6 29.3 53.7 28.1 54C24.6 54.7 21.2 55.5 17.8 56.2C7.8 58.4 0 47.7 5.2 38.9C7.2 35.6 9.1 32.3 11.1 28.9C20.4 13.2 25 5.4 31.9 5.3C38.8 5.3 43.5 13.2 52.9 28.9C54.8 32.1 56.7 35.4 58.6 38.6C64 47.6 55.9 58.7 45.7 56.3C42.4 55.5 39.1 54.8 35.9 54C34.6 53.7 33.3 53.6 32 53.6Z",
-                            "sunny": "M63.8 32C63.8 33.1 63.4 34.3 62.6 35.2C61 37.1 59.4 39 57.8 40.9C57.1 41.7 56.7 42.7 56.6 43.8C56.4 46.2 56.2 48.7 56 51.2C55.8 53.7 53.9 55.6 51.4 55.8C48.9 56 46.4 56.2 44 56.4C42.9 56.5 41.9 56.9 41.1 57.6C39.2 59.2 37.3 60.8 35.4 62.4C33.6 64 30.8 64 29 62.4C27.1 60.8 25.2 59.2 23.3 57.6C22.5 56.9 21.5 56.5 20.4 56.4C18 56.2 15.5 56 13 55.8C10.5 55.6 8.6 53.7 8.4 51.2C8.2 48.7 8 46.2 7.8 43.8C7.7 42.7 7.3 41.7 6.6 40.9C5 39 3.4 37.1 1.8 35.2C0.2 33.4 0.2 30.6 1.8 28.8C3.4 26.9 5 25 6.6 23.1C7.3 22.3 7.7 21.3 7.8 20.2C8 17.8 8.2 15.3 8.4 12.8C8.6 10.3 10.5 8.4 13 8.2C15.5 8 18 7.8 20.4 7.6C21.5 7.5 22.5 7.1 23.3 6.4C25.2 4.8 27.1 3.2 29 1.6C30.8 0 33.6 0 35.4 1.6C37.3 3.2 39.2 4.8 41.1 6.4C41.9 7.1 42.9 7.5 44 7.6C46.4 7.8 48.9 8 51.4 8.2C53.9 8.4 55.8 10.3 56 12.8C56.2 15.3 56.4 17.8 56.6 20.2C56.7 21.3 57.1 22.3 57.8 23.1C59.4 25 61 26.9 62.6 28.8C63.4 29.7 63.8 30.9 63.8 32Z"
+                            "cookie4": "M69.7 69.7C64.8 74.5 57.3 76.7 49.8 73.5C48.7 73 47.6 72.5 46.5 72.1C42.4 70.3 37.7 70.3 33.5 72.1C32.5 72.6 31.4 73 30.3 73.5C15.3 80 0 64.8 6.5 49.7C7 48.7 7.5 47.6 7.9 46.5C9.7 42.3 9.7 37.7 7.9 33.5C7.5 32.4 7 31.4 6.5 30.3C0 15.3 15.2 0 30.3 6.5C31.4 7 32.4 7.5 33.5 7.9C37.7 9.7 42.4 9.7 46.5 7.9C47.6 7.4 48.6 7 49.7 6.5C64.7 0 80 15.2 73.5 30.3C73 31.3 72.6 32.4 72.1 33.5C70.3 37.7 70.3 42.3 72.1 46.5C72.6 47.6 73 48.6 73.5 49.7C76.8 57.2 74.6 64.8 69.7 69.7Z",
+                            "gem": "M40 80C39.3 80 38.7 80 38 79.9C34.8 79.6 31.8 78.2 25.7 75.4C20.8 73.1 15.9 70.9 10.9 68.6C4.2 65.5 0.3 58.4 1.4 51.1C2.5 43.5 3.6 35.9 4.7 28.3C5.4 23.4 8.1 19 12.2 16.1C18.2 11.8 24.2 7.5 30.2 3.2C33.1 1.1 36.6 0 40.1 0C43.6 0 47.1 1.1 50 3.2C56 7.5 62 11.9 68 16.2C72 19.1 74.7 23.6 75.4 28.5C76.5 36.1 77.5 43.6 78.6 51.2C79.7 58.5 75.8 65.7 69 68.7C64.1 71 59.1 73.2 54.2 75.4C48.1 78.2 45.1 79.6 41.9 79.9C41.3 80 40.6 80 40 80Z",
+                            "oval": "M72.7 7.3C75.4 10 77.3 13.6 78.2 17.8C80 26.3 77.7 36.7 71.8 46.8C65.9 56.9 56.9 65.9 46.8 71.8C36.7 77.7 26.3 80 17.8 78.2C9.4 76.4 3.6 70.6 1.8 62.2C0 53.7 2.3 43.3 8.2 33.2C14.1 23.1 23.1 14.1 33.2 8.2C43.3 2.3 53.7 0 62.2 1.8C66.4 2.7 70 4.6 72.7 7.3Z",
+                            "pill": "M69.9 10.1C75.2 15.5 78.8 22.7 79.6 30.7C79.8 31.9 79.9 33.1 80 34.3C79.9 43.5 76.2 52.4 69.7 58.9C66.1 62.5 62.5 66.1 58.9 69.7C52.4 76.2 43.5 79.9 34.3 80C33.1 79.9 31.9 79.8 30.7 79.6C14.7 78 2 65.3 0.4 49.3C0.2 48.1 0.1 46.9 0 45.7C0.1 36.5 3.8 27.6 10.3 21.1C13.9 17.5 17.5 13.9 21.1 10.3C27.6 3.8 36.5 0.1 45.7 0C46.9 0.1 48.1 0.2 49.3 0.4C57.3 1.2 64.5 4.8 69.9 10.1Z",
+                            "square": "M73 73C68.6 77.3 62.6 80 56 80C45.3 80 34.7 80 24 80C10.7 80 0 69.3 0 56C0 45.3 0 34.7 0 24C0 10.7 10.7 0 24 0C34.7 0 45.3 0 56 0C69.3 0 80 10.7 80 24C80 34.7 80 45.3 80 56C80 62.6 77.3 68.6 73 73Z",
+                            "arrow": "M40 66.9C38.3 66.9 36.7 67.1 35.1 67.5C30.8 68.4 26.5 69.4 22.2 70.3C9.8 73.1 0 59.6 6.5 48.6C8.9 44.5 11.4 40.3 13.8 36.2C25.4 16.5 31.3 6.7 39.9 6.7C48.6 6.7 54.4 16.5 66.1 36.1C68.5 40.1 70.9 44.2 73.3 48.2C80 59.5 69.9 73.3 57.1 70.4C53 69.4 48.9 68.5 44.8 67.5C43.2 67.1 41.6 67 40 66.9Z",
+                            "sunny": "M79.8 40C79.8 41.4 79.3 42.9 78.3 44C76.2 46.4 74.2 48.8 72.2 51.2C71.3 52.2 70.8 53.4 70.7 54.7C70.5 57.8 70.2 60.9 70 64C69.7 67.1 67.3 69.5 64.3 69.7C61.2 70 58.1 70.2 54.9 70.5C53.6 70.6 52.4 71.1 51.4 71.9C49 74 46.7 76 44.3 78C42 80 38.5 80 36.2 78C33.8 76 31.5 74 29.1 71.9C28.1 71.1 26.9 70.6 25.5 70.5C22.4 70.2 19.3 70 16.2 69.7C13.2 69.5 10.8 67.1 10.5 64C10.3 60.9 10 57.8 9.8 54.7C9.7 53.4 9.1 52.2 8.3 51.2C6.3 48.8 4.3 46.4 2.2 44C0.2 41.7 0.2 38.3 2.2 36C4.3 33.6 6.3 31.2 8.3 28.8C9.1 27.8 9.7 26.6 9.8 25.3C10 22.2 10.3 19.1 10.5 16C10.8 12.9 13.2 10.5 16.2 10.3C19.3 10 22.4 9.8 25.5 9.5C26.9 9.4 28.1 8.9 29.1 8.1C31.5 6 33.8 4 36.2 2C38.5 0 42 0 44.3 2C46.7 4 49 6 51.4 8.1C52.4 8.9 53.6 9.4 54.9 9.5C58.1 9.8 61.2 10 64.3 10.3C67.3 10.5 69.7 12.9 70 16C70.2 19.1 70.5 22.2 70.7 25.3C70.8 26.6 71.3 27.8 72.2 28.8C74.2 31.2 76.2 33.6 78.3 36C79.3 37.1 79.8 38.6 79.8 40Z"
                         })
 
                         readonly property string currentSvgPath: isActive ? m3ShapePaths[activeRandomShape] : m3ShapePaths["cookie4"]
@@ -1358,7 +1372,7 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 text: powerActionBtn.modelData.icon
                                 font.family: Icons.effectiveFont(text)
-                                font.pixelSize: powerActionBtn.isActive ? 27 : 23
+                                font.pixelSize: powerActionBtn.isActive ? 36 : 30
                                 color: powerActionBtn.isActive
                                     ? Theme.darker_background
                                     : (powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.accent)

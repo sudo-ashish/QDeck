@@ -61,7 +61,7 @@ QtObject {
     property int workspacesIconOffsetX: 0
     property int workspacesIconOffsetY: 0
     property int workspacesCapsuleWidth: Math.max(16, Math.round(Fonts.baseTextSize * (24 / 12.0)))
-    property int workspacesActiveCapsuleWidth: Math.max(30, Math.round(Fonts.baseTextSize * (46 / 12.0)))
+    property int workspacesActiveCapsuleWidth: Math.max(30, Math.round(Fonts.baseTextSize * (39 / 12.0)))
 
     // =========================================================================
     // Corner Radii

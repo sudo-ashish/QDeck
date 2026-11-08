@@ -70,7 +70,7 @@ case "$CMD" in
   select)
     call_ipc powermenu select "${2:-0}"
     ;;
-  state)
+  state|getState|status)
     call_ipc powermenu getState
     ;;
   *)
