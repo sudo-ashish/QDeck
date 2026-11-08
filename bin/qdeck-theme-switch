@@ -36,6 +36,7 @@ list_themes_json() {
         local id
         id="$(basename "$dir")"
         [[ "$id" == .* || "$id" == "current" ]] && continue
+        [[ ! -f "$dir/colors.toml" && ! -d "$dir/backgrounds" && ! -f "$dir/default.png" ]] && continue
 
         # Find first wallpaper matching standard formats
         local wallpaper=""
@@ -67,10 +68,14 @@ list_themes_json() {
 
         # Extract colors from colors.toml
         get_color() {
-            local k="$1"
-            local def="$2"
+            local k1="$1"
+            local k2="${2:-}"
+            local def="${3:-}"
             local v
-            v="$(grep -E "^[[:space:]]*$k[[:space:]]*=" "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*[^=]+=[[:space:]]*["\x27]?([^"\x27[:space:]]+).*/\1/' | xargs)"
+            v="$(grep -E "^[[:space:]]*$k1[[:space:]]*=" "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*[^=]+=[[:space:]]*["\x27]?([^"\x27[:space:]]+).*/\1/' | xargs)"
+            if [[ -z "$v" && -n "$k2" ]]; then
+                v="$(grep -E "^[[:space:]]*$k2[[:space:]]*=" "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*[^=]+=[[:space:]]*["\x27]?([^"\x27[:space:]]+).*/\1/' | xargs)"
+            fi
             if [[ -n "$v" ]]; then
                 [[ "$v" != \#* ]] && v="#$v"
                 echo "$v"
@@ -80,15 +85,15 @@ list_themes_json() {
         }
 
         local accent background foreground p_red p_green p_yellow p_blue p_magenta p_cyan
-        accent="$(get_color accent "#7daea3")"
-        background="$(get_color background "#282828")"
-        foreground="$(get_color foreground "#ebdbb2")"
-        p_red="$(get_color red "#ea6962")"
-        p_green="$(get_color green "#a9b665")"
-        p_yellow="$(get_color yellow "#d8a657")"
-        p_blue="$(get_color blue "$accent")"
-        p_magenta="$(get_color magenta "#d3869b")"
-        p_cyan="$(get_color cyan "#89b482")"
+        accent="$(get_color accent "" "#7daea3")"
+        background="$(get_color background "" "#282828")"
+        foreground="$(get_color foreground "" "#ebdbb2")"
+        p_red="$(get_color red color1 "#ea6962")"
+        p_green="$(get_color green color2 "#a9b665")"
+        p_yellow="$(get_color yellow color3 "#d8a657")"
+        p_blue="$(get_color blue color4 "$accent")"
+        p_magenta="$(get_color magenta color5 "#d3869b")"
+        p_cyan="$(get_color cyan color6 "#89b482")"
 
         local palette_json
         palette_json="$(jq -nc \

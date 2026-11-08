@@ -91,8 +91,8 @@ PanelWindow {
     readonly property real targetHeight: {
         if (root.currentView === "apps") return Appearance.launcherHeight
         if (root.currentView === "power") return 178
-        if (root.currentView === "wallpaper") return 254
-        return 254 // theme view
+        if (root.currentView === "wallpaper") return 218
+        return 248 // theme view
     }
 
     // Material Design 3 (M3) Shared Axis Y + Z physics from bottom
@@ -194,7 +194,6 @@ PanelWindow {
         }
         root.currentView = "wallpaper"
         root.wallpaperFilter = ""
-        if (wallpaperSearchInput) wallpaperSearchInput.text = ""
         root.wallpaperIndex = (root.wallpaperService && root.wallpaperService.middleIndex !== undefined)
             ? root.wallpaperService.middleIndex
             : Math.floor(root.wallpapersCount / 2)
@@ -203,7 +202,7 @@ PanelWindow {
             openAnim.restart()
         }
         Qt.callLater(function() {
-            if (wallpaperSearchInput) wallpaperSearchInput.forceActiveFocus()
+            keyCatcher.forceActiveFocus()
             if (wallpapersList) {
                 wallpapersList.currentIndex = root.wallpaperIndex
                 wallpapersList.positionViewAtIndex(root.wallpaperIndex, ListView.Center)
@@ -713,10 +712,10 @@ PanelWindow {
                     event.accepted = true
                 }
             } else if (root.currentView === "wallpaper") {
-                if (event.key === Qt.Key_Left) {
+                if (event.key === Qt.Key_Left || event.key === Qt.Key_Up) {
                     root.prevWallpaper()
                     event.accepted = true
-                } else if (event.key === Qt.Key_Right) {
+                } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Down) {
                     root.nextWallpaper()
                     event.accepted = true
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -980,10 +979,6 @@ PanelWindow {
                 text: {
                     if (root.currentView === "power") {
                         return root.powerActions[root.powerIndex] ? root.powerActions[root.powerIndex].name : "Power"
-                    } else if (root.currentView === "theme") {
-                        return root.currentTheme ? ("Active: " + root.currentTheme) : "Themes"
-                    } else if (root.currentView === "wallpaper") {
-                        return root.wallpapersCount ? (root.wallpapersCount + " wallpapers") : "Wallpapers"
                     }
                     return ""
                 }
@@ -1540,15 +1535,6 @@ PanelWindow {
                         Keys.onEscapePressed: root.close()
                     }
                 }
-
-                // Counter e.g. 5/18 (matches screenshot)
-                Text {
-                    text: (root.filteredThemes.length > 0 ? (root.themeIndex + 1) : 0) + "/" + root.filteredThemes.length
-                    font.family: root.fontFamily
-                    font.pixelSize: 12
-                    color: Theme.muted
-                    Layout.alignment: Qt.AlignVCenter
-                }
             }
 
             // The Carousel: 3 full cards + 2 half cards (selected card locked in center)
@@ -1597,7 +1583,9 @@ PanelWindow {
 
                     readonly property bool isSelected: (root.currentView === "theme") && (root.themeIndex === cardItem.index)
                     readonly property bool isCurrentTheme: modelData.isCurrent === true
-                    readonly property color themeAccent: modelData.accent ? modelData.accent : Theme.accent
+                    readonly property color themeAccent: (modelData.accent && modelData.accent !== "") ? modelData.accent : Theme.accent
+                    readonly property color themeBg: (modelData.background && modelData.background !== "") ? modelData.background : "#282828"
+                    readonly property color themeFg: (modelData.foreground && modelData.foreground !== "") ? modelData.foreground : Theme.bright_foreground
                     readonly property var cardPalette: root.getThemePalette(modelData)
 
                     width: 160
@@ -1621,11 +1609,11 @@ PanelWindow {
                             NumberAnimation { duration: Motion.short4; easing.type: Easing.OutCubic }
                         }
 
-                        color: modelData.background ? modelData.background : "#282828"
+                        color: cardItem.themeBg
 
                         border.color: cardItem.isSelected
                             ? cardItem.themeAccent
-                            : (cardItem.isCurrentTheme ? Theme.withAlpha(Theme.accent, 0.5) : Theme.withAlpha(Theme.border, 0.22))
+                            : (cardItem.isCurrentTheme ? Theme.withAlpha(cardItem.themeAccent, 0.45) : Theme.withAlpha(Theme.border, 0.22))
                         border.width: cardItem.isSelected ? 2 : 1
 
                         Behavior on border.color { ColorAnimation { duration: 160 } }
@@ -1649,7 +1637,7 @@ PanelWindow {
                             anchors.centerIn: parent
                             spacing: 12
 
-                            // 6 Color dots palette row (matches screenshot)
+                            // 6 Color dots palette row (dynamically updated from colors.toml)
                             Row {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 spacing: 6
@@ -1667,7 +1655,7 @@ PanelWindow {
                                 }
                             }
 
-                            // Theme name text (matches screenshot lowercase/clean)
+                            // Theme name text (dynamically adapted to theme foreground)
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: cardItem.modelData.id ? cardItem.modelData.id.toLowerCase() : (cardItem.modelData.name || "").toLowerCase()
@@ -1675,8 +1663,8 @@ PanelWindow {
                                 font.pixelSize: 12
                                 font.weight: cardItem.isSelected ? Fonts.weightBold : Fonts.weightMedium
                                 color: cardItem.isSelected
-                                    ? (cardItem.modelData.foreground || Theme.bright_foreground)
-                                    : (cardItem.modelData.foreground ? Theme.withAlpha(cardItem.modelData.foreground, 0.72) : Theme.muted)
+                                    ? cardItem.themeFg
+                                    : Theme.withAlpha(cardItem.themeFg, 0.72)
                                 elide: Text.ElideRight
                             }
                         }
@@ -1714,87 +1702,11 @@ PanelWindow {
             }
             visible: root.currentView === "wallpaper"
 
-            // Header Search & Counter Row
-            RowLayout {
-                id: wallpaperHeaderRow
-                anchors {
-                    top: parent.top
-                    left: parent.left
-                    right: parent.right
-                    leftMargin: 16
-                    rightMargin: 16
-                }
-                height: 24
-                spacing: 8
-
-                Row {
-                    spacing: 8
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-
-                    Text {
-                        text: Icons.search
-                        font.family: Icons.effectiveFont(text)
-                        font.pixelSize: 13
-                        color: Theme.muted
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    TextInput {
-                        id: wallpaperSearchInput
-                        width: 220
-                        anchors.verticalCenter: parent.verticalCenter
-                        font.family: root.fontFamily
-                        font.pixelSize: 13
-                        color: Theme.foreground
-                        selectionColor: Theme.selection
-                        selectedTextColor: Theme.bright_foreground
-                        clip: true
-
-                        Text {
-                            text: "Search wallpapers..."
-                            font.family: root.fontFamily
-                            font.pixelSize: 13
-                            color: Theme.withAlpha(Theme.muted, 0.6)
-                            visible: !wallpaperSearchInput.text && !wallpaperSearchInput.activeFocus
-                            anchors.fill: parent
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onTextChanged: {
-                            root.wallpaperFilter = text.trim()
-                            root.wallpaperIndex = 0
-                            if (wallpapersList) {
-                                wallpapersList.currentIndex = 0
-                                wallpapersList.positionViewAtIndex(0, ListView.Center)
-                            }
-                        }
-
-                        Keys.onLeftPressed: root.prevWallpaper()
-                        Keys.onRightPressed: root.nextWallpaper()
-                        Keys.onUpPressed: root.prevWallpaper()
-                        Keys.onDownPressed: root.nextWallpaper()
-                        Keys.onReturnPressed: root.applyCurrentWallpaper()
-                        Keys.onEnterPressed: root.applyCurrentWallpaper()
-                        Keys.onEscapePressed: root.close()
-                    }
-                }
-
-                // Counter e.g. 3/5
-                Text {
-                    text: (root.filteredWallpapers.length > 0 ? (root.wallpaperIndex + 1) : 0) + "/" + root.filteredWallpapers.length
-                    font.family: root.fontFamily
-                    font.pixelSize: 12
-                    color: Theme.muted
-                    Layout.alignment: Qt.AlignVCenter
-                }
-            }
-
             // The Carousel: 3 full cards + 2 half cards (selected card locked in center)
             ListView {
                 id: wallpapersList
                 anchors {
-                    top: wallpaperHeaderRow.bottom
+                    top: parent.top
                     topMargin: 8
                     left: parent.left
                     right: parent.right
@@ -1805,7 +1717,7 @@ PanelWindow {
                 orientation: ListView.Horizontal
                 spacing: 12
                 clip: true
-                model: root.filteredWallpapers
+                model: root.wallpapers
                 currentIndex: root.wallpaperIndex
 
                 preferredHighlightBegin: (width - 160) / 2
@@ -1861,14 +1773,6 @@ PanelWindow {
 
                         color: Theme.withAlpha(Theme.dark_background, 0.6)
 
-                        border.color: wallCardItem.isSelected
-                            ? Theme.accent
-                            : (wallCardItem.isActiveWall ? Theme.withAlpha(Theme.accent, 0.6) : Theme.withAlpha(Theme.border, 0.25))
-                        border.width: wallCardItem.isSelected ? 2 : 1
-
-                        Behavior on border.color { ColorAnimation { duration: 160 } }
-                        Behavior on border.width { NumberAnimation { duration: 160 } }
-
                         MouseArea {
                             id: wallCardMouse
                             anchors.fill: parent
@@ -1883,7 +1787,7 @@ PanelWindow {
                             }
                         }
 
-                        // Image Preview
+                        // Image Preview (only visual, no name scrim)
                         Image {
                             anchors.fill: parent
                             source: wallCardItem.modelData.path ? ("file://" + wallCardItem.modelData.path) : ""
@@ -1893,27 +1797,16 @@ PanelWindow {
                             sourceSize: Qt.size(320, 196)
                         }
 
-                        // Bottom scrim with wallpaper name
+                        // Border overlay for selected wallpaper
                         Rectangle {
-                            anchors {
-                                left: parent.left
-                                right: parent.right
-                                bottom: parent.bottom
-                            }
-                            height: 26
-                            color: Theme.withAlpha(Theme.darker_background, 0.8)
+                            anchors.fill: parent
+                            radius: 14
+                            color: "transparent"
+                            border.color: wallCardItem.isSelected ? Theme.accent : "transparent"
+                            border.width: wallCardItem.isSelected ? 2 : 0
 
-                            Text {
-                                anchors.centerIn: parent
-                                text: wallCardItem.modelData.name || ""
-                                font.family: root.fontFamily
-                                font.pixelSize: 11
-                                font.weight: wallCardItem.isSelected ? Fonts.weightBold : Fonts.weightMedium
-                                color: wallCardItem.isSelected ? Theme.bright_foreground : Theme.foreground
-                                elide: Text.ElideRight
-                                horizontalAlignment: Text.AlignHCenter
-                                width: parent.width - 12
-                            }
+                            Behavior on border.color { ColorAnimation { duration: 160 } }
+                            Behavior on border.width { NumberAnimation { duration: 160 } }
                         }
                     }
                 }
