@@ -14,9 +14,7 @@ PanelWindow {
 
     readonly property string fontFamily: Fonts.uiFont
     property real animProgress: 0.0
-
-    property bool isDraggingOut: false
-    readonly property bool isDragging: dropArea.containsDrag || root.isDraggingOut
+    property bool isDraggingItem: false
 
     function categoryColor(cat) {
         if (cat === "code") return Theme.orange
@@ -108,10 +106,14 @@ PanelWindow {
         anchors.fill: parent
         radius: Appearance.launcherRadius
 
-        color: Theme.withAlpha(Theme.darker_background, 0.90)
+        color: (dropArea.containsDrag && !root.isDraggingItem)
+            ? Theme.withAlpha(Theme.dark_background, Theme.baseOpacity)
+            : Theme.withAlpha(Theme.darker_background, Theme.baseOpacity)
         border.width: 0
         border.color: "transparent"
         clip: true
+
+        Behavior on color { ColorAnimation { duration: 180 } }
 
         // M3 Slide-in from right + Scale + Opacity
         transform: Translate {
@@ -129,6 +131,7 @@ PanelWindow {
             anchors.fill: parent
 
             onEntered: function(drag) {
+                if (root.isDraggingItem) return
                 drag.acceptProposedAction()
             }
 
@@ -313,19 +316,19 @@ PanelWindow {
             model: root.shelfService ? root.shelfService.items : null
             interactive: count > 0
 
-            // Blur out background items when dragging files over shelf
-            layer.enabled: dropArea.containsDrag
-            layer.effect: MultiEffect {
-                blurEnabled: true
-                blur: 0.85
-                blurMax: 32
-                saturation: 0.8
-            }
-
             delegate: Item {
                 id: delegateRoot
                 required property var model
                 required property int index
+
+                readonly property bool isDragging: dragArea.drag.active
+                onIsDraggingChanged: {
+                    if (isDragging) {
+                        root.isDraggingItem = true
+                    } else {
+                        root.isDraggingItem = false
+                    }
+                }
 
                 width: listView.width
                 height: 60
@@ -351,8 +354,8 @@ PanelWindow {
                     anchors.fill: parent
                     radius: Appearance.launcherItemRadius
                     color: dragArea.drag.active
-                        ? Theme.accent
-                        : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.42) : Theme.withAlpha(Theme.dark_background, 0.90))
+                        ? Theme.withAlpha(Theme.accent, 0.32)
+                        : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.38) : Theme.withAlpha(Theme.dark_background, 0.90))
                     border.width: 0
                     border.color: "transparent"
                     scale: dragArea.drag.active ? 0.96 : (dragArea.containsMouse ? 1.01 : 1.0)
@@ -449,7 +452,7 @@ PanelWindow {
                                 font.family: root.fontFamily
                                 font.pixelSize: 12
                                 font.weight: Fonts.weightMedium
-                                color: dragArea.drag.active ? Theme.darker_background : Theme.bright_foreground
+                                color: Theme.bright_foreground
                                 elide: Text.ElideMiddle
                             }
 
@@ -462,7 +465,7 @@ PanelWindow {
                                 }
                                 font.family: root.fontFamily
                                 font.pixelSize: 10
-                                color: dragArea.drag.active ? Theme.withAlpha(Theme.darker_background, 0.75) : Theme.muted
+                                color: Theme.muted
                                 elide: Text.ElideMiddle
                             }
                         }
@@ -509,18 +512,15 @@ PanelWindow {
                     drag.target: dragProxy
                     drag.axis: Drag.XAndYAxis
 
-                    onPressed: {
-                        root.isDraggingOut = true
-                    }
                     onReleased: {
-                        root.isDraggingOut = false
                         dragProxy.x = 0
                         dragProxy.y = 0
+                        root.isDraggingItem = false
                     }
                     onCanceled: {
-                        root.isDraggingOut = false
                         dragProxy.x = 0
                         dragProxy.y = 0
+                        root.isDraggingItem = false
                     }
                 }
             }
@@ -532,7 +532,7 @@ PanelWindow {
         Column {
             anchors.centerIn: parent
             spacing: 12
-            visible: (root.shelfService ? root.shelfService.count === 0 : true) && !dropArea.containsDrag
+            visible: (root.shelfService ? root.shelfService.count === 0 : true) && (!dropArea.containsDrag || root.isDraggingItem)
 
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -575,7 +575,7 @@ PanelWindow {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Inbound Drag Active Overlay (Borderless with background blur effect)
+        // Inbound Drag Active Overlay (Borderless with background indicator)
         // ─────────────────────────────────────────────────────────────────────
         Rectangle {
             anchors {
@@ -586,16 +586,16 @@ PanelWindow {
                 margins: 10
             }
             radius: Appearance.launcherItemRadius
-            visible: dropArea.containsDrag
-            color: Theme.withAlpha(Theme.darker_background, 0.45)
+            visible: dropArea.containsDrag && !root.isDraggingItem
+            color: Theme.withAlpha(Theme.accent, 0.22)
             border.width: 0
 
             Rectangle {
                 anchors.centerIn: parent
                 width: dropBannerCol.implicitWidth + 36
-                height: dropBannerCol.implicitHeight + 24
+                height: dropBannerCol.implicitHeight + 20
                 radius: 16
-                color: Theme.withAlpha(Theme.dark_background, 0.95)
+                color: Theme.withAlpha(Theme.darker_background, 0.92)
                 border.width: 0
 
                 Column {
