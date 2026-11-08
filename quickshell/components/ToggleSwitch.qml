@@ -25,24 +25,37 @@ Item {
         border.width: Appearance.toggleBorderWidth
 
         Behavior on color {
-            ColorAnimation { duration: 120 }
+            ColorAnimation { duration: Motion.short4 }
         }
 
         Rectangle {
             id: thumb
-            width: Appearance.toggleThumbSize
+            width: root.checked ? (Appearance.toggleThumbSize + 2) : Appearance.toggleThumbSize
             height: Appearance.toggleThumbSize
             radius: Appearance.toggleThumbRadius
             anchors.verticalCenter: parent.verticalCenter
             x: root.checked ? (track.width - width - 3) : 3
             color: root.checked ? Theme.accent : Theme.muted
 
+            // M3 Standard Easing for on-screen utility transition
             Behavior on x {
-                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                NumberAnimation {
+                    duration: Motion.medium1
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Motion.standardCurve
+                }
+            }
+
+            Behavior on width {
+                NumberAnimation {
+                    duration: Motion.short3
+                    easing.type: Easing.OutBack
+                    easing.overshoot: Motion.springOvershoot
+                }
             }
 
             Behavior on color {
-                ColorAnimation { duration: 120 }
+                ColorAnimation { duration: Motion.short4 }
             }
         }
     }

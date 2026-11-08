@@ -110,6 +110,24 @@ PanelWindow {
         return Math.max(Appearance.barHeight + 6, itemBottomScreenY + 6)
     }
 
+    property real enterProgress: root.open ? 1.0 : 0.0
+    NumberAnimation {
+        id: enterAnim
+        target: root
+        property: "enterProgress"
+        from: 0.0
+        to: 1.0
+        duration: Motion.enterYDuration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Motion.emphasizedDecelerateCurve
+    }
+    onOpenChanged: {
+        if (root.open) {
+            root.enterProgress = 0.0
+            enterAnim.restart()
+        }
+    }
+
     // Outer Card Container
     Rectangle {
         id: cardRect
@@ -122,9 +140,21 @@ PanelWindow {
         border.width: Appearance.borderWidthNone
         radius: Appearance.popupRadius
 
+        // M3 Shared Axis Y + Z entrance
+        opacity: root.enterProgress
+        scale: Motion.enterZScaleStart + (1.0 - Motion.enterZScaleStart) * root.enterProgress
+        transform: Translate {
+            y: (1.0 - root.enterProgress) * -12
+        }
+
+        // M3 Container Transform on height
         Behavior on height {
             enabled: root.open
-            NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: Motion.medium3
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.emphasizedCurve
+            }
         }
 
         // Prevent clicks inside the card from closing the popup

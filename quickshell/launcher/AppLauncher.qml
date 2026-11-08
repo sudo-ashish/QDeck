@@ -67,15 +67,15 @@ PanelWindow {
         return 290 // theme view
     }
 
-    // Spring pop-up & retraction physics from bottom
+    // Material Design 3 (M3) Shared Axis Y + Z physics from bottom
     NumberAnimation {
         id: openAnim
         target: root
         property: "animProgress"
         to: 1.0
-        duration: 320
-        easing.type: Easing.OutBack
-        easing.overshoot: 1.12
+        duration: Motion.enterYDuration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Motion.emphasizedDecelerateCurve
     }
 
     NumberAnimation {
@@ -83,8 +83,9 @@ PanelWindow {
         target: root
         property: "animProgress"
         to: 0.0
-        duration: 190
-        easing.type: Easing.InCubic
+        duration: Motion.exitYDuration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Motion.emphasizedAccelerateCurve
         onFinished: {
             root.animProgress = 0.0
             if (!root.isOpen) {
@@ -658,11 +659,20 @@ PanelWindow {
         height: Math.min(parent.height - 60, root.targetHeight)
         radius: Appearance.launcherRadius
 
+        // Material Design 3 (M3) Container Transform: synchronized dimensions morph
         Behavior on width {
-            NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: Motion.containerTransformDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.containerTransformEasing
+            }
         }
         Behavior on height {
-            NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: Motion.containerTransformDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.containerTransformEasing
+            }
         }
 
         color: Theme.withAlpha(Theme.darker_background, Theme.baseOpacity)
@@ -670,12 +680,12 @@ PanelWindow {
         border.width: 1
         clip: true
 
-        // Pop down-to-up translation & spring physics
+        // M3 Shared Axis Y (Translate) + Z (Scale)
         transform: Translate {
             y: (1.0 - root.animProgress) * (launcherCard.height + 64)
         }
         opacity: Math.min(1.0, root.animProgress * 1.5)
-        scale: 0.94 + 0.06 * Math.max(0, root.animProgress)
+        scale: Motion.enterZScaleStart + (1.0 - Motion.enterZScaleStart) * Math.max(0, Math.min(1.0, root.animProgress))
 
         MouseArea {
             anchors.fill: parent
@@ -1284,10 +1294,10 @@ PanelWindow {
                             rotation: powerActionBtn.isActive ? ((powerActionBtn.index % 2 === 0) ? 5 : -5) : 0
 
                             Behavior on scale {
-                                NumberAnimation { duration: 240; easing.type: Easing.OutBack; easing.overshoot: 1.3 }
+                                NumberAnimation { duration: Motion.springDuration; easing.type: Easing.OutBack; easing.overshoot: Motion.springOvershoot }
                             }
                             Behavior on rotation {
-                                NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+                                NumberAnimation { duration: Motion.short4; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
                             }
 
                             SequentialAnimation {
@@ -1297,15 +1307,17 @@ PanelWindow {
                                     property: "scale"
                                     from: 0.88
                                     to: 1.18
-                                    duration: 160
-                                    easing.type: Easing.OutCubic
+                                    duration: Motion.short3
+                                    easing.type: Easing.BezierSpline
+                                    easing.bezierCurve: Motion.emphasizedDecelerateCurve
                                 }
                                 NumberAnimation {
                                     target: buttonContent
                                     property: "scale"
                                     to: 1.14
-                                    duration: 120
-                                    easing.type: Easing.OutBack
+                                    duration: Motion.short2
+                                    easing.type: Easing.BezierSpline
+                                    easing.bezierCurve: Motion.emphasizedCurve
                                 }
                             }
 

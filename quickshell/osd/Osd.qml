@@ -143,7 +143,7 @@ Item {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Animation Controllers (Fade + Slight Slide-in)
+    // Material Design 3 (M3) Motion Controllers (Shared Axis Y + Z)
     // ─────────────────────────────────────────────────────────────────────────
     property real animProgress: 0.0
 
@@ -152,8 +152,9 @@ Item {
         target: root
         property: "animProgress"
         to: 1.0
-        duration: 180
-        easing.type: Easing.OutCubic
+        duration: Motion.enterYDuration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Motion.emphasizedDecelerateCurve
     }
 
     NumberAnimation {
@@ -161,8 +162,9 @@ Item {
         target: root
         property: "animProgress"
         to: 0.0
-        duration: 150
-        easing.type: Easing.InQuad
+        duration: Motion.exitYDuration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Motion.emphasizedAccelerateCurve
     }
 
     onOpenedChanged: {
@@ -224,7 +226,7 @@ Item {
 
             transformOrigin: Item.Center
             opacity: root.animProgress
-            scale: 0.92 + 0.08 * root.animProgress
+            scale: Motion.enterZScaleStart + (1.0 - Motion.enterZScaleStart) * root.animProgress
             transform: Translate {
                 y: (1.0 - root.animProgress) * 20
             }

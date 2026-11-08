@@ -56,14 +56,15 @@ Rectangle {
 
                 Behavior on width {
                     NumberAnimation {
-                        duration: Appearance.animDurationNormal
-                        easing.type: Easing.OutCubic
+                        duration: Motion.medium1
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Motion.emphasizedCurve
                     }
                 }
 
                 Behavior on color {
                     ColorAnimation {
-                        duration: Appearance.animDurationNormal
+                        duration: Motion.colorDuration
                     }
                 }
 

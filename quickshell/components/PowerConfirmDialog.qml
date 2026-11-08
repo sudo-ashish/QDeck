@@ -63,7 +63,11 @@ PanelWindow {
         opacity: root.isOpen ? 1.0 : 0.0
 
         Behavior on opacity {
-            NumberAnimation { duration: Appearance.animDurationNormal; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: Motion.medium1
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: Motion.standardCurve
+            }
         }
 
         MouseArea {
@@ -74,7 +78,7 @@ PanelWindow {
         }
     }
 
-    // Centered Confirmation Dialog Box
+    // Centered Confirmation Dialog Box (M3 Shared Axis Z)
     Rectangle {
         id: dialogCard
         width: 380
@@ -86,13 +90,21 @@ PanelWindow {
         border.width: Appearance.borderWidthThin
 
         opacity: root.isOpen ? 1.0 : 0.0
-        scale: root.isOpen ? 1.0 : 0.95
+        scale: root.isOpen ? 1.0 : Motion.enterZScaleStart
 
         Behavior on opacity {
-            NumberAnimation { duration: Appearance.animDurationNormal; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: root.isOpen ? Motion.enterZDuration : Motion.exitZDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.isOpen ? Motion.enterZEasing : Motion.exitZEasing
+            }
         }
         Behavior on scale {
-            NumberAnimation { duration: Appearance.animDurationNormal; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: root.isOpen ? Motion.enterZDuration : Motion.exitZDuration
+                easing.type: Easing.BezierSpline
+                easing.bezierCurve: root.isOpen ? Motion.enterZEasing : Motion.exitZEasing
+            }
         }
 
         // Prevent clicks on the card from falling through to the backdrop

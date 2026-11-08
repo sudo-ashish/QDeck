@@ -61,6 +61,7 @@ QtObject {
     readonly property real scrimOpacity: Appearance.scrimOpacity
 
     function withAlpha(colorVal, alphaVal) {
+        if (!colorVal || colorVal.r === undefined) return Qt.rgba(0, 0, 0, alphaVal || 0)
         return Qt.rgba(colorVal.r, colorVal.g, colorVal.b, alphaVal)
     }
 

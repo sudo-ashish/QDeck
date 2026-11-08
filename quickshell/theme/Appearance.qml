@@ -208,11 +208,11 @@ QtObject {
     property real disabledOpacity: 0.38
 
     // =========================================================================
-    // Animation Durations (ms)
+    // Material Design 3 (M3) Motion Durations (ms)
     // =========================================================================
-    property int animDurationFast: 100
-    property int animDurationNormal: 150
-    property int animDurationMedium: 200
-    property int animDurationSlow: 250
-    property int animDurationSpring: 320
+    property int animDurationFast: Motion.short2   // 100ms
+    property int animDurationNormal: Motion.short3 // 150ms
+    property int animDurationMedium: Motion.short4 // 200ms
+    property int animDurationSlow: Motion.medium1   // 250ms
+    property int animDurationSpring: Motion.springDuration // 320ms
 }

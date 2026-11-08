@@ -101,7 +101,7 @@ PanelWindow {
     property bool isDraggingSeek: false
     property real dragProgress: 0.0
 
-    // Bouncy morph transition (State A -> State B)
+    // M3 Motion transition (State A -> State B)
     property real animProgress: 0.0
 
     NumberAnimation {
@@ -110,8 +110,9 @@ PanelWindow {
         property: "animProgress"
         from: root.animProgress
         to: 1.0
-        duration: 300
-        easing.type: Easing.OutCubic
+        duration: Motion.enterYDuration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Motion.emphasizedDecelerateCurve
     }
 
     NumberAnimation {
@@ -120,8 +121,9 @@ PanelWindow {
         property: "animProgress"
         from: root.animProgress
         to: 0.0
-        duration: 200
-        easing.type: Easing.InCubic
+        duration: Motion.exitYDuration
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Motion.emphasizedAccelerateCurve
     }
 
     Timer {

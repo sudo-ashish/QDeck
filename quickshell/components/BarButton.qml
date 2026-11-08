@@ -30,8 +30,18 @@ Rectangle {
         return "transparent"
     }
 
+    scale: mouseArea.pressed ? 0.94 : (mouseArea.containsMouse ? 1.04 : 1.0)
+
+    Behavior on scale {
+        NumberAnimation {
+            duration: Motion.short3
+            easing.type: Easing.OutBack
+            easing.overshoot: Motion.springOvershoot
+        }
+    }
+
     Behavior on color {
-        ColorAnimation { duration: Appearance.animDurationNormal }
+        ColorAnimation { duration: Motion.short3 }
     }
 
     Row {

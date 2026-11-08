@@ -69,8 +69,14 @@ Item {
                 border.color: Theme.accent
                 border.width: Appearance.sliderKnobBorderWidth
 
-                scale: sliderMouse.containsMouse || sliderMouse.pressed ? 1.2 : 1.0
-                Behavior on scale { NumberAnimation { duration: Appearance.animDurationFast } }
+                scale: sliderMouse.containsMouse || sliderMouse.pressed ? 1.25 : 1.0
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Motion.short3
+                        easing.type: Easing.OutBack
+                        easing.overshoot: Motion.springOvershoot
+                    }
+                }
             }
 
             MouseArea {

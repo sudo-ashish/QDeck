@@ -475,6 +475,22 @@ Item {
 
                         readonly property real lifetime: root.durationFor(cardSlot.urgency, cardSlot.expireTimeout)
 
+                        // M3 Shared Axis Y + Z entrance transition
+                        property real enterProgress: 0.0
+                        NumberAnimation on enterProgress {
+                            from: 0.0
+                            to: 1.0
+                            duration: Motion.enterYDuration
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Motion.emphasizedDecelerateCurve
+                        }
+
+                        opacity: cardSlot.enterProgress
+                        scale: Motion.enterZScaleStart + (1.0 - Motion.enterZScaleStart) * cardSlot.enterProgress
+                        transform: Translate {
+                            y: (1.0 - cardSlot.enterProgress) * -16
+                        }
+
                         NotificationCard {
                             id: card
                             anchors.horizontalCenter: parent.horizontalCenter
