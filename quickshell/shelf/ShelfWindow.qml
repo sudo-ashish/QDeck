@@ -323,45 +323,135 @@ PanelWindow {
 
                 readonly property bool isDragging: dragArea.drag.active
                 onIsDraggingChanged: {
-                    if (isDragging) {
-                        root.isDraggingItem = true
-                    } else {
-                        root.isDraggingItem = false
-                    }
+                    root.isDraggingItem = isDragging
                 }
 
                 width: listView.width
                 height: 60
 
-                // Invisible drag proxy for outbound Wayland dragging
-                Item {
-                    id: dragProxy
-                    width: 60
-                    height: 60
-                    visible: false
+                // ─────────────────────────────────────────────────────────────
+                // Ghost Slot Placeholder (In-Shelf Feedback when card is lifted)
+                // ─────────────────────────────────────────────────────────────
+                Rectangle {
+                    id: ghostSlot
+                    anchors.fill: parent
+                    visible: dragArea.drag.active
+                    radius: Appearance.launcherItemRadius
+                    color: Theme.withAlpha(Theme.dark_background, 0.40)
+                    border.color: Theme.withAlpha(Theme.accent, 0.35)
+                    border.width: 1
 
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        spacing: 8
+                        opacity: 0.55
+
+                        Text {
+                            text: Icons.move || Icons.folder
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 14
+                            color: Theme.accent
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        Text {
+                            text: "Dragging file out..."
+                            font.family: root.fontFamily
+                            font.pixelSize: 11
+                            font.weight: Fonts.weightMedium
+                            color: Theme.muted
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                    }
+                }
+
+                // ─────────────────────────────────────────────────────────────
+                // Foreground Interactive Card (Lift, Spring, Wayland Drag Target)
+                // ─────────────────────────────────────────────────────────────
+                Rectangle {
+                    id: card
+                    width: parent.width
+                    height: parent.height
+                    x: 0
+                    y: 0
+                    radius: Appearance.launcherItemRadius
+
+                    // Outbound Wayland Drag Properties attached directly to card
                     Drag.active: dragArea.drag.active
                     Drag.dragType: Drag.Automatic
                     Drag.supportedActions: Qt.CopyAction
                     Drag.mimeData: ({ "text/uri-list": delegateRoot.model.filePath + "\r\n" })
-                    Drag.hotSpot.x: 30
-                    Drag.hotSpot.y: 30
-                }
+                    Drag.hotSpot: Qt.point(card.width / 2, card.height / 2)
+                    Drag.imageSource: cardDragImageSource
 
-                // Visual Card
-                Rectangle {
-                    id: cardVisual
-                    anchors.fill: parent
-                    radius: Appearance.launcherItemRadius
+                    property string cardDragImageSource: delegateRoot.model.isImage ? delegateRoot.model.filePath : ""
+
+                    function refreshDragSnapshot() {
+                        if (!card || card.width <= 0 || card.height <= 0) return
+                        card.grabToImage(function(result) {
+                            if (result && result.url) {
+                                cardDragImageSource = result.url
+                            }
+                        }, Qt.size(card.width, card.height))
+                    }
+
+                    Component.onCompleted: {
+                        Qt.callLater(card.refreshDragSnapshot)
+                    }
+
+                    // Spring Lift & Press Animations
+                    scale: dragArea.drag.active ? 0.94 : (dragArea.containsPress ? 0.98 : (dragArea.containsMouse ? 1.01 : 1.0))
+                    opacity: dragArea.drag.active ? 0.4 : 1.0
                     color: dragArea.drag.active
                         ? Theme.withAlpha(Theme.accent, 0.32)
                         : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.38) : Theme.withAlpha(Theme.dark_background, 0.90))
-                    border.width: 0
-                    border.color: "transparent"
-                    scale: dragArea.drag.active ? 0.96 : (dragArea.containsMouse ? 1.01 : 1.0)
+                    border.width: dragArea.drag.active ? 1 : 0
+                    border.color: Theme.accent
 
-                    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
+                    Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+                    Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                     Behavior on color { ColorAnimation { duration: 140 } }
+                    Behavior on border.width { NumberAnimation { duration: 140 } }
+                    Behavior on border.color { ColorAnimation { duration: 140 } }
+
+                    // Snap-back animation when released
+                    Behavior on x {
+                        enabled: !dragArea.drag.active
+                        NumberAnimation { duration: 200; easing.type: Easing.OutBack }
+                    }
+                    Behavior on y {
+                        enabled: !dragArea.drag.active
+                        NumberAnimation { duration: 200; easing.type: Easing.OutBack }
+                    }
+
+                    // Drag MouseArea on the card
+                    MouseArea {
+                        id: dragArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: dragArea.drag.active ? Qt.ClosedHandCursor : (dragArea.containsMouse ? Qt.OpenHandCursor : Qt.ArrowCursor)
+                        drag.target: card
+                        drag.axis: Drag.XAndYAxis
+
+                        onPressed: {
+                            if (!card.cardDragImageSource) {
+                                card.refreshDragSnapshot()
+                            }
+                        }
+
+                        onReleased: {
+                            card.x = 0
+                            card.y = 0
+                            root.isDraggingItem = false
+                        }
+                        onCanceled: {
+                            card.x = 0
+                            card.y = 0
+                            root.isDraggingItem = false
+                        }
+                    }
 
                     // Category Color Indicator Pill (Left Edge)
                     Rectangle {
@@ -414,6 +504,12 @@ PanelWindow {
                                 cache: false
                                 mipmap: true
                                 sourceSize: Qt.size(96, 96)
+
+                                onStatusChanged: {
+                                    if (status === Image.Ready) {
+                                        Qt.callLater(card.refreshDragSnapshot)
+                                    }
+                                }
 
                                 layer.enabled: true
                                 layer.effect: MultiEffect {
@@ -472,7 +568,7 @@ PanelWindow {
 
                         // Remove button (✕)
                         Rectangle {
-                            z: 2
+                            z: 10
                             Layout.preferredWidth: 26
                             Layout.preferredHeight: 26
                             Layout.alignment: Qt.AlignVCenter
@@ -500,27 +596,6 @@ PanelWindow {
                                 }
                             }
                         }
-                    }
-                }
-
-                // Drag MouseArea on the card
-                MouseArea {
-                    id: dragArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: dragArea.drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-                    drag.target: dragProxy
-                    drag.axis: Drag.XAndYAxis
-
-                    onReleased: {
-                        dragProxy.x = 0
-                        dragProxy.y = 0
-                        root.isDraggingItem = false
-                    }
-                    onCanceled: {
-                        dragProxy.x = 0
-                        dragProxy.y = 0
-                        root.isDraggingItem = false
                     }
                 }
             }

@@ -84,3 +84,4 @@ case "$CMD" in
     call_ipc shelf "$CMD" "${@:2}"
     ;;
 esac
+
