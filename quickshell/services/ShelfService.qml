@@ -171,6 +171,14 @@ QtObject {
         root.updateSelectedCount()
     }
 
+    function toggleItem(index) {
+        if (index < 0 || index >= items.count) return
+        var cur = !!items.get(index).selected
+        items.setProperty(index, "selected", !cur)
+        root.lastSelectedIndex = index
+        root.updateSelectedCount()
+    }
+
     function toggleSelection(index, modifiers) {
         if (index < 0 || index >= items.count) return
         var isShift = !!(modifiers & Qt.ShiftModifier)
@@ -193,9 +201,16 @@ QtObject {
             items.setProperty(index, "selected", !cur)
             root.lastSelectedIndex = index
         } else {
-            // Plain click: clear other selections and select this index
-            for (var k = 0; k < items.count; k++) {
-                items.setProperty(k, "selected", k === index)
+            // Plain click:
+            // If already in multi-select mode (selectedCount > 0), clicking toggles this item
+            // If not in multi-select mode (selectedCount == 0), select this item
+            if (root.selectedCount > 0) {
+                var curState = !!items.get(index).selected
+                items.setProperty(index, "selected", !curState)
+            } else {
+                for (var k = 0; k < items.count; k++) {
+                    items.setProperty(k, "selected", k === index)
+                }
             }
             root.lastSelectedIndex = index
         }
@@ -313,6 +328,15 @@ QtObject {
         function selectAll(): string {
             root.selectAll()
             return "ok"
+        }
+
+        function toggleItem(indexStr: string): string {
+            var idx = parseInt(indexStr, 10)
+            if (!isNaN(idx)) {
+                root.toggleItem(idx)
+                return "ok"
+            }
+            return "error"
         }
 
         function clearSelection(): string {

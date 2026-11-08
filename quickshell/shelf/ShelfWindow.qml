@@ -491,6 +491,54 @@ PanelWindow {
 
             Item { Layout.fillWidth: true }
 
+            // Normal State Button: "Select" (Select All)
+            Rectangle {
+                visible: !shelfCard.hasSelection && (root.shelfService ? root.shelfService.count > 0 : false)
+                width: selectAllRow.implicitWidth + 14
+                height: 24
+                radius: 12
+                color: selectAllMouse.containsMouse
+                    ? Theme.withAlpha(Theme.accent, 0.28)
+                    : Theme.withAlpha(Theme.lighter_background, 0.30)
+                border.width: 0
+                Layout.alignment: Qt.AlignVCenter
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                Row {
+                    id: selectAllRow
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    Text {
+                        text: Icons.check || "✓"
+                        font.family: Icons.effectiveFont(text)
+                        font.pixelSize: 10
+                        color: selectAllMouse.containsMouse ? Theme.accent : Theme.muted
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text: "Select"
+                        font.family: root.fontFamily
+                        font.pixelSize: 10
+                        font.weight: Fonts.weightMedium
+                        color: selectAllMouse.containsMouse ? Theme.accent : Theme.muted
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
+                    id: selectAllMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (root.shelfService) root.shelfService.selectAll()
+                    }
+                }
+            }
+
             // Normal State Button: "Clear All"
             Rectangle {
                 visible: !shelfCard.hasSelection && (root.shelfService ? root.shelfService.count > 0 : false)
@@ -535,6 +583,46 @@ PanelWindow {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         if (root.shelfService) root.shelfService.clear()
+                    }
+                }
+            }
+
+            // Selection State Button: "All" (when not all items are selected)
+            Rectangle {
+                visible: shelfCard.hasSelection && (root.shelfService ? root.shelfService.selectedCount < root.shelfService.count : false)
+                width: selAllInSelRow.implicitWidth + 14
+                height: 24
+                radius: 12
+                color: selAllInSelMouse.containsMouse
+                    ? Theme.withAlpha(Theme.accent, 0.28)
+                    : Theme.withAlpha(Theme.lighter_background, 0.25)
+                border.width: 0
+                Layout.alignment: Qt.AlignVCenter
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                Row {
+                    id: selAllInSelRow
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    Text {
+                        text: "All"
+                        font.family: root.fontFamily
+                        font.pixelSize: 10
+                        font.weight: Fonts.weightMedium
+                        color: selAllInSelMouse.containsMouse ? Theme.accent : Theme.muted
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
+                    id: selAllInSelMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (root.shelfService) root.shelfService.selectAll()
                     }
                 }
             }
@@ -774,41 +862,68 @@ PanelWindow {
                         }
                     }
 
-                    // Checkmark / Selection Indicator
-                    Rectangle {
-                        id: selIndicator
+                    // Checkmark / Selection Indicator (Dedicated GUI Multi-Select target)
+                    Item {
+                        id: selIndicatorBox
+                        z: 20
                         anchors {
                             left: parent.left
-                            verticalCenter: parent.verticalCenter
-                            leftMargin: 8
+                            top: parent.top
+                            bottom: parent.bottom
                         }
-                        width: 18
-                        height: 18
-                        radius: 9
-                        color: delegateRoot.isSelected
-                            ? Theme.accent
-                            : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.30) : "transparent")
-                        border.color: delegateRoot.isSelected
-                            ? Theme.accent
-                            : (dragArea.containsMouse ? Theme.withAlpha(Theme.border, 0.40) : Theme.withAlpha(root.categoryColor(delegateRoot.model.fileCategory), 0.6))
-                        border.width: delegateRoot.isSelected ? 0 : 1
+                        width: 36
 
-                        Behavior on color { ColorAnimation { duration: 120 } }
-                        Behavior on border.color { ColorAnimation { duration: 120 } }
-
-                        Text {
+                        Rectangle {
+                            id: selIndicator
                             anchors.centerIn: parent
-                            text: delegateRoot.isSelected ? (Icons.check || "✓") : ""
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 11
-                            font.weight: Fonts.weightBold
-                            color: Theme.darker_background
+                            width: 20
+                            height: 20
+                            radius: 10
+                            color: delegateRoot.isSelected
+                                ? Theme.accent
+                                : (selMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.40) : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.25) : "transparent"))
+                            border.color: delegateRoot.isSelected
+                                ? Theme.accent
+                                : (selMouse.containsMouse ? Theme.withAlpha(Theme.border, 0.60) : (dragArea.containsMouse ? Theme.withAlpha(Theme.border, 0.40) : Theme.withAlpha(root.categoryColor(delegateRoot.model.fileCategory), 0.6)))
+                            border.width: delegateRoot.isSelected ? 0 : 1
+
+                            scale: selMouse.pressed ? 0.88 : (selMouse.containsMouse ? 1.10 : 1.0)
+
+                            Behavior on color { ColorAnimation { duration: 120 } }
+                            Behavior on border.color { ColorAnimation { duration: 120 } }
+                            Behavior on scale { NumberAnimation { duration: 100 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: delegateRoot.isSelected ? (Icons.check || "✓") : ""
+                                font.family: Icons.effectiveFont(text)
+                                font.pixelSize: 11
+                                font.weight: Fonts.weightBold
+                                color: Theme.darker_background
+                            }
+                        }
+
+                        MouseArea {
+                            id: selMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            preventStealing: true
+                            onPressed: function(mouse) {
+                                mouse.accepted = true
+                            }
+                            onClicked: function(mouse) {
+                                mouse.accepted = true
+                                if (root.shelfService) {
+                                    root.shelfService.toggleItem(delegateRoot.index)
+                                }
+                            }
                         }
                     }
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 34
+                        anchors.leftMargin: 38
                         anchors.rightMargin: 8
                         anchors.topMargin: 6
                         anchors.bottomMargin: 6

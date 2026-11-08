@@ -83,6 +83,10 @@ case "$CMD" in
   select-all)
     call_ipc shelf selectAll
     ;;
+  toggle-item|toggle-select)
+    shift
+    call_ipc shelf toggleItem "$1"
+    ;;
   deselect|clear-selection)
     call_ipc shelf clearSelection
     ;;
