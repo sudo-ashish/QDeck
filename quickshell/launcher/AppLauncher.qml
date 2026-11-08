@@ -999,9 +999,8 @@ PanelWindow {
                 radius: 13
                 color: (root.shelfService && root.shelfService.isOpen)
                     ? Theme.accent
-                    : (navShelfMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-                border.color: (root.shelfService && root.shelfService.isOpen) ? Theme.accent : Theme.withAlpha(Theme.border, 0.28)
-                border.width: (root.shelfService && root.shelfService.isOpen) ? 0 : 1
+                    : (navShelfMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.45) : Theme.withAlpha(Theme.lighter_background, 0.22))
+                border.width: 0
                 Layout.alignment: Qt.AlignVCenter
 
                 Behavior on color { ColorAnimation { duration: 150 } }
@@ -1377,11 +1376,9 @@ PanelWindow {
                         color: (root.shelfService && root.shelfService.isOpen)
                             ? Theme.accent
                             : (shelfMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.45) : Theme.withAlpha(Theme.lighter_background, 0.22))
-                        border.color: (root.shelfService && root.shelfService.isOpen) ? Theme.accent : Theme.withAlpha(Theme.border, 0.28)
-                        border.width: 1
+                        border.width: 0
 
                         Behavior on color { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
 
                         Row {
                             id: shelfToggleRow

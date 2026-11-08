@@ -44,7 +44,24 @@ QtObject {
         return /\.(png|jpe?g|webp|gif|svg|avif|bmp|ico)$/i.test(filename)
     }
 
-    function resolveFileIcon(filename) {
+    function resolveFileCategory(cleanPath, filename) {
+        var ext = ""
+        var dotIdx = filename.lastIndexOf(".")
+        if (dotIdx !== -1) {
+            ext = filename.slice(dotIdx + 1).toLowerCase()
+        }
+        if (["png", "jpg", "jpeg", "webp", "gif", "svg", "avif", "bmp"].indexOf(ext) !== -1) return "image"
+        if (["mp4", "mkv", "webm", "avi", "mov", "flv"].indexOf(ext) !== -1) return "video"
+        if (["mp3", "flac", "wav", "ogg", "m4a", "opus", "aac"].indexOf(ext) !== -1) return "audio"
+        if (["zip", "tar", "gz", "bz2", "xz", "7z", "rar", "zst"].indexOf(ext) !== -1) return "archive"
+        if (["pdf"].indexOf(ext) !== -1) return "pdf"
+        if (["sh", "bash", "zsh", "py", "js", "ts", "qml", "json", "toml", "c", "cpp", "rs", "html", "css", "lua"].indexOf(ext) !== -1) return "code"
+        if (["txt", "md", "doc", "docx", "odt", "rtf", "conf", "log"].indexOf(ext) !== -1) return "document"
+        if (cleanPath && (cleanPath.indexOf("/bin/") !== -1 || ["makefile", "dockerfile", "gemfile", "vagrantfile"].indexOf(filename.toLowerCase()) !== -1)) return "code"
+        return "folder"
+    }
+
+    function resolveFileIcon(cleanPath, filename) {
         var ext = ""
         var dotIdx = filename.lastIndexOf(".")
         if (dotIdx !== -1) {
@@ -56,7 +73,8 @@ QtObject {
         if (["zip", "tar", "gz", "bz2", "xz", "7z", "rar", "zst"].indexOf(ext) !== -1) return "folder_zip"
         if (["pdf"].indexOf(ext) !== -1) return "description"
         if (["sh", "bash", "zsh", "py", "js", "ts", "qml", "json", "toml", "c", "cpp", "rs", "html", "css", "lua"].indexOf(ext) !== -1) return Icons.terminal
-        if (["txt", "md", "doc", "docx", "odt", "rtf", "conf"].indexOf(ext) !== -1) return "description"
+        if (["txt", "md", "doc", "docx", "odt", "rtf", "conf", "log"].indexOf(ext) !== -1) return "description"
+        if (cleanPath && (cleanPath.indexOf("/bin/") !== -1 || ["makefile", "dockerfile", "gemfile", "vagrantfile"].indexOf(filename.toLowerCase()) !== -1)) return Icons.terminal
         return Icons.folder
     }
 
@@ -75,13 +93,15 @@ QtObject {
         var unquoted = decodeURIComponent(cleanUrl.replace(/^file:\/\//, ""))
         var name = unquoted.split("/").pop() || unquoted
         var isImg = root.isImageFile(name)
-        var icon = root.resolveFileIcon(name)
+        var icon = root.resolveFileIcon(cleanUrl, name)
+        var category = root.resolveFileCategory(cleanUrl, name)
 
         items.append({
             filePath: cleanUrl,
             fileName: name,
             isImage: isImg,
-            fileIcon: icon
+            fileIcon: icon,
+            fileCategory: category
         })
         return true
     }
@@ -131,7 +151,8 @@ QtObject {
                 filePath: it.filePath,
                 fileName: it.fileName,
                 isImage: it.isImage,
-                fileIcon: it.fileIcon
+                fileIcon: it.fileIcon,
+                fileCategory: it.fileCategory || "folder"
             })
         }
         return JSON.stringify(arr)

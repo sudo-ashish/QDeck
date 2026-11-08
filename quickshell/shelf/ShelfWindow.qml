@@ -15,6 +15,19 @@ PanelWindow {
     readonly property string fontFamily: Fonts.uiFont
     property real animProgress: 0.0
 
+    property bool isDraggingOut: false
+    readonly property bool isDragging: dropArea.containsDrag || root.isDraggingOut
+
+    function categoryColor(cat) {
+        if (cat === "code") return Theme.orange
+        if (cat === "document") return Theme.cyan
+        if (cat === "archive") return Theme.yellow
+        if (cat === "video" || cat === "audio") return Theme.magenta
+        if (cat === "pdf") return Theme.urgent
+        if (cat === "image") return Theme.cyan
+        return Theme.accent
+    }
+
     visible: (shelfService && shelfService.isOpen) || closeAnim.running
 
     // Multi-monitor support: focus monitor or primary
@@ -95,15 +108,10 @@ PanelWindow {
         anchors.fill: parent
         radius: Appearance.launcherRadius
 
-        color: Theme.withAlpha(Theme.darker_background, Theme.baseOpacity)
-        border.color: dropArea.containsDrag
-            ? Theme.accent
-            : Theme.withAlpha(Theme.border, 0.28)
-        border.width: dropArea.containsDrag ? 2 : 1
+        color: Theme.withAlpha(Theme.darker_background, 0.90)
+        border.width: 0
+        border.color: "transparent"
         clip: true
-
-        Behavior on border.color { ColorAnimation { duration: 150 } }
-        Behavior on border.width { NumberAnimation { duration: 150 } }
 
         // M3 Slide-in from right + Scale + Opacity
         transform: Translate {
@@ -187,9 +195,8 @@ PanelWindow {
                     width: Math.max(18, countBadgeText.implicitWidth + 8)
                     height: 18
                     radius: 9
-                    color: Theme.withAlpha(Theme.accent, 0.22)
-                    border.color: Theme.withAlpha(Theme.accent, 0.5)
-                    border.width: 1
+                    color: Theme.withAlpha(Theme.accent, 0.28)
+                    border.width: 0
                     anchors.verticalCenter: parent.verticalCenter
 
                     Text {
@@ -213,12 +220,9 @@ PanelWindow {
                 height: 24
                 radius: 12
                 color: clearMouse.containsMouse
-                    ? Theme.withAlpha(Theme.urgent, 0.22)
-                    : Theme.withAlpha(Theme.lighter_background, 0.25)
-                border.color: clearMouse.containsMouse
-                    ? Theme.withAlpha(Theme.urgent, 0.6)
-                    : Theme.withAlpha(Theme.border, 0.2)
-                border.width: 1
+                    ? Theme.withAlpha(Theme.urgent, 0.28)
+                    : Theme.withAlpha(Theme.lighter_background, 0.30)
+                border.width: 0
                 Layout.alignment: Qt.AlignVCenter
 
                 Behavior on color { ColorAnimation { duration: 120 } }
@@ -309,6 +313,15 @@ PanelWindow {
             model: root.shelfService ? root.shelfService.items : null
             interactive: count > 0
 
+            // Blur out background items when dragging files over shelf
+            layer.enabled: dropArea.containsDrag
+            layer.effect: MultiEffect {
+                blurEnabled: true
+                blur: 0.85
+                blurMax: 32
+                saturation: 0.8
+            }
+
             delegate: Item {
                 id: delegateRoot
                 required property var model
@@ -338,21 +351,37 @@ PanelWindow {
                     anchors.fill: parent
                     radius: Appearance.launcherItemRadius
                     color: dragArea.drag.active
-                        ? Theme.withAlpha(Theme.accent, 0.28)
-                        : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.38) : Theme.withAlpha(Theme.dark_background, 0.75))
-                    border.color: dragArea.drag.active
                         ? Theme.accent
-                        : (dragArea.containsMouse ? Theme.withAlpha(Theme.accent, 0.45) : Theme.withAlpha(Theme.border, 0.22))
-                    border.width: dragArea.drag.active ? 2 : 1
+                        : (dragArea.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.42) : Theme.withAlpha(Theme.dark_background, 0.90))
+                    border.width: 0
+                    border.color: "transparent"
                     scale: dragArea.drag.active ? 0.96 : (dragArea.containsMouse ? 1.01 : 1.0)
 
                     Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
                     Behavior on color { ColorAnimation { duration: 140 } }
-                    Behavior on border.color { ColorAnimation { duration: 140 } }
+
+                    // Category Color Indicator Pill (Left Edge)
+                    Rectangle {
+                        anchors {
+                            left: parent.left
+                            verticalCenter: parent.verticalCenter
+                            leftMargin: 5
+                        }
+                        width: 3
+                        height: 32
+                        radius: 1.5
+                        color: root.categoryColor(delegateRoot.model.fileCategory)
+                        opacity: dragArea.drag.active ? 1.0 : (dragArea.containsMouse ? 0.95 : 0.75)
+
+                        Behavior on opacity { NumberAnimation { duration: 140 } }
+                    }
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 6
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 8
+                        anchors.topMargin: 6
+                        anchors.bottomMargin: 6
                         spacing: 10
 
                         // Thumbnail / Icon Box (48x48)
@@ -390,21 +419,20 @@ PanelWindow {
                                 }
                             }
 
-                            // Non-image Icon Tile
+                            // Non-image Icon Tile with Category Background Indicator
                             Rectangle {
                                 visible: !delegateRoot.model.isImage || thumbImg.status === Image.Error
                                 anchors.fill: parent
                                 radius: 8
-                                color: Theme.withAlpha(Theme.lighter_background, 0.45)
-                                border.color: Theme.withAlpha(Theme.border, 0.2)
-                                border.width: 1
+                                color: Theme.withAlpha(root.categoryColor(delegateRoot.model.fileCategory), 0.22)
+                                border.width: 0
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: delegateRoot.model.fileIcon || Icons.folder
                                     font.family: Icons.effectiveFont(text)
                                     font.pixelSize: 22
-                                    color: Theme.accent
+                                    color: root.categoryColor(delegateRoot.model.fileCategory)
                                 }
                             }
                         }
@@ -421,7 +449,7 @@ PanelWindow {
                                 font.family: root.fontFamily
                                 font.pixelSize: 12
                                 font.weight: Fonts.weightMedium
-                                color: Theme.bright_foreground
+                                color: dragArea.drag.active ? Theme.darker_background : Theme.bright_foreground
                                 elide: Text.ElideMiddle
                             }
 
@@ -434,7 +462,7 @@ PanelWindow {
                                 }
                                 font.family: root.fontFamily
                                 font.pixelSize: 10
-                                color: Theme.muted
+                                color: dragArea.drag.active ? Theme.withAlpha(Theme.darker_background, 0.75) : Theme.muted
                                 elide: Text.ElideMiddle
                             }
                         }
@@ -481,7 +509,16 @@ PanelWindow {
                     drag.target: dragProxy
                     drag.axis: Drag.XAndYAxis
 
+                    onPressed: {
+                        root.isDraggingOut = true
+                    }
                     onReleased: {
+                        root.isDraggingOut = false
+                        dragProxy.x = 0
+                        dragProxy.y = 0
+                    }
+                    onCanceled: {
+                        root.isDraggingOut = false
                         dragProxy.x = 0
                         dragProxy.y = 0
                     }
@@ -502,9 +539,8 @@ PanelWindow {
                 width: 64
                 height: 64
                 radius: 32
-                color: Theme.withAlpha(Theme.lighter_background, 0.3)
-                border.color: Theme.withAlpha(Theme.border, 0.2)
-                border.width: 1
+                color: Theme.withAlpha(Theme.lighter_background, 0.32)
+                border.width: 0
 
                 Text {
                     anchors.centerIn: parent
@@ -539,7 +575,7 @@ PanelWindow {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Inbound Drag Active Overlay
+        // Inbound Drag Active Overlay (Borderless with background blur effect)
         // ─────────────────────────────────────────────────────────────────────
         Rectangle {
             anchors {
@@ -551,29 +587,38 @@ PanelWindow {
             }
             radius: Appearance.launcherItemRadius
             visible: dropArea.containsDrag
-            color: Theme.withAlpha(Theme.accent, 0.15)
-            border.color: Theme.accent
-            border.width: 2
+            color: Theme.withAlpha(Theme.darker_background, 0.45)
+            border.width: 0
 
-            Column {
+            Rectangle {
                 anchors.centerIn: parent
-                spacing: 8
+                width: dropBannerCol.implicitWidth + 36
+                height: dropBannerCol.implicitHeight + 24
+                radius: 16
+                color: Theme.withAlpha(Theme.dark_background, 0.95)
+                border.width: 0
 
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: Icons.folder
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: 36
-                    color: Theme.accent
-                }
+                Column {
+                    id: dropBannerCol
+                    anchors.centerIn: parent
+                    spacing: 8
 
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: "Release to stage files"
-                    font.family: root.fontFamily
-                    font.pixelSize: 13
-                    font.weight: Fonts.weightBold
-                    color: Theme.bright_foreground
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: Icons.folder
+                        font.family: Icons.effectiveFont(text)
+                        font.pixelSize: 34
+                        color: Theme.accent
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "Release to stage files"
+                        font.family: root.fontFamily
+                        font.pixelSize: 13
+                        font.weight: Fonts.weightBold
+                        color: Theme.bright_foreground
+                    }
                 }
             }
         }
