@@ -1305,7 +1305,7 @@ PanelWindow {
 
             Row {
                 anchors.centerIn: parent
-                spacing: 17
+                spacing: 18
 
                 Repeater {
                     model: root.powerActions
@@ -1317,8 +1317,8 @@ PanelWindow {
 
                         readonly property bool isActive: (root.currentView === "power") && (root.powerIndex === index)
 
-                        width: 80
-                        height: 80
+                        width: 68
+                        height: 68
 
                         // Random shape from {gem, oval, pill, square, arrow, sunny} for selected, cookie4 for unselected
                         readonly property var selectedShapePool: ["gem", "oval", "pill", "square", "arrow", "sunny"]
@@ -1369,9 +1369,11 @@ PanelWindow {
 
                         Item {
                             id: buttonContent
-                            anchors.fill: parent
+                            width: 80
+                            height: 80
+                            anchors.centerIn: parent
 
-                            scale: powerActionBtn.isActive ? 1.14 : (powerBtnMouse.containsMouse ? 1.05 : 1.0)
+                            scale: powerActionBtn.isActive ? 0.98 : (powerBtnMouse.containsMouse ? 0.88 : 0.82)
                             rotation: powerActionBtn.isActive ? ((powerActionBtn.index % 2 === 0) ? 5 : -5) : 0
 
                             Behavior on scale {
@@ -1386,8 +1388,8 @@ PanelWindow {
                                 NumberAnimation {
                                     target: buttonContent
                                     property: "scale"
-                                    from: 0.88
-                                    to: 1.18
+                                    from: 0.80
+                                    to: 1.04
                                     duration: Motion.short3
                                     easing.type: Easing.BezierSpline
                                     easing.bezierCurve: Motion.emphasizedDecelerateCurve
@@ -1395,7 +1397,7 @@ PanelWindow {
                                 NumberAnimation {
                                     target: buttonContent
                                     property: "scale"
-                                    to: 1.14
+                                    to: 0.98
                                     duration: Motion.short2
                                     easing.type: Easing.BezierSpline
                                     easing.bezierCurve: Motion.emphasizedCurve
@@ -1439,7 +1441,7 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 text: powerActionBtn.modelData.icon
                                 font.family: Icons.effectiveFont(text)
-                                font.pixelSize: powerActionBtn.isActive ? 36 : 30
+                                font.pixelSize: powerActionBtn.isActive ? 28 : 22
                                 color: powerActionBtn.isActive
                                     ? Theme.darker_background
                                     : (powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.accent)
@@ -1787,17 +1789,35 @@ PanelWindow {
                             }
                         }
 
-                        // Image Preview (only visual, no name scrim)
+                        // 1. Direct Mask for Rounded Wallpaper Corners
+                        Rectangle {
+                            id: wallMask
+                            anchors.fill: parent
+                            radius: 14
+                            color: "black"
+                            layer.enabled: true
+                            visible: false
+                        }
+
+                        // 2. Wallpaper Image Thumbnail (Masked to rounded corners)
                         Image {
+                            id: previewImg
                             anchors.fill: parent
                             source: wallCardItem.modelData.path ? ("file://" + wallCardItem.modelData.path) : ""
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             smooth: true
+                            mipmap: true
                             sourceSize: Qt.size(320, 196)
+
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                maskEnabled: true
+                                maskSource: wallMask
+                            }
                         }
 
-                        // Border overlay for selected wallpaper
+                        // 3. Border overlay for selected wallpaper
                         Rectangle {
                             anchors.fill: parent
                             radius: 14
