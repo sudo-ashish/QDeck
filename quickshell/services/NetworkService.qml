@@ -29,6 +29,17 @@ QtObject {
     property var otherNetworks: []
     property var networks: []
     property bool scanning: false
+    property bool menuOpen: false
+    property bool isInputActive: false
+
+    onMenuOpenChanged: {
+        if (root.menuOpen) {
+            root.refresh()
+            if (root.wifiEnabled) {
+                root.scanWifi()
+            }
+        }
+    }
 
     property var qrMatrix: []
     property int qrSize: 0
@@ -69,6 +80,19 @@ QtObject {
         root.wifiEnabled = nextState
         Quickshell.execDetached(["nmcli", "radio", "wifi", nextState ? "on" : "off"])
         refreshTimer.restart()
+        if (nextState && root.menuOpen) {
+            wifiEnableScanTimer.restart()
+        }
+    }
+
+    property Timer wifiEnableScanTimer: Timer {
+        interval: 1200
+        repeat: false
+        onTriggered: {
+            if (root.wifiEnabled && root.menuOpen) {
+                root.scanWifi()
+            }
+        }
     }
 
     function setDns(provider) {
@@ -200,6 +224,7 @@ QtObject {
     }
 
     function scanWifi() {
+        if (!root.wifiEnabled) return
         if (!scanProc.running) {
             root.scanning = true
             scanProc.running = true
@@ -336,7 +361,10 @@ QtObject {
     // 4. Wi-Fi Scan & Categorization into Known and Other Networks
     property Process scanProc: Process {
         id: scanProc
-        command: ["bash", "-c", "echo '===SAVED==='; nmcli -t -f NAME,TYPE connection show 2>/dev/null; echo '===WIFI==='; nmcli -t -f active,ssid,signal,security dev wifi 2>/dev/null"]
+        command: ["bash", "-c", "echo '===SAVED==='; nmcli -t -f NAME,TYPE connection show 2>/dev/null; echo '===WIFI==='; nmcli -t -f active,ssid,signal,security dev wifi list --rescan yes 2>/dev/null || nmcli -t -f active,ssid,signal,security dev wifi 2>/dev/null"]
+        onExited: function(exitCode, exitStatus) {
+            root.scanning = false
+        }
         stdout: StdioCollector {
             waitForEnd: true
             onStreamFinished: {
@@ -375,8 +403,13 @@ QtObject {
                         var signal = parseInt(wParts[2], 10) || 0
                         var security = wParts[3] || ""
 
-                        if (!ssid || seen[ssid]) continue
-                        seen[ssid] = true
+                        if (!ssid) continue
+                        if (seen[ssid]) {
+                            var existing = seen[ssid]
+                            if (isActive && !existing.active) existing.active = true
+                            if (signal > existing.signal) existing.signal = signal
+                            continue
+                        }
 
                         var isSecured = (security.length > 0 && security.indexOf("--") === -1 && security.toLowerCase().indexOf("open") === -1)
                         var isKnown = isActive || (knownSet[ssid] === true)
@@ -388,6 +421,7 @@ QtObject {
                             isSecured: isSecured,
                             active: isActive
                         }
+                        seen[ssid] = item
 
                         if (isActive) {
                             root.currentSsid = ssid
@@ -434,9 +468,56 @@ QtObject {
         onTriggered: root.refresh()
     }
 
+    // Periodic auto-scan when Network menu is open and Wi-Fi is on
+    property Timer autoScanTimer: Timer {
+        id: autoScanTimer
+        interval: 8000
+        repeat: true
+        running: root.wifiEnabled && root.menuOpen && !root.isInputActive && root.connectingSsid === "" && !connectProc.running
+        onTriggered: {
+            if (root.wifiEnabled && !root.scanning) {
+                root.scanWifi()
+            }
+        }
+    }
+
+    // Debounce timer for reactive D-Bus Wi-Fi updates
+    property Timer scanDebounceTimer: Timer {
+        id: scanDebounceTimer
+        interval: 1200
+        repeat: false
+        onTriggered: {
+            if (root.wifiEnabled && root.menuOpen && !root.isInputActive && root.connectingSsid === "" && !connectProc.running && !root.scanning) {
+                root.scanWifi()
+            }
+        }
+    }
+
+    // Real-time event listener via NetworkManager D-Bus signals
+    property Process nmMonitorProc: Process {
+        id: nmMonitorProc
+        command: ["gdbus", "monitor", "--system", "--dest", "org.freedesktop.NetworkManager"]
+        running: true
+        stdout: SplitParser {
+            onRead: function(line) {
+                if (line.indexOf("AccessPointAdded") !== -1 ||
+                    line.indexOf("AccessPointRemoved") !== -1 ||
+                    line.indexOf("DeviceAdded") !== -1 ||
+                    line.indexOf("DeviceRemoved") !== -1 ||
+                    line.indexOf("StateChanged") !== -1 ||
+                    line.indexOf("PropertiesChanged") !== -1) {
+                    if (root.menuOpen) {
+                        scanDebounceTimer.restart()
+                    }
+                    refreshTimer.restart()
+                }
+            }
+        }
+    }
+
     // Passive telemetry background polling (does not execute nmcli dev wifi scans)
     property Timer pollTimer: Timer {
-        interval: 3500
+        interval: root.menuOpen ? 2500 : 5000
         repeat: true
         running: true
         onTriggered: root.refresh()
