@@ -385,58 +385,14 @@ PanelWindow {
                                 elide: Text.ElideRight
                             }
 
-                            // Line 2: Subtitle Row
-                            RowLayout {
+                            // Line 2: Subtitle
+                            Text {
                                 Layout.fillWidth: true
-                                spacing: 6
-
-                                // Action badge [⚡ Action]
-                                Rectangle {
-                                    visible: modelData.type === "action"
-                                    Layout.preferredHeight: 18
-                                    Layout.preferredWidth: actionBadgeRow.implicitWidth + 10
-                                    radius: 4
-                                    color: "#22d3ee"
-
-                                    RowLayout {
-                                        id: actionBadgeRow
-                                        anchors.centerIn: parent
-                                        spacing: 2
-
-                                        Text {
-                                            text: "⚡"
-                                            font.pixelSize: 9
-                                            color: "#083344"
-                                            Layout.alignment: Qt.AlignVCenter
-                                        }
-
-                                        Text {
-                                            text: "Action"
-                                            font.family: root.fontFamily
-                                            font.pixelSize: 10
-                                            font.weight: Fonts.weightBold
-                                            color: "#083344"
-                                            Layout.alignment: Qt.AlignVCenter
-                                        }
-                                    }
-                                }
-
-                                Text {
-                                    visible: modelData.type === "action"
-                                    text: "•"
-                                    font.family: root.fontFamily
-                                    font.pixelSize: 12
-                                    color: Theme.muted
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: modelData.metaText || ""
-                                    font.family: root.fontFamily
-                                    font.pixelSize: 12
-                                    color: Theme.muted
-                                    elide: Text.ElideRight
-                                }
+                                text: modelData.metaText || ""
+                                font.family: root.fontFamily
+                                font.pixelSize: 12
+                                color: Theme.muted
+                                elide: Text.ElideRight
                             }
                         }
                     }
@@ -459,29 +415,37 @@ PanelWindow {
                 }
             }
 
-            // Scrollbar
+            // Scrollbar (with strict boundaries preventing overshoot)
             Rectangle {
                 id: scrollbar
                 anchors.right: parent.right
                 anchors.top: parent.top
+                anchors.topMargin: 4
                 anchors.bottom: parent.bottom
+                anchors.bottomMargin: 4
                 width: 4
                 radius: 2
                 color: Theme.withAlpha(Theme.dark_background, 0.5)
-                visible: listView.count > 8
+                clip: true
+                visible: listView.visibleArea.heightRatio < 1.0 && listView.count > 0
 
                 Rectangle {
                     id: scrollbarHandle
                     width: parent.width
                     radius: 2
                     color: Theme.accent
-                    height: Math.max(20, listView.visibleArea.heightRatio * scrollbar.height)
-                    y: listView.visibleArea.yPosition * scrollbar.height
+
+                    readonly property real rawHeight: Math.max(24, listView.visibleArea.heightRatio * scrollbar.height)
+                    readonly property real clampedHeight: Math.min(scrollbar.height, rawHeight)
+                    readonly property real maxY: Math.max(0, scrollbar.height - clampedHeight)
+
+                    height: clampedHeight
+                    y: Math.max(0, Math.min(maxY, listView.visibleArea.yPosition * scrollbar.height))
                 }
             }
         }
 
-        // ── Bottom: Search Input Field ───────────────────────────────────────
+        // ── Bottom: Search Input Field (Bigger, Borderless) ───────────────────
         Rectangle {
             id: searchContainer
 
@@ -491,24 +455,24 @@ PanelWindow {
                 bottom: parent.bottom
                 margins: 14
             }
-            height: 48
-            radius: 12
+            height: 56
+            radius: 14
 
-            color: Theme.withAlpha(Theme.dark_background, 0.92)
-            border.color: searchInput.activeFocus ? Theme.accent : Theme.withAlpha(Theme.border, 0.22)
-            border.width: 1
+            color: Theme.withAlpha(Theme.dark_background, 0.95)
+            border.width: 0
+            border.color: "transparent"
 
             Item {
                 anchors.fill: parent
-                anchors.leftMargin: 16
-                anchors.rightMargin: 16
+                anchors.leftMargin: 18
+                anchors.rightMargin: 18
 
                 Text {
                     anchors.fill: parent
                     verticalAlignment: Text.AlignVCenter
-                    text: "Search"
+                    text: searchInput.text.startsWith(">") ? "Search action commands..." : "Search apps or type '> ' for commands..."
                     font.family: root.fontFamily
-                    font.pixelSize: 14
+                    font.pixelSize: 16
                     color: Theme.muted
                     visible: searchInput.text.length === 0
                 }
@@ -518,7 +482,7 @@ PanelWindow {
                     anchors.fill: parent
                     verticalAlignment: TextInput.AlignVCenter
                     font.family: root.fontFamily
-                    font.pixelSize: 14
+                    font.pixelSize: 16
                     color: Theme.foreground
                     selectionColor: Theme.selection
                     selectedTextColor: Theme.bright_foreground

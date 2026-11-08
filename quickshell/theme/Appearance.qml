@@ -166,13 +166,13 @@ QtObject {
     // =========================================================================
     // Application Launcher
     // =========================================================================
-    property int launcherWidth: 440
-    property int launcherHeight: 516
-    property int launcherModalWidth: 460
-    property int launcherModalHeight: 536
+    property int launcherWidth: 580
+    property int launcherHeight: 540
+    property int launcherModalWidth: 600
+    property int launcherModalHeight: 560
     property int launcherRadius: 20
     property int launcherPadding: 14
-    property int launcherItemHeight: 50
+    property int launcherItemHeight: 52
     property int launcherItemRadius: 10
     property int launcherIconSize: 32
 

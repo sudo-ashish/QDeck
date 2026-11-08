@@ -192,147 +192,156 @@ function formatRelativeTime(ts, now) {
 }
 
 function filterAll(apps, query, historyMap) {
-    var q = normalizeText(query);
+    var raw = String(query || "");
+    var rawTrimmed = raw.trim();
+    var isAction = rawTrimmed.startsWith(">");
     var history = historyMap || {};
     var now = Date.now();
     var allItems = [];
 
-    // 1. Process Desktop Applications
-    if (apps && apps.length) {
-        for (var i = 0; i < apps.length; i++) {
-            var app = apps[i];
-            if (!app || app.noDisplay) continue;
+    if (isAction) {
+        // Action Mode: trigger with > or > <search>
+        var actionTerm = rawTrimmed.replace(/^>\s*/, "").toLowerCase();
 
-            var name = String(app.name || app.id || "").trim();
-            if (!name) continue;
+        for (var a = 0; a < BUILTIN_ACTIONS.length; a++) {
+            var act = BUILTIN_ACTIONS[a];
+            var actLastUsed = history[act.id] || 0;
+            var actMeta = "";
 
-            var id = String(app.id || "").trim();
-            var category = getAppCategory(app);
-            var lastUsed = history[id] || 0;
-
-            // Generate deterministic fallback timestamp if not in history so relative time displays neatly
-            if (!lastUsed) {
-                var hash = 0;
-                for (var h = 0; h < name.length; h++) hash = (hash * 31 + name.charCodeAt(h)) & 0xffffff;
-                var daysAgo = 1 + (Math.abs(hash) % 4);
-                lastUsed = now - (daysAgo * 86400000 + (Math.abs(hash) % 3600000));
+            if (actLastUsed) {
+                actMeta = formatRelativeTime(actLastUsed, now) + " • " + act.category;
+            } else {
+                actMeta = "Action • " + act.category;
             }
 
-            var metaText = formatRelativeTime(lastUsed, now) + " • " + category;
-
-            var keywords = "";
-            try {
-                if (app.keywords && Array.isArray(app.keywords)) {
-                    keywords = app.keywords.join(" ");
-                }
-            } catch (e) {}
-
-            var generic = String(app.genericName || "").trim();
-            var comment = String(app.comment || "").trim();
-
-            var score = 0;
-            if (!q) {
-                if (history[id]) {
-                    score = 10000 + Math.max(0, 5000 - Math.floor((now - history[id]) / 60000));
+            var actScore = 0;
+            if (!actionTerm) {
+                // User typed ">" or "> ": show all actions
+                if (history[act.id]) {
+                    actScore = 10000 + Math.max(0, 5000 - Math.floor((now - history[act.id]) / 60000));
                 } else {
-                    score = Math.max(1, 1000 - Math.floor((now - lastUsed) / 3600000));
+                    actScore = 1000 - a * 10;
                 }
             } else {
-                var nameLower = name.toLowerCase();
-                var idLower = id.toLowerCase();
-                var genericLower = generic.toLowerCase();
-                var commentLower = comment.toLowerCase();
-                var keywordsLower = keywords.toLowerCase();
+                var actNameLower = act.name.toLowerCase();
+                var actKeywordsLower = (act.keywords || []).join(" ").toLowerCase();
+                var actCategoryLower = String(act.category || "").toLowerCase();
 
-                if (nameLower === q) score += 2000;
-                else if (nameLower.startsWith(q)) score += 1000;
-                else if (nameLower.indexOf(q) !== -1) score += 500;
-                else if (idLower.startsWith(q)) score += 400;
-                else if (idLower.indexOf(q) !== -1) score += 250;
-                else if (genericLower.indexOf(q) !== -1) score += 150;
-                else if (keywordsLower.indexOf(q) !== -1) score += 100;
-                else if (commentLower.indexOf(q) !== -1) score += 50;
+                if (actNameLower === actionTerm) actScore += 2000;
+                else if (actNameLower.startsWith(actionTerm)) actScore += 1000;
+                else if (actNameLower.indexOf(actionTerm) !== -1) actScore += 500;
+                else if (actKeywordsLower.indexOf(actionTerm) !== -1) actScore += 300;
+                else if (actCategoryLower.indexOf(actionTerm) !== -1) actScore += 150;
 
-                // Acronym search
-                var words = nameLower.split(/[\s\-_]+/);
-                var acronym = "";
-                for (var w = 0; w < words.length; w++) {
-                    if (words[w]) acronym += words[w].charAt(0);
-                }
-                if (acronym.indexOf(q) !== -1) score += 80;
-
-                if (score > 0 && history[id]) {
-                    score += 50;
+                if (actScore > 0 && history[act.id]) {
+                    actScore += 50;
                 }
             }
 
-            if (score > 0) {
+            if (actScore > 0) {
                 allItems.push({
-                    type: "app",
-                    id: id,
-                    name: name,
-                    icon: resolveIcon(app.icon),
-                    iconGlyph: "",
-                    category: category,
-                    metaText: metaText,
-                    score: score,
-                    lastUsed: lastUsed,
-                    entry: app,
-                    cmd: ""
+                    type: "action",
+                    id: act.id,
+                    name: act.name,
+                    icon: "",
+                    iconGlyph: act.iconGlyph,
+                    category: act.category,
+                    metaText: actMeta,
+                    score: actScore,
+                    lastUsed: actLastUsed,
+                    entry: null,
+                    cmd: act.cmd
                 });
             }
         }
-    }
+    } else {
+        // Normal Apps Mode: only show and search desktop applications
+        var q = normalizeText(query);
 
-    // 2. Process Built-in Actions
-    for (var a = 0; a < BUILTIN_ACTIONS.length; a++) {
-        var act = BUILTIN_ACTIONS[a];
-        var actLastUsed = history[act.id] || 0;
-        var actMeta = "";
+        if (apps && apps.length) {
+            for (var i = 0; i < apps.length; i++) {
+                var app = apps[i];
+                if (!app || app.noDisplay) continue;
 
-        if (actLastUsed) {
-            actMeta = formatRelativeTime(actLastUsed, now);
-        } else {
-            actMeta = act.defaultMeta;
-        }
+                var name = String(app.name || app.id || "").trim();
+                if (!name) continue;
 
-        var actScore = 0;
-        if (!q) {
-            if (history[act.id]) {
-                actScore = 10000 + Math.max(0, 5000 - Math.floor((now - history[act.id]) / 60000));
-            } else {
-                if (act.id === "act-vol-50") actScore = 4000;
-                else if (act.id === "act-dnd") actScore = 3500;
-                else actScore = 200;
+                var id = String(app.id || "").trim();
+                var category = getAppCategory(app);
+                var lastUsed = history[id] || 0;
+
+                // Generate deterministic fallback timestamp if not in history so relative time displays neatly
+                if (!lastUsed) {
+                    var hash = 0;
+                    for (var h = 0; h < name.length; h++) hash = (hash * 31 + name.charCodeAt(h)) & 0xffffff;
+                    var daysAgo = 1 + (Math.abs(hash) % 4);
+                    lastUsed = now - (daysAgo * 86400000 + (Math.abs(hash) % 3600000));
+                }
+
+                var metaText = formatRelativeTime(lastUsed, now) + " • " + category;
+
+                var keywords = "";
+                try {
+                    if (app.keywords && Array.isArray(app.keywords)) {
+                        keywords = app.keywords.join(" ");
+                    }
+                } catch (e) {}
+
+                var generic = String(app.genericName || "").trim();
+                var comment = String(app.comment || "").trim();
+
+                var score = 0;
+                if (!q) {
+                    if (history[id]) {
+                        score = 10000 + Math.max(0, 5000 - Math.floor((now - history[id]) / 60000));
+                    } else {
+                        score = Math.max(1, 1000 - Math.floor((now - lastUsed) / 3600000));
+                    }
+                } else {
+                    var nameLower = name.toLowerCase();
+                    var idLower = id.toLowerCase();
+                    var genericLower = generic.toLowerCase();
+                    var commentLower = comment.toLowerCase();
+                    var keywordsLower = keywords.toLowerCase();
+
+                    if (nameLower === q) score += 2000;
+                    else if (nameLower.startsWith(q)) score += 1000;
+                    else if (nameLower.indexOf(q) !== -1) score += 500;
+                    else if (idLower.startsWith(q)) score += 400;
+                    else if (idLower.indexOf(q) !== -1) score += 250;
+                    else if (genericLower.indexOf(q) !== -1) score += 150;
+                    else if (keywordsLower.indexOf(q) !== -1) score += 100;
+                    else if (commentLower.indexOf(q) !== -1) score += 50;
+
+                    // Acronym search
+                    var words = nameLower.split(/[\s\-_]+/);
+                    var acronym = "";
+                    for (var w = 0; w < words.length; w++) {
+                        if (words[w]) acronym += words[w].charAt(0);
+                    }
+                    if (acronym.indexOf(q) !== -1) score += 80;
+
+                    if (score > 0 && history[id]) {
+                        score += 50;
+                    }
+                }
+
+                if (score > 0) {
+                    allItems.push({
+                        type: "app",
+                        id: id,
+                        name: name,
+                        icon: resolveIcon(app.icon),
+                        iconGlyph: "",
+                        category: category,
+                        metaText: metaText,
+                        score: score,
+                        lastUsed: lastUsed,
+                        entry: app,
+                        cmd: ""
+                    });
+                }
             }
-        } else {
-            var actNameLower = act.name.toLowerCase();
-            var actKeywordsLower = (act.keywords || []).join(" ").toLowerCase();
-
-            if (actNameLower === q) actScore += 2000;
-            else if (actNameLower.startsWith(q)) actScore += 1000;
-            else if (actNameLower.indexOf(q) !== -1) actScore += 500;
-            else if (actKeywordsLower.indexOf(q) !== -1) actScore += 300;
-
-            if (actScore > 0 && history[act.id]) {
-                actScore += 50;
-            }
-        }
-
-        if (actScore > 0) {
-            allItems.push({
-                type: "action",
-                id: act.id,
-                name: act.name,
-                icon: "",
-                iconGlyph: act.iconGlyph,
-                category: act.category,
-                metaText: actMeta,
-                score: actScore,
-                lastUsed: actLastUsed,
-                entry: null,
-                cmd: act.cmd
-            });
         }
     }
 
