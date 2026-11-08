@@ -19,6 +19,7 @@ PanelWindow {
     property PowerService powerService: null
     property ThemeSwitcherService themeService: null
     property WallpaperSwitcherService wallpaperService: null
+    property ShelfService shelfService: null
 
     property bool isOpen: false
     property string currentView: "apps" // "apps" | "power" | "theme" | "wallpaper"
@@ -500,6 +501,9 @@ PanelWindow {
                 return
             } else if (item.id === "act-wallpaper") {
                 root.openWallpaper()
+                return
+            } else if (item.id === "act-shelf") {
+                if (root.shelfService) root.shelfService.toggle()
                 return
             } else if (item.cmd) {
                 Quickshell.execDetached(["bash", "-c", item.cmd])
@@ -987,6 +991,74 @@ PanelWindow {
                 color: Theme.muted
                 Layout.alignment: Qt.AlignVCenter
             }
+
+            // Staging Shelf Toggle Button
+            Rectangle {
+                width: navShelfRow.implicitWidth + 14
+                height: 26
+                radius: 13
+                color: (root.shelfService && root.shelfService.isOpen)
+                    ? Theme.accent
+                    : (navShelfMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
+                border.color: (root.shelfService && root.shelfService.isOpen) ? Theme.accent : Theme.withAlpha(Theme.border, 0.28)
+                border.width: (root.shelfService && root.shelfService.isOpen) ? 0 : 1
+                Layout.alignment: Qt.AlignVCenter
+
+                Behavior on color { ColorAnimation { duration: 150 } }
+
+                Row {
+                    id: navShelfRow
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    Text {
+                        text: Icons.folder
+                        font.family: Icons.effectiveFont(text)
+                        font.pixelSize: 12
+                        color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.foreground
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text: "Shelf"
+                        font.family: root.fontFamily
+                        font.pixelSize: 11
+                        font.weight: (root.shelfService && root.shelfService.isOpen) ? Fonts.weightBold : Fonts.weightMedium
+                        color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.foreground
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    // Live Counter Badge
+                    Rectangle {
+                        visible: root.shelfService ? root.shelfService.count > 0 : false
+                        width: Math.max(16, navCountBadge.implicitWidth + 6)
+                        height: 16
+                        radius: 8
+                        color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.accent
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            id: navCountBadge
+                            anchors.centerIn: parent
+                            text: root.shelfService ? String(root.shelfService.count) : "0"
+                            font.family: root.fontFamily
+                            font.pixelSize: 9
+                            font.weight: Fonts.weightBold
+                            color: (root.shelfService && root.shelfService.isOpen) ? Theme.accent : Theme.darker_background
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: navShelfMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (root.shelfService) root.shelfService.toggle()
+                    }
+                }
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -1207,21 +1279,30 @@ PanelWindow {
                 Item {
                     anchors.fill: parent
                     anchors.leftMargin: 18
-                    anchors.rightMargin: 18
+                    anchors.rightMargin: 12
 
                     Text {
-                        anchors.fill: parent
+                        anchors.left: parent.left
+                        anchors.right: shelfToggleBtn.left
+                        anchors.rightMargin: 10
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
                         verticalAlignment: Text.AlignVCenter
                         text: searchInput.text.startsWith(">") ? "Search action commands..." : "Search apps or type '> ' for commands..."
                         font.family: root.fontFamily
                         font.pixelSize: 16
                         color: Theme.muted
                         visible: searchInput.text.length === 0
+                        elide: Text.ElideRight
                     }
 
                     TextInput {
                         id: searchInput
-                        anchors.fill: parent
+                        anchors.left: parent.left
+                        anchors.right: shelfToggleBtn.left
+                        anchors.rightMargin: 10
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
                         verticalAlignment: TextInput.AlignVCenter
                         font.family: root.fontFamily
                         font.pixelSize: 16
@@ -1281,6 +1362,77 @@ PanelWindow {
                                     listView.positionViewAtIndex(listView.currentIndex, ListView.Contain)
                                 }
                                 event.accepted = true
+                            }
+                        }
+                    }
+
+                    // Quick-access Staging Shelf Toggle Button
+                    Rectangle {
+                        id: shelfToggleBtn
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 34
+                        width: shelfToggleRow.implicitWidth + 18
+                        radius: 17
+                        color: (root.shelfService && root.shelfService.isOpen)
+                            ? Theme.accent
+                            : (shelfMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.45) : Theme.withAlpha(Theme.lighter_background, 0.22))
+                        border.color: (root.shelfService && root.shelfService.isOpen) ? Theme.accent : Theme.withAlpha(Theme.border, 0.28)
+                        border.width: 1
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                        Row {
+                            id: shelfToggleRow
+                            anchors.centerIn: parent
+                            spacing: 6
+
+                            Text {
+                                text: Icons.folder
+                                font.family: Icons.effectiveFont(text)
+                                font.pixelSize: 14
+                                color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.foreground
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: "Shelf"
+                                font.family: root.fontFamily
+                                font.pixelSize: 12
+                                font.weight: (root.shelfService && root.shelfService.isOpen) ? Fonts.weightBold : Fonts.weightMedium
+                                color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.foreground
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // Live counter badge when count > 0
+                            Rectangle {
+                                visible: root.shelfService ? root.shelfService.count > 0 : false
+                                width: Math.max(18, shelfBadgeText.implicitWidth + 8)
+                                height: 18
+                                radius: 9
+                                color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.accent
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    id: shelfBadgeText
+                                    anchors.centerIn: parent
+                                    text: root.shelfService ? String(root.shelfService.count) : "0"
+                                    font.family: root.fontFamily
+                                    font.pixelSize: 10
+                                    font.weight: Fonts.weightBold
+                                    color: (root.shelfService && root.shelfService.isOpen) ? Theme.accent : Theme.darker_background
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: shelfMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (root.shelfService) root.shelfService.toggle()
                             }
                         }
                     }

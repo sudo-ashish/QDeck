@@ -24,6 +24,7 @@ QtObject {
     readonly property color accent: _c.accent || _c.color4 || "#7aa2f7"
     readonly property color selection: _c.selection || _c.color0 || "#292e42"
     readonly property color muted: _c.muted || _c.color8 || "#585b70"
+    readonly property color border: _c.border || _c.color8 || root.muted
 
     // Typography & Foregrounds
     readonly property color foreground: _c.foreground || "#a9b1d6"

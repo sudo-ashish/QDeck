@@ -106,6 +106,16 @@ var BUILTIN_ACTIONS = [
         keywords: ["wallpaper", "background", "image", "photo"]
     },
     {
+        id: "act-shelf",
+        name: "Toggle Staging Shelf",
+        type: "action",
+        iconGlyph: "folder",
+        category: "Files",
+        defaultMeta: "Drop Shelf",
+        cmd: "qs ipc call shelf toggle",
+        keywords: ["shelf", "drop", "staging", "dnd", "drag", "files", "clipboard", "tray"]
+    },
+    {
         id: "act-terminal",
         name: "Open Terminal",
         type: "action",

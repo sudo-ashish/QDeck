@@ -10,6 +10,7 @@ import "notifications"
 import "components"
 import "polkit"
 import "powermenu"
+import "shelf"
 import "theme"
 
 ShellRoot {
@@ -25,6 +26,7 @@ ShellRoot {
     property PowerService powerService: PowerService { }
     property ThemeSwitcherService themeSwitcherService: ThemeSwitcherService { }
     property WallpaperSwitcherService wallpaperSwitcherService: WallpaperSwitcherService { }
+    property ShelfService shelfService: ShelfService { id: shelfService }
 
     IpcHandler {
         target: "bar"
@@ -67,6 +69,13 @@ ShellRoot {
         powerService: root.powerService
         themeService: root.themeSwitcherService
         wallpaperService: root.wallpaperSwitcherService
+        shelfService: root.shelfService
+    }
+
+    // Staging Drop Shelf Component (Wayland DND)
+    ShelfWindow {
+        id: shelfWindow
+        shelfService: root.shelfService
     }
 
     // Power Confirmation Dialog (centered overlay)
