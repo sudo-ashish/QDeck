@@ -166,15 +166,15 @@ QtObject {
     // =========================================================================
     // Application Launcher
     // =========================================================================
-    property int launcherWidth: 600
-    property int launcherHeight: 410
-    property int launcherModalWidth: 700
-    property int launcherModalHeight: 468
-    property int launcherRadius: 10
-    property int launcherPadding: 30
-    property int launcherItemHeight: 36
+    property int launcherWidth: 440
+    property int launcherHeight: 516
+    property int launcherModalWidth: 460
+    property int launcherModalHeight: 536
+    property int launcherRadius: 20
+    property int launcherPadding: 14
+    property int launcherItemHeight: 50
     property int launcherItemRadius: 10
-    property int launcherIconSize: Math.max(16, Math.round(Fonts.baseTextSize * (24 / 12.0)))
+    property int launcherIconSize: 32
 
     // =========================================================================
     // Power & Unified Menu

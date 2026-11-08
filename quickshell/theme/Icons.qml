@@ -96,6 +96,9 @@ QtObject {
     readonly property string terminal: root.useMaterialSymbols ? "terminal" : "󰆍"
     readonly property string palette: root.useMaterialSymbols ? "palette" : "󰏘"
     readonly property string wallpaper: root.useMaterialSymbols ? "wallpaper" : "󰋩"
+    readonly property string tune: root.useMaterialSymbols ? "tune" : "󰌌"
+    readonly property string phone: root.useMaterialSymbols ? "smartphone" : "󰄜"
+    readonly property string screenshot: root.useMaterialSymbols ? "screenshot_monitor" : "󰹑"
 
     // Workspaces
     property string workspace: ""
