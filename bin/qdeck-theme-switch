@@ -65,22 +65,51 @@ list_themes_json() {
             is_current=true
         fi
 
-        # Try to read accent color from colors.toml
-        local accent=""
-        if [[ -f "$dir/colors.toml" ]]; then
-            accent="$(grep -E '^[[:space:]]*accent[[:space:]]*=' "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*accent[[:space:]]*=[[:space:]]*["'\'']?([^"'\''";]+)["'\'']?.*/\1/' | xargs)"
-            if [[ -n "$accent" && "$accent" != \#* ]]; then
-                accent="#$accent"
+        # Extract colors from colors.toml
+        get_color() {
+            local k="$1"
+            local def="$2"
+            local v
+            v="$(grep -E "^[[:space:]]*$k[[:space:]]*=" "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*[^=]+=[[:space:]]*["\x27]?([^"\x27[:space:]]+).*/\1/' | xargs)"
+            if [[ -n "$v" ]]; then
+                [[ "$v" != \#* ]] && v="#$v"
+                echo "$v"
+            else
+                echo "$def"
             fi
-        fi
+        }
+
+        local accent background foreground p_red p_green p_yellow p_blue p_magenta p_cyan
+        accent="$(get_color accent "#7daea3")"
+        background="$(get_color background "#282828")"
+        foreground="$(get_color foreground "#ebdbb2")"
+        p_red="$(get_color red "#ea6962")"
+        p_green="$(get_color green "#a9b665")"
+        p_yellow="$(get_color yellow "#d8a657")"
+        p_blue="$(get_color blue "$accent")"
+        p_magenta="$(get_color magenta "#d3869b")"
+        p_cyan="$(get_color cyan "#89b482")"
+
+        local palette_json
+        palette_json="$(jq -nc \
+            --arg c0 "$p_red" \
+            --arg c1 "$p_green" \
+            --arg c2 "$p_yellow" \
+            --arg c3 "$p_blue" \
+            --arg c4 "$p_magenta" \
+            --arg c5 "$p_cyan" \
+            '[$c0, $c1, $c2, $c3, $c4, $c5]')"
 
         items+=( "$(jq -n \
             --arg id "$id" \
             --arg name "$name" \
             --arg wallpaper "$wallpaper" \
             --arg accent "$accent" \
+            --arg background "$background" \
+            --arg foreground "$foreground" \
+            --argjson palette "$palette_json" \
             --argjson isCurrent "$is_current" \
-            '{id: $id, name: $name, wallpaper: $wallpaper, accent: $accent, isCurrent: $isCurrent}')" )
+            '{id: $id, name: $name, wallpaper: $wallpaper, accent: $accent, background: $background, foreground: $foreground, palette: $palette, isCurrent: $isCurrent}')" )
     done
     shopt -u nullglob
 
