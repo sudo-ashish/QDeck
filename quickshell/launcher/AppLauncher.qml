@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -49,7 +50,7 @@ PanelWindow {
     // Dynamic target dimensions per view
     readonly property real targetWidth: {
         if (root.currentView === "apps") return Appearance.launcherWidth
-        if (root.currentView === "power") return 400
+        if (root.currentView === "power") return 500
         if (root.currentView === "theme") {
             var tCount = Math.min(5, Math.max(1, root.themesCount))
             return Math.min(root.width - 48, Math.max(580, (tCount * 196) + ((tCount - 1) * 12) + 28))
@@ -61,9 +62,9 @@ PanelWindow {
 
     readonly property real targetHeight: {
         if (root.currentView === "apps") return Appearance.launcherHeight
-        if (root.currentView === "power") return 116
-        if (root.currentView === "wallpaper") return 210
-        return 260 // theme view
+        if (root.currentView === "power") return 170
+        if (root.currentView === "wallpaper") return 250
+        return 290 // theme view
     }
 
     // Spring pop-up & retraction physics from bottom
@@ -223,6 +224,16 @@ PanelWindow {
             exec: function() {
                 root.close()
                 Quickshell.execDetached(["sh", "-c", "loginctl lock-session || hyprlock || swaylock"])
+            }
+        },
+        {
+            id: "suspend",
+            name: "Suspend",
+            icon: Icons.suspend,
+            isUrgent: false,
+            exec: function() {
+                root.close()
+                Quickshell.execDetached(["systemctl", "suspend"])
             }
         },
         {
@@ -677,6 +688,216 @@ PanelWindow {
             }
         }
 
+        // ── Top: Unified Navigation Tabs Bar (Visible on Session, Theme, Wallpaper — Hidden on Apps Launcher) ─
+        RowLayout {
+            id: navHeader
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                topMargin: 12
+                leftMargin: 14
+                rightMargin: 14
+            }
+            height: 28
+            spacing: 8
+            visible: root.currentView !== "apps"
+
+            // Segmented View Switcher Tabs
+            Row {
+                spacing: 4
+                Layout.alignment: Qt.AlignVCenter
+
+                // Tab 1: Apps
+                Rectangle {
+                    width: appsTabRow.implicitWidth + 14
+                    height: 26
+                    radius: 13
+                    color: (root.currentView === "apps")
+                        ? Theme.accent
+                        : (appsTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Row {
+                        id: appsTabRow
+                        anchors.centerIn: parent
+                        spacing: 5
+
+                        Text {
+                            text: Icons.apps
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 12
+                            color: (root.currentView === "apps") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "Apps"
+                            font.family: root.fontFamily
+                            font.pixelSize: 11
+                            font.weight: (root.currentView === "apps") ? Fonts.weightBold : Fonts.weightMedium
+                            color: (root.currentView === "apps") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: appsTabMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.switchToView("apps")
+                    }
+                }
+
+                // Tab 2: Session (Power)
+                Rectangle {
+                    width: sessionTabRow.implicitWidth + 14
+                    height: 26
+                    radius: 13
+                    color: (root.currentView === "power")
+                        ? Theme.accent
+                        : (sessionTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Row {
+                        id: sessionTabRow
+                        anchors.centerIn: parent
+                        spacing: 5
+
+                        Text {
+                            text: Icons.power
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 12
+                            color: (root.currentView === "power") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "Session"
+                            font.family: root.fontFamily
+                            font.pixelSize: 11
+                            font.weight: (root.currentView === "power") ? Fonts.weightBold : Fonts.weightMedium
+                            color: (root.currentView === "power") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: sessionTabMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.switchToView("power")
+                    }
+                }
+
+                // Tab 3: Themes
+                Rectangle {
+                    width: themeTabRow.implicitWidth + 14
+                    height: 26
+                    radius: 13
+                    color: (root.currentView === "theme")
+                        ? Theme.accent
+                        : (themeTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Row {
+                        id: themeTabRow
+                        anchors.centerIn: parent
+                        spacing: 5
+
+                        Text {
+                            text: Icons.palette
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 12
+                            color: (root.currentView === "theme") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "Themes"
+                            font.family: root.fontFamily
+                            font.pixelSize: 11
+                            font.weight: (root.currentView === "theme") ? Fonts.weightBold : Fonts.weightMedium
+                            color: (root.currentView === "theme") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: themeTabMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.switchToView("theme")
+                    }
+                }
+
+                // Tab 4: Wallpapers
+                Rectangle {
+                    width: wallpaperTabRow.implicitWidth + 14
+                    height: 26
+                    radius: 13
+                    color: (root.currentView === "wallpaper")
+                        ? Theme.accent
+                        : (wallpaperTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Row {
+                        id: wallpaperTabRow
+                        anchors.centerIn: parent
+                        spacing: 5
+
+                        Text {
+                            text: Icons.wallpaper
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 12
+                            color: (root.currentView === "wallpaper") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "Wallpapers"
+                            font.family: root.fontFamily
+                            font.pixelSize: 11
+                            font.weight: (root.currentView === "wallpaper") ? Fonts.weightBold : Fonts.weightMedium
+                            color: (root.currentView === "wallpaper") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: wallpaperTabMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.switchToView("wallpaper")
+                    }
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            // Right View Context Status / Hint
+            Text {
+                text: {
+                    if (root.currentView === "power") {
+                        return root.powerActions[root.powerIndex] ? root.powerActions[root.powerIndex].name : "Power"
+                    } else if (root.currentView === "theme") {
+                        return root.currentTheme ? ("Active: " + root.currentTheme) : "Themes"
+                    } else if (root.currentView === "wallpaper") {
+                        return root.wallpapersCount ? (root.wallpapersCount + " wallpapers") : "Wallpapers"
+                    }
+                    return ""
+                }
+                font.family: root.fontFamily
+                font.pixelSize: 11
+                color: Theme.muted
+                Layout.alignment: Qt.AlignVCenter
+            }
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // VIEW 1: Apps & Actions Launcher
         // ─────────────────────────────────────────────────────────────────────
@@ -981,7 +1202,14 @@ PanelWindow {
         // ─────────────────────────────────────────────────────────────────────
         Item {
             id: powerViewContainer
-            anchors.fill: parent
+            anchors {
+                top: navHeader.bottom
+                topMargin: 8
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                bottomMargin: 12
+            }
             visible: root.currentView === "power"
 
             Row {
@@ -998,60 +1226,126 @@ PanelWindow {
 
                         readonly property bool isActive: (root.currentView === "power") && (root.powerIndex === index)
 
-                        width: isActive ? 80 : 64
+                        width: 64
                         height: 64
 
-                        Behavior on width {
-                            NumberAnimation { duration: 240; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+                        // Random shape from {gem, oval, pill, square, arrow, sunny} for selected, cookie4 for unselected
+                        readonly property var selectedShapePool: ["gem", "oval", "pill", "square", "arrow", "sunny"]
+                        property string activeRandomShape: "gem"
+
+                        function pickNewRandomShape() {
+                            var pool = selectedShapePool
+                            var nextShape = pool[Math.floor(Math.random() * pool.length)]
+                            if (nextShape === activeRandomShape && pool.length > 1) {
+                                nextShape = pool[(pool.indexOf(nextShape) + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length]
+                            }
+                            activeRandomShape = nextShape
                         }
 
-                        scale: isActive ? 1.08 : (powerBtnMouse.containsMouse ? 1.04 : 1.0)
-                        Behavior on scale {
-                            NumberAnimation { duration: 200; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+                        onIsActiveChanged: {
+                            if (isActive) {
+                                pickNewRandomShape()
+                                bounceAnim.restart()
+                            }
                         }
 
-                        Rectangle {
-                            id: powerBtnBg
+                        Component.onCompleted: {
+                            if (isActive) {
+                                pickNewRandomShape()
+                            }
+                        }
+
+                        readonly property var m3ShapePaths: ({
+                            "cookie4": "M55.8 55.7C51.9 59.6 45.8 61.4 39.8 58.8C38.9 58.4 38.1 58 37.2 57.7C33.9 56.2 30.1 56.2 26.8 57.7C26 58 25.1 58.4 24.2 58.8C12.2 64 0 51.8 5.2 39.8C5.6 38.9 6 38.1 6.3 37.2C7.8 33.9 7.8 30.1 6.3 26.8C6 26 5.6 25.1 5.2 24.2C0 12.2 12.2 0 24.2 5.2C25.1 5.6 26 6 26.8 6.3C30.1 7.8 33.9 7.8 37.2 6.3C38.1 6 38.9 5.6 39.8 5.2C51.8 0 64 12.2 58.8 24.2C58.4 25.1 58 25.9 57.7 26.8C56.2 30.1 56.2 33.9 57.7 37.2C58.1 38 58.4 38.9 58.8 39.8C61.4 45.8 59.7 51.8 55.8 55.7Z",
+                            "gem": "M32 64C31.4 64 30.9 64 30.4 63.9C27.9 63.7 25.4 62.5 20.6 60.3C16.6 58.5 12.7 56.7 8.8 54.9C3.4 52.4 0.3 46.7 1.1 40.9C2 34.8 2.9 28.7 3.8 22.7C4.4 18.7 6.5 15.2 9.7 12.9C14.5 9.4 19.4 6 24.2 2.5C26.5 0.9 29.3 0 32.1 0C34.9 0 37.7 0.9 40 2.6C44.8 6 49.6 9.5 54.4 13C57.6 15.3 59.8 18.8 60.3 22.8C61.2 28.8 62 34.9 62.9 41C63.7 46.8 60.6 52.5 55.2 55C51.3 56.8 47.3 58.6 43.4 60.4C38.5 62.6 36.1 63.7 33.5 63.9C33 64 32.5 64 32 64Z",
+                            "oval": "M58.1 5.9C60.3 8 61.8 10.9 62.6 14.3C64 21 62.2 29.3 57.5 37.5C52.8 45.6 45.6 52.8 37.5 57.5C29.3 62.2 21 64 14.3 62.6C7.5 61.1 2.9 56.5 1.4 49.7C0 43 1.8 34.7 6.5 26.5C11.2 18.4 18.4 11.2 26.5 6.5C34.7 1.8 43 0 49.7 1.4C53.1 2.2 56 3.7 58.1 5.9Z",
+                            "pill": "M55.9 8.1C60.2 12.4 63 18.2 63.7 24.6C63.8 25.5 63.9 26.5 64 27.4C64 34.8 61 41.9 55.8 47.1C52.9 50 50 52.9 47.1 55.8C41.9 61 34.8 64 27.4 64C26.5 63.9 25.5 63.8 24.6 63.7C11.7 62.4 1.6 52.3 0.3 39.4C0.2 38.5 0.1 37.5 0 36.6C0 29.2 3 22.1 8.2 16.9C11.1 14 14 11.1 16.9 8.2C22.1 3 29.2 0 36.6 0C37.5 0.1 38.5 0.2 39.4 0.3C45.8 1 51.6 3.8 55.9 8.1Z",
+                            "square": "M58.4 58.4C54.9 61.9 50.1 64 44.8 64C36.3 64 27.7 64 19.2 64C8.6 64 0 55.4 0 44.8C0 36.3 0 27.7 0 19.2C0 8.6 8.6 0 19.2 0C27.7 0 36.3 0 44.8 0C55.4 0 64 8.6 64 19.2C64 27.7 64 36.3 64 44.8C64 50.1 61.9 54.9 58.4 58.4Z",
+                            "arrow": "M32 53.6C30.7 53.6 29.3 53.7 28.1 54C24.6 54.7 21.2 55.5 17.8 56.2C7.8 58.4 0 47.7 5.2 38.9C7.2 35.6 9.1 32.3 11.1 28.9C20.4 13.2 25 5.4 31.9 5.3C38.8 5.3 43.5 13.2 52.9 28.9C54.8 32.1 56.7 35.4 58.6 38.6C64 47.6 55.9 58.7 45.7 56.3C42.4 55.5 39.1 54.8 35.9 54C34.6 53.7 33.3 53.6 32 53.6Z",
+                            "sunny": "M63.8 32C63.8 33.1 63.4 34.3 62.6 35.2C61 37.1 59.4 39 57.8 40.9C57.1 41.7 56.7 42.7 56.6 43.8C56.4 46.2 56.2 48.7 56 51.2C55.8 53.7 53.9 55.6 51.4 55.8C48.9 56 46.4 56.2 44 56.4C42.9 56.5 41.9 56.9 41.1 57.6C39.2 59.2 37.3 60.8 35.4 62.4C33.6 64 30.8 64 29 62.4C27.1 60.8 25.2 59.2 23.3 57.6C22.5 56.9 21.5 56.5 20.4 56.4C18 56.2 15.5 56 13 55.8C10.5 55.6 8.6 53.7 8.4 51.2C8.2 48.7 8 46.2 7.8 43.8C7.7 42.7 7.3 41.7 6.6 40.9C5 39 3.4 37.1 1.8 35.2C0.2 33.4 0.2 30.6 1.8 28.8C3.4 26.9 5 25 6.6 23.1C7.3 22.3 7.7 21.3 7.8 20.2C8 17.8 8.2 15.3 8.4 12.8C8.6 10.3 10.5 8.4 13 8.2C15.5 8 18 7.8 20.4 7.6C21.5 7.5 22.5 7.1 23.3 6.4C25.2 4.8 27.1 3.2 29 1.6C30.8 0 33.6 0 35.4 1.6C37.3 3.2 39.2 4.8 41.1 6.4C41.9 7.1 42.9 7.5 44 7.6C46.4 7.8 48.9 8 51.4 8.2C53.9 8.4 55.8 10.3 56 12.8C56.2 15.3 56.4 17.8 56.6 20.2C56.7 21.3 57.1 22.3 57.8 23.1C59.4 25 61 26.9 62.6 28.8C63.4 29.7 63.8 30.9 63.8 32Z"
+                        })
+
+                        readonly property string currentSvgPath: isActive ? m3ShapePaths[activeRandomShape] : m3ShapePaths["cookie4"]
+
+                        MouseArea {
+                            id: powerBtnMouse
                             anchors.fill: parent
-                            // Google Material 3 Shape: Circle (32) morphs to Squircle (16) on select
-                            radius: powerActionBtn.isActive ? 16 : 32
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: root.powerIndex = powerActionBtn.index
+                            onClicked: powerActionBtn.modelData.exec()
+                        }
 
-                            Behavior on radius {
-                                NumberAnimation { duration: 260; easing.type: Easing.OutBack; easing.overshoot: 1.25 }
+                        Item {
+                            id: buttonContent
+                            anchors.fill: parent
+
+                            scale: powerActionBtn.isActive ? 1.14 : (powerBtnMouse.containsMouse ? 1.05 : 1.0)
+                            rotation: powerActionBtn.isActive ? ((powerActionBtn.index % 2 === 0) ? 5 : -5) : 0
+
+                            Behavior on scale {
+                                NumberAnimation { duration: 240; easing.type: Easing.OutBack; easing.overshoot: 1.3 }
+                            }
+                            Behavior on rotation {
+                                NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
                             }
 
-                            color: {
-                                if (powerActionBtn.isActive) {
-                                    return powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.accent
+                            SequentialAnimation {
+                                id: bounceAnim
+                                NumberAnimation {
+                                    target: buttonContent
+                                    property: "scale"
+                                    from: 0.88
+                                    to: 1.18
+                                    duration: 160
+                                    easing.type: Easing.OutCubic
                                 }
-                                if (powerBtnMouse.containsMouse) {
-                                    return Theme.withAlpha(Theme.lighter_background, 0.45)
+                                NumberAnimation {
+                                    target: buttonContent
+                                    property: "scale"
+                                    to: 1.14
+                                    duration: 120
+                                    easing.type: Easing.OutBack
                                 }
-                                return Theme.withAlpha(Theme.dark_background, 0.65)
                             }
-                            border.color: powerActionBtn.isActive
-                                ? "transparent"
-                                : (powerBtnMouse.containsMouse ? Theme.withAlpha(Theme.accent, 0.4) : Theme.withAlpha(Theme.border, 0.2))
-                            border.width: 1
 
-                            Behavior on color { ColorAnimation { duration: 180 } }
-                            Behavior on border.color { ColorAnimation { duration: 180 } }
-
-                            MouseArea {
-                                id: powerBtnMouse
+                            Shape {
+                                id: shapeBg
                                 anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onEntered: root.powerIndex = powerActionBtn.index
-                                onClicked: powerActionBtn.modelData.exec()
+                                preferredRendererType: Shape.CurveRenderer
+
+                                ShapePath {
+                                    id: shapePath
+                                    strokeWidth: powerActionBtn.isActive ? 0 : 1
+                                    strokeColor: powerBtnMouse.containsMouse
+                                        ? Theme.withAlpha(Theme.accent, 0.45)
+                                        : Theme.withAlpha(Theme.border, 0.25)
+
+                                    fillColor: {
+                                        if (powerActionBtn.isActive) {
+                                            return powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.accent
+                                        }
+                                        if (powerBtnMouse.containsMouse) {
+                                            return Theme.withAlpha(Theme.lighter_background, 0.45)
+                                        }
+                                        return Theme.withAlpha(Theme.dark_background, 0.65)
+                                    }
+
+                                    Behavior on strokeColor { ColorAnimation { duration: 180 } }
+                                    Behavior on fillColor { ColorAnimation { duration: 180 } }
+
+                                    PathSvg {
+                                        path: powerActionBtn.currentSvgPath
+                                    }
+                                }
                             }
 
-                            // Only Logo inside (no text)
+                            // Centered Logo / Icon ONLY (No text)
                             Text {
                                 anchors.centerIn: parent
                                 text: powerActionBtn.modelData.icon
                                 font.family: Icons.effectiveFont(text)
-                                font.pixelSize: powerActionBtn.isActive ? 28 : 24
+                                font.pixelSize: powerActionBtn.isActive ? 27 : 23
                                 color: powerActionBtn.isActive
                                     ? Theme.darker_background
                                     : (powerActionBtn.modelData.isUrgent ? Theme.urgent : Theme.foreground)
@@ -1072,8 +1366,14 @@ PanelWindow {
         // ─────────────────────────────────────────────────────────────────────
         Item {
             id: themeViewContainer
-            anchors.fill: parent
-            anchors.margins: 14
+            anchors {
+                top: navHeader.bottom
+                topMargin: 8
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                margins: 12
+            }
             visible: root.currentView === "theme"
 
             ListView {
@@ -1223,8 +1523,14 @@ PanelWindow {
         // ─────────────────────────────────────────────────────────────────────
         Item {
             id: wallpaperViewContainer
-            anchors.fill: parent
-            anchors.margins: 14
+            anchors {
+                top: navHeader.bottom
+                topMargin: 8
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                margins: 12
+            }
             visible: root.currentView === "wallpaper"
 
             ListView {
