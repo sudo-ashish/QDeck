@@ -9,6 +9,7 @@ import Quickshell.Io
 import "../theme"
 import "../components"
 import "../services"
+import "../shelf"
 import "LauncherModel.js" as LauncherModel
 
 PanelWindow {
@@ -22,7 +23,7 @@ PanelWindow {
     property ShelfService shelfService: null
 
     property bool isOpen: false
-    property string currentView: "apps" // "apps" | "power" | "theme" | "wallpaper"
+    property string currentView: "apps" // "apps" | "power" | "theme" | "wallpaper" | "shelf"
     property real animProgress: 0.0
 
     // Transitions between views
@@ -82,7 +83,7 @@ PanelWindow {
 
     // Dynamic target dimensions per view
     readonly property real targetWidth: {
-        if (root.currentView === "apps") return Appearance.launcherWidth
+        if (root.currentView === "apps" || root.currentView === "shelf") return Appearance.launcherWidth
         if (root.currentView === "power") return 500
         if (root.currentView === "theme") return 720
         if (root.currentView === "wallpaper") return 720
@@ -90,7 +91,7 @@ PanelWindow {
     }
 
     readonly property real targetHeight: {
-        if (root.currentView === "apps") return Appearance.launcherHeight
+        if (root.currentView === "apps" || root.currentView === "shelf") return Appearance.launcherHeight
         if (root.currentView === "power") return 178
         if (root.currentView === "wallpaper") return 218
         return 248 // theme view
@@ -121,6 +122,7 @@ PanelWindow {
                 if (root.powerService) root.powerService.powerMenuOpen = false
                 if (root.themeService) root.themeService.isOpen = false
                 if (root.wallpaperService) root.wallpaperService.isOpen = false
+                if (root.shelfService) root.shelfService.isOpen = false
                 root.currentView = "apps"
             }
         }
@@ -250,6 +252,28 @@ PanelWindow {
         }
     }
 
+    function openShelf() {
+        var wasOpen = root.isOpen
+        closeAnim.stop()
+        if (root.shelfService) {
+            root.shelfService.isOpen = true
+        }
+        root.currentView = "shelf"
+        root.isOpen = true
+        if (!wasOpen) {
+            openAnim.restart()
+        }
+        Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+    }
+
+    function toggleShelf() {
+        if (root.isOpen && root.currentView === "shelf") {
+            root.close()
+        } else {
+            root.openShelf()
+        }
+    }
+
     function switchToView(viewName) {
         if (root.currentView === viewName) return
         if (viewName === "apps") {
@@ -260,6 +284,8 @@ PanelWindow {
             root.openTheme()
         } else if (viewName === "wallpaper") {
             root.openWallpaper()
+        } else if (viewName === "shelf") {
+            root.openShelf()
         }
     }
 
@@ -680,7 +706,22 @@ PanelWindow {
         }
     }
 
-    // Keyboard Controller for non-input views (power, theme, wallpaper)
+    Connections {
+        target: root.shelfService
+        function onIsOpenChanged() {
+            if (root.shelfService && root.shelfService.isOpen) {
+                if (root.currentView !== "shelf" || !root.isOpen) {
+                    root.openShelf()
+                }
+            } else if (!root.shelfService || !root.shelfService.isOpen) {
+                if (root.isOpen && root.currentView === "shelf") {
+                    root.close()
+                }
+            }
+        }
+    }
+
+    // Keyboard Controller for non-input views (power, theme, wallpaper, shelf)
     Item {
         id: keyCatcher
         anchors.fill: parent
@@ -688,6 +729,11 @@ PanelWindow {
 
         Keys.onPressed: function(event) {
             if (event.key === Qt.Key_Escape) {
+                if (root.currentView === "shelf" && root.shelfService && root.shelfService.selectedCount > 0) {
+                    root.shelfService.clearSelection()
+                    event.accepted = true
+                    return
+                }
                 root.close()
                 event.accepted = true
                 return
@@ -725,6 +771,19 @@ PanelWindow {
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     root.applyCurrentWallpaper()
                     event.accepted = true
+                }
+            } else if (root.currentView === "shelf") {
+                if (event.key === Qt.Key_A && (event.modifiers & Qt.ControlModifier)) {
+                    if (root.shelfService) root.shelfService.selectAll()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
+                    if (root.shelfService && root.shelfService.selectedCount > 0) {
+                        root.shelfService.removeSelected()
+                        event.accepted = true
+                        return
+                    }
                 }
             }
         }
@@ -974,90 +1033,71 @@ PanelWindow {
                         onClicked: root.switchToView("wallpaper")
                     }
                 }
+
+                // Tab 5: Shelf
+                Rectangle {
+                    width: shelfTabRow.implicitWidth + 14
+                    height: 26
+                    radius: 13
+                    color: (root.currentView === "shelf")
+                        ? Theme.accent
+                        : (shelfTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Row {
+                        id: shelfTabRow
+                        anchors.centerIn: parent
+                        spacing: 5
+
+                        Text {
+                            text: Icons.folder
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 12
+                            color: (root.currentView === "shelf") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "Shelf"
+                            font.family: root.fontFamily
+                            font.pixelSize: 11
+                            font.weight: (root.currentView === "shelf") ? Fonts.weightBold : Fonts.weightMedium
+                            color: (root.currentView === "shelf") ? Theme.darker_background : Theme.foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        // Live Counter Badge
+                        Rectangle {
+                            visible: root.shelfService ? root.shelfService.count > 0 : false
+                            width: Math.max(16, tabShelfBadge.implicitWidth + 6)
+                            height: 16
+                            radius: 8
+                            color: (root.currentView === "shelf") ? Theme.darker_background : Theme.accent
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Text {
+                                id: tabShelfBadge
+                                anchors.centerIn: parent
+                                text: root.shelfService ? String(root.shelfService.count) : "0"
+                                font.family: root.fontFamily
+                                font.pixelSize: 9
+                                font.weight: Fonts.weightBold
+                                color: (root.currentView === "shelf") ? Theme.accent : Theme.darker_background
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: shelfTabMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.switchToView("shelf")
+                    }
+                }
             }
 
             Item { Layout.fillWidth: true }
-
-            // Right View Context Status / Hint
-            Text {
-                text: {
-                    if (root.currentView === "power") {
-                        return root.powerActions[root.powerIndex] ? root.powerActions[root.powerIndex].name : "Power"
-                    }
-                    return ""
-                }
-                font.family: root.fontFamily
-                font.pixelSize: 11
-                color: Theme.muted
-                Layout.alignment: Qt.AlignVCenter
-            }
-
-            // Staging Shelf Toggle Button
-            Rectangle {
-                width: navShelfRow.implicitWidth + 14
-                height: 26
-                radius: 13
-                color: (root.shelfService && root.shelfService.isOpen)
-                    ? Theme.accent
-                    : (navShelfMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.45) : Theme.withAlpha(Theme.lighter_background, 0.22))
-                border.width: 0
-                Layout.alignment: Qt.AlignVCenter
-
-                Behavior on color { ColorAnimation { duration: 150 } }
-
-                Row {
-                    id: navShelfRow
-                    anchors.centerIn: parent
-                    spacing: 5
-
-                    Text {
-                        text: Icons.folder
-                        font.family: Icons.effectiveFont(text)
-                        font.pixelSize: 12
-                        color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.foreground
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Text {
-                        text: "Shelf"
-                        font.family: root.fontFamily
-                        font.pixelSize: 11
-                        font.weight: (root.shelfService && root.shelfService.isOpen) ? Fonts.weightBold : Fonts.weightMedium
-                        color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.foreground
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    // Live Counter Badge
-                    Rectangle {
-                        visible: root.shelfService ? root.shelfService.count > 0 : false
-                        width: Math.max(16, navCountBadge.implicitWidth + 6)
-                        height: 16
-                        radius: 8
-                        color: (root.shelfService && root.shelfService.isOpen) ? Theme.darker_background : Theme.accent
-                        anchors.verticalCenter: parent.verticalCenter
-
-                        Text {
-                            id: navCountBadge
-                            anchors.centerIn: parent
-                            text: root.shelfService ? String(root.shelfService.count) : "0"
-                            font.family: root.fontFamily
-                            font.pixelSize: 9
-                            font.weight: Fonts.weightBold
-                            color: (root.shelfService && root.shelfService.isOpen) ? Theme.accent : Theme.darker_background
-                        }
-                    }
-                }
-
-                MouseArea {
-                    id: navShelfMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (root.shelfService) root.shelfService.toggle()
-                    }
-                }
-            }
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -1429,7 +1469,7 @@ PanelWindow {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                if (root.shelfService) root.shelfService.toggle()
+                                root.switchToView("shelf")
                             }
                         }
                     }
@@ -1994,6 +2034,25 @@ PanelWindow {
                 font.pixelSize: 11
                 color: Theme.withAlpha(Theme.muted, 0.7)
             }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // VIEW 5: Staging Drop Shelf View
+        // ─────────────────────────────────────────────────────────────────────
+        ShelfView {
+            id: shelfView
+            anchors {
+                top: navHeader.bottom
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                topMargin: 8
+                bottomMargin: 10
+                leftMargin: 12
+                rightMargin: 12
+            }
+            visible: root.currentView === "shelf"
+            shelfService: root.shelfService
         }
     }
 

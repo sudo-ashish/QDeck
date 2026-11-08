@@ -63,18 +63,12 @@ ShellRoot {
         }
     }
 
-    // Unified Launcher: App Launcher, Power Session Menu, Theme Switcher & Wallpaper Picker
+    // Unified Launcher: App Launcher, Power Session Menu, Theme Switcher, Wallpaper Picker & Staging Shelf
     AppLauncher {
         id: launcher
         powerService: root.powerService
         themeService: root.themeSwitcherService
         wallpaperService: root.wallpaperSwitcherService
-        shelfService: root.shelfService
-    }
-
-    // Staging Drop Shelf Component (Wayland DND)
-    ShelfWindow {
-        id: shelfWindow
         shelfService: root.shelfService
     }
 
