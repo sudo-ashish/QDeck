@@ -133,19 +133,22 @@ PanelWindow {
     // ─────────────────────────────────────────────────────────────────────────
     function openApps(initialQuery) {
         var wasOpen = root.isOpen
-        closeAnim.stop()
+        if (closeAnim.running) {
+            closeAnim.stop()
+            root.animProgress = 1.0
+        }
+        root.currentView = "apps"
         if (root.powerService) root.powerService.powerMenuOpen = false
         if (root.themeService) root.themeService.isOpen = false
         if (root.wallpaperService) root.wallpaperService.isOpen = false
         if (root.shelfService) root.shelfService.isOpen = false
         root.loadHistory()
         root.loadApps()
-        root.currentView = "apps"
         searchInput.text = (typeof initialQuery === "string") ? initialQuery : ""
         root.filterItems()
         listView.currentIndex = 0
         root.isOpen = true
-        if (!wasOpen) {
+        if (!wasOpen || root.animProgress < 1.0) {
             openAnim.restart()
         }
         Qt.callLater(function() {
@@ -155,15 +158,18 @@ PanelWindow {
 
     function openPower() {
         var wasOpen = root.isOpen
-        closeAnim.stop()
+        if (closeAnim.running) {
+            closeAnim.stop()
+            root.animProgress = 1.0
+        }
+        root.currentView = "power"
         if (root.themeService) root.themeService.isOpen = false
         if (root.wallpaperService) root.wallpaperService.isOpen = false
         if (root.shelfService) root.shelfService.isOpen = false
-        root.currentView = "power"
         root.powerIndex = 0
         if (root.powerService) root.powerService.powerMenuOpen = true
         root.isOpen = true
-        if (!wasOpen) {
+        if (!wasOpen || root.animProgress < 1.0) {
             openAnim.restart()
         }
         Qt.callLater(function() { keyCatcher.forceActiveFocus() })
@@ -171,7 +177,11 @@ PanelWindow {
 
     function openTheme() {
         var wasOpen = root.isOpen
-        closeAnim.stop()
+        if (closeAnim.running) {
+            closeAnim.stop()
+            root.animProgress = 1.0
+        }
+        root.currentView = "theme"
         if (root.powerService) root.powerService.powerMenuOpen = false
         if (root.wallpaperService) root.wallpaperService.isOpen = false
         if (root.shelfService) root.shelfService.isOpen = false
@@ -179,14 +189,13 @@ PanelWindow {
             root.themeService.refresh()
             root.themeService.isOpen = true
         }
-        root.currentView = "theme"
         root.themeFilter = ""
         if (themeSearchInput) themeSearchInput.text = ""
         root.themeIndex = (root.themeService && root.themeService.middleIndex !== undefined)
             ? root.themeService.middleIndex
             : Math.floor(root.themesCount / 2)
         root.isOpen = true
-        if (!wasOpen) {
+        if (!wasOpen || root.animProgress < 1.0) {
             openAnim.restart()
         }
         Qt.callLater(function() {
@@ -200,7 +209,11 @@ PanelWindow {
 
     function openWallpaper() {
         var wasOpen = root.isOpen
-        closeAnim.stop()
+        if (closeAnim.running) {
+            closeAnim.stop()
+            root.animProgress = 1.0
+        }
+        root.currentView = "wallpaper"
         if (root.powerService) root.powerService.powerMenuOpen = false
         if (root.themeService) root.themeService.isOpen = false
         if (root.shelfService) root.shelfService.isOpen = false
@@ -208,13 +221,12 @@ PanelWindow {
             root.wallpaperService.refresh()
             root.wallpaperService.isOpen = true
         }
-        root.currentView = "wallpaper"
         root.wallpaperFilter = ""
         root.wallpaperIndex = (root.wallpaperService && root.wallpaperService.middleIndex !== undefined)
             ? root.wallpaperService.middleIndex
             : Math.floor(root.wallpapersCount / 2)
         root.isOpen = true
-        if (!wasOpen) {
+        if (!wasOpen || root.animProgress < 1.0) {
             openAnim.restart()
         }
         Qt.callLater(function() {
@@ -267,16 +279,19 @@ PanelWindow {
 
     function openShelf() {
         var wasOpen = root.isOpen
-        closeAnim.stop()
+        if (closeAnim.running) {
+            closeAnim.stop()
+            root.animProgress = 1.0
+        }
+        root.currentView = "shelf"
         if (root.powerService) root.powerService.powerMenuOpen = false
         if (root.themeService) root.themeService.isOpen = false
         if (root.wallpaperService) root.wallpaperService.isOpen = false
         if (root.shelfService) {
             root.shelfService.isOpen = true
         }
-        root.currentView = "shelf"
         root.isOpen = true
-        if (!wasOpen) {
+        if (!wasOpen || root.animProgress < 1.0) {
             openAnim.restart()
         }
         Qt.callLater(function() { keyCatcher.forceActiveFocus() })
@@ -604,7 +619,10 @@ PanelWindow {
     // Pass-through input region: When in shelf view, all mouse clicks outside launcherCard pass directly to the screen
     Region {
         id: shelfInputRegion
-        item: launcherCard
+        x: launcherCard.x
+        y: launcherCard.y
+        width: launcherCard.width
+        height: launcherCard.height
     }
 
     mask: (root.currentView === "shelf") ? shelfInputRegion : null
