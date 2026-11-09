@@ -47,6 +47,7 @@ PanelWindow {
     // App launcher data
     property var allApps: []
     property var filteredItems: []
+    property int filteredCount: 0
     property var historyMap: ({})
 
     // Theme & Wallpaper Search Filter & Palette Helpers
@@ -91,7 +92,22 @@ PanelWindow {
     }
 
     readonly property real targetHeight: {
-        if (root.currentView === "apps" || root.currentView === "shelf") return Appearance.launcherHeight
+        if (root.currentView === "apps") {
+            var isSearching = searchInput && searchInput.text.trim().length > 0
+            var count = root.filteredCount
+            if (count <= 0) {
+                if (!isSearching) return Appearance.launcherHeight
+                // Empty search result: compact card framing the search box + "no results" hint
+                return 130
+            }
+            // Dynamic height based on number of items:
+            // Fixed vertical chrome: 92px (top margin 14 + bottom margin 8 + search box 56 + outer margin 14)
+            // Each item: 52px height (Appearance.launcherItemHeight) + 2px spacing = 54px
+            var itemContentH = (count * Appearance.launcherItemHeight) + (Math.max(0, count - 1) * 2)
+            var totalH = 92 + itemContentH
+            return Math.min(Appearance.launcherHeight, totalH)
+        }
+        if (root.currentView === "shelf") return Appearance.launcherHeight
         if (root.currentView === "power") return 130
         if (root.currentView === "wallpaper") return 180
         if (root.currentView === "theme") return 210
@@ -544,7 +560,8 @@ PanelWindow {
     function filterItems() {
         var q = searchInput.text.trim()
         root.filteredItems = LauncherModel.filterAll(root.allApps, q, root.historyMap)
-        if (listView.currentIndex >= root.filteredItems.length) {
+        root.filteredCount = root.filteredItems ? root.filteredItems.length : 0
+        if (listView.currentIndex >= root.filteredCount) {
             listView.currentIndex = 0
         }
     }
@@ -870,17 +887,17 @@ PanelWindow {
         Behavior on width {
             enabled: root.viewTransitionsEnabled
             NumberAnimation {
-                duration: Motion.containerTransformDuration
+                duration: Motion.medium3
                 easing.type: Easing.BezierSpline
-                easing.bezierCurve: Motion.containerTransformEasing
+                easing.bezierCurve: Motion.emphasizedCurve
             }
         }
         Behavior on height {
             enabled: root.viewTransitionsEnabled
             NumberAnimation {
-                duration: Motion.containerTransformDuration
+                duration: Motion.medium3
                 easing.type: Easing.BezierSpline
-                easing.bezierCurve: Motion.containerTransformEasing
+                easing.bezierCurve: Motion.emphasizedCurve
             }
         }
 
@@ -934,6 +951,7 @@ PanelWindow {
                     anchors.rightMargin: scrollbar.visible ? 8 : 0
                     clip: true
                     spacing: 2
+                    boundsBehavior: Flickable.StopAtBounds
                     model: root.filteredItems
 
                     delegate: Rectangle {
@@ -1101,6 +1119,33 @@ PanelWindow {
 
                         height: clampedHeight
                         y: Math.max(0, Math.min(maxY, listView.visibleArea.yPosition * scrollbar.height))
+                    }
+                }
+
+                // Empty search results state (subtle M3 muted hint)
+                Item {
+                    anchors.fill: parent
+                    visible: root.filteredCount === 0 && searchInput.text.trim().length > 0
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 8
+
+                        Text {
+                            text: "󰍉"
+                            font.family: Icons.effectiveFont("󰍉")
+                            font.pixelSize: 16
+                            color: Theme.muted
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                            text: "No matching applications"
+                            font.family: root.fontFamily
+                            font.pixelSize: 13
+                            color: Theme.muted
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
                 }
             }
@@ -1880,5 +1925,6 @@ PanelWindow {
     Component.onCompleted: {
         root.loadHistory()
         root.loadApps()
+        root.filterItems()
     }
 }
