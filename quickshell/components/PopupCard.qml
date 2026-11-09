@@ -215,8 +215,11 @@ PanelWindow {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            anchors.margins: root.showDefaultHeader ? Appearance.paddingMedium : Appearance.popupPadding
-            clip: true
+            anchors.topMargin: root.showDefaultHeader ? Appearance.paddingMedium : 14
+            anchors.bottomMargin: root.showDefaultHeader ? Appearance.paddingMedium : 16
+            anchors.leftMargin: root.showDefaultHeader ? Appearance.paddingMedium : 14
+            anchors.rightMargin: root.showDefaultHeader ? Appearance.paddingMedium : 14
+            clip: false
         }
     }
 }

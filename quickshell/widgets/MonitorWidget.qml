@@ -50,12 +50,13 @@ Item {
         anchorItem: monButton
         showDefaultHeader: false
         contentWidth: 350
-        contentHeight: mainCol.implicitHeight + 24
+        contentHeight: mainCol.implicitHeight + 30
 
         Column {
             id: mainCol
-            anchors.fill: parent
-            anchors.margins: 6
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
             spacing: 12
 
             // ================= 1. STANDARDIZED M3 HEADER =================
@@ -263,6 +264,7 @@ Item {
                         width: parent.width
                         height: 20
 
+                        readonly property int dotInset: 10
                         readonly property var stops: root.service.textSizeStops
                         readonly property int activeIndex: {
                             var idx = stops.indexOf(root.service.textSize)
@@ -289,7 +291,7 @@ Item {
                             color: Theme.surfaceContainerHigh
                             clip: true
 
-                            // Filled portion
+                            // Filled portion (up to the center of active thumb)
                             Rectangle {
                                 anchors.left: parent.left
                                 anchors.top: parent.top
@@ -298,7 +300,8 @@ Item {
                                     var count = textSliderItem.stops.length
                                     if (count <= 1) return 0
                                     var ratio = textSliderItem.activeIndex / (count - 1)
-                                    return parent.width * ratio
+                                    var usableW = tTrack.width - (2 * textSliderItem.dotInset)
+                                    return Math.round(textSliderItem.dotInset + (ratio * usableW))
                                 }
                                 radius: 7
                                 color: Theme.accent
@@ -308,7 +311,7 @@ Item {
                                 }
                             }
 
-                            // Circular 4x4 Tick Dots inside track
+                            // Circular 4x4 Tick Dots inside track (inset past rounded end-caps)
                             Repeater {
                                 model: textSliderItem.stops.length
 
@@ -320,12 +323,13 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                     x: {
                                         var count = textSliderItem.stops.length
-                                        if (count <= 1) return 0
+                                        if (count <= 1) return textSliderItem.dotInset - 2
                                         var ratio = index / (count - 1)
-                                        return (tTrack.width - width) * ratio
+                                        var usableW = tTrack.width - (2 * textSliderItem.dotInset)
+                                        return Math.round(textSliderItem.dotInset + (ratio * usableW) - 2)
                                     }
-                                    color: (index <= textSliderItem.activeIndex) ? Theme.dark_background : Theme.surfaceContainerHighest
-                                    opacity: 0.8
+                                    color: (index <= textSliderItem.activeIndex) ? Theme.surfaceBase : Theme.bright_foreground
+                                    opacity: (index <= textSliderItem.activeIndex) ? 0.85 : 0.45
                                 }
                             }
                         }
@@ -340,9 +344,10 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             x: {
                                 var count = textSliderItem.stops.length
-                                if (count <= 1) return 0
+                                if (count <= 1) return textSliderItem.dotInset - 2
                                 var ratio = textSliderItem.activeIndex / (count - 1)
-                                return Math.max(0, Math.min(textSliderItem.width - width, (ratio * (textSliderItem.width - width))))
+                                var usableW = textSliderItem.width - (2 * textSliderItem.dotInset)
+                                return Math.round(textSliderItem.dotInset + (ratio * usableW) - 2)
                             }
 
                             scale: tMouse.containsMouse || tMouse.pressed ? 1.25 : 1.0
@@ -361,7 +366,10 @@ Item {
 
                             function updateFromPos(mouseX) {
                                 var count = textSliderItem.stops.length
-                                var ratio = Math.max(0, Math.min(1.0, mouseX / textSliderItem.width))
+                                if (count <= 1) return
+                                var usableW = textSliderItem.width - (2 * textSliderItem.dotInset)
+                                var relX = mouseX - textSliderItem.dotInset
+                                var ratio = Math.max(0, Math.min(1.0, relX / usableW))
                                 var nearestIndex = Math.round(ratio * (count - 1))
                                 var newSize = textSliderItem.stops[nearestIndex]
                                 if (newSize !== root.service.textSize) {

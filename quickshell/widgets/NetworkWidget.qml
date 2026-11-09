@@ -56,10 +56,10 @@ Item {
         showDefaultHeader: false
         contentWidth: 360
         contentHeight: {
-            if (!root.service.wifiEnabled && !root.showQrView) return 128
+            if (!root.service.wifiEnabled && !root.showQrView) return 130
             if (root.showQrView) return 420
-            var h = netMainCol.implicitHeight + 24
-            return Math.max(132, Math.min(540, h))
+            var h = netMainCol.implicitHeight + 30
+            return Math.max(134, Math.min(540, h))
         }
         keyboardFocus: root.showPasswordInput ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
@@ -91,8 +91,9 @@ Item {
 
         Column {
             id: netMainCol
-            anchors.fill: parent
-            anchors.margins: 6
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
             spacing: 12
 
             // ================= 1. STANDARDIZED M3 HEADER =================

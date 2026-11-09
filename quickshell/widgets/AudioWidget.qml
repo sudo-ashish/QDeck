@@ -173,12 +173,13 @@ Item {
         anchorItem: audioButton
         showDefaultHeader: false
         contentWidth: 340
-        contentHeight: audioCol.implicitHeight + 24
+        contentHeight: audioCol.implicitHeight + 30
 
         Column {
             id: audioCol
-            anchors.fill: parent
-            anchors.margins: 6
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
             spacing: 12
 
             // ================= 1. STANDARDIZED M3 HEADER =================

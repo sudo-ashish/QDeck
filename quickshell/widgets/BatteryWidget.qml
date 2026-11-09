@@ -46,12 +46,13 @@ Item {
         anchorItem: batButton
         showDefaultHeader: false
         contentWidth: 360
-        contentHeight: batCol.implicitHeight + 24
+        contentHeight: batCol.implicitHeight + 30
 
         Column {
             id: batCol
-            anchors.fill: parent
-            anchors.margins: 6
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
             spacing: 12
 
             // ================= 1. STANDARDIZED M3 HEADER =================

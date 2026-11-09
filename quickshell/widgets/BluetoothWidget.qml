@@ -63,9 +63,9 @@ Item {
         showDefaultHeader: false
         contentWidth: 340
         contentHeight: {
-            if (!root.service.bluetoothEnabled) return 120
+            if (!root.service.bluetoothEnabled) return 124
             var listH = Math.min(320, btScrollCol.implicitHeight)
-            return Math.max(124, listH + 68)
+            return Math.max(130, listH + 84)
         }
 
         Binding {

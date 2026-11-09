@@ -92,7 +92,7 @@ Item {
         anchorItem: clockButton
         showDefaultHeader: false
         contentWidth: 380
-        contentHeight: 395
+        contentHeight: 405
 
         WheelHandler {
             onWheel: function(event) {
@@ -103,8 +103,9 @@ Item {
 
         Column {
             id: calendarCol
-            anchors.fill: parent
-            anchors.margins: 10
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
             spacing: 12
 
             // ================= 1. STANDARDIZED M3 HEADER =================
