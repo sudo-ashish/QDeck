@@ -73,13 +73,6 @@ hl.window_rule({
 
 hl.window_rule({ match = { class = "org.gnome.Calculator" }, float = true, center = true })
 
--- Terminal tagging rule for universal shortcuts and window classification
-hl.window_rule({
-	name = "tag-terminals",
-	match = { class = "^(kitty|foot|alacritty|ghostty|wezterm|org\\.wezfurlong\\.wezterm|gnome-terminal|xfce4-terminal|xterm|floating-terminal|tui-.*)$" },
-	tag = "+terminal",
-})
-
 --------------------------------
 ---- QUICKSHELL LAYER RULES ----
 --------------------------------
