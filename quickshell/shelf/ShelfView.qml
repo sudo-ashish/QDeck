@@ -106,8 +106,7 @@ Item {
             height: 60
             radius: 10
             color: Theme.withAlpha(Theme.darker_background, 0.90)
-            border.color: Theme.withAlpha(Theme.accent, 0.40)
-            border.width: 1
+            border.width: 0
             transform: [
                 Translate { x: -6; y: -6 },
                 Rotation { angle: -6; origin.x: 30; origin.y: 30 }
@@ -122,8 +121,7 @@ Item {
             height: 62
             radius: 10
             color: Theme.withAlpha(Theme.dark_background, 0.95)
-            border.color: Theme.withAlpha(Theme.accent, 0.60)
-            border.width: 1
+            border.width: 0
             transform: [
                 Translate { x: 4; y: -4 },
                 Rotation { angle: 5; origin.x: 31; origin.y: 31 }
@@ -137,8 +135,7 @@ Item {
             height: 64
             radius: 12
             color: Theme.darker_background
-            border.color: Theme.accent
-            border.width: 2
+            border.width: 0
             clip: true
 
             Rectangle {
@@ -195,8 +192,7 @@ Item {
             height: 20
             radius: 10
             color: Theme.accent
-            border.width: 1.5
-            border.color: Theme.darker_background
+            border.width: 0
 
             Text {
                 id: badgeCountText
@@ -819,8 +815,7 @@ Item {
         visible: dropArea.containsDrag && !root.isDraggingItem
         radius: Appearance.launcherRadius
         color: Theme.withAlpha(Theme.accent, 0.12)
-        border.color: Theme.accent
-        border.width: 2
+        border.width: 0
         z: 30
 
         Rectangle {
@@ -829,6 +824,7 @@ Item {
             height: dropBannerCol.implicitHeight + 24
             radius: 16
             color: Theme.withAlpha(Theme.darker_background, 0.94)
+            border.width: 0
 
             Column {
                 id: dropBannerCol
