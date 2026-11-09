@@ -132,7 +132,7 @@ var BUILTIN_ACTIONS = [
         iconGlyph: "screenshot",
         category: "Utility",
         defaultMeta: "Screenshot",
-        cmd: "grimblast copysave area",
+        cmd: "qdeck screenshot region",
         keywords: ["screenshot", "snip", "capture", "screen", "area"]
     },
     {

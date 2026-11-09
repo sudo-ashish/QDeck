@@ -211,7 +211,7 @@ QtObject {
         var iconName = root.resolveFastXdgIcon(cleanUrl, name, isImg)
         var category = root.resolveFileCategory(cleanUrl, name)
 
-        items.append({
+        items.insert(0, {
             filePath: cleanUrl,
             fileName: name,
             isImage: isImg,
@@ -222,6 +222,7 @@ QtObject {
         })
         root.updateSelectedCount()
         root.queueGioQuery([cleanUrl])
+        root.saveState()
         return true
     }
 
@@ -242,7 +243,7 @@ QtObject {
                     var iconName = root.resolveFastXdgIcon(cleanUrl, name, isImg)
                     var category = root.resolveFileCategory(cleanUrl, name)
 
-                    items.append({
+                    items.insert(i, {
                         filePath: cleanUrl,
                         fileName: name,
                         isImage: isImg,
@@ -259,6 +260,7 @@ QtObject {
         if (addedAny) {
             root.updateSelectedCount()
             root.queueGioQuery(addedUris)
+            root.saveState()
         }
         return addedAny
     }
@@ -270,6 +272,7 @@ QtObject {
                 root.lastSelectedIndex = items.count - 1
             }
             root.updateSelectedCount()
+            root.saveState()
         }
     }
 
@@ -277,6 +280,7 @@ QtObject {
         items.clear()
         root.lastSelectedIndex = -1
         root.selectedCount = 0
+        root.saveState()
     }
 
     function setSelected(index, val) {
@@ -355,6 +359,7 @@ QtObject {
         }
         root.lastSelectedIndex = -1
         root.updateSelectedCount()
+        root.saveState()
     }
 
     function getSelectedUris() {
@@ -514,5 +519,92 @@ QtObject {
         function selectedCount(): string { return root.ipcHandler.selectedCount() }
         function selectedUris(): string { return root.ipcHandler.selectedUris() }
         function add(path: string): string { return root.ipcHandler.add(path) }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Disk State Persistence (~/.local/state/quickshell/qshelf-items.json)
+    // ─────────────────────────────────────────────────────────────────────────
+    function populateFromSavedList(list) {
+        if (!list || !Array.isArray(list)) return
+        var urisToQuery = []
+        for (var i = 0; i < list.length; i++) {
+            var raw = list[i]
+            var cleanUrl = root.normalizeUrl(raw)
+            if (cleanUrl && !root.hasUrl(cleanUrl)) {
+                var unquoted = decodeURIComponent(cleanUrl.replace(/^file:\/\//, ""))
+                var name = unquoted.split("/").pop() || unquoted
+                var isImg = root.isImageFile(name)
+                var icon = root.resolveFileIcon(cleanUrl, name)
+                var iconName = root.resolveFastXdgIcon(cleanUrl, name, isImg)
+                var category = root.resolveFileCategory(cleanUrl, name)
+
+                items.append({
+                    filePath: cleanUrl,
+                    fileName: name,
+                    isImage: isImg,
+                    iconName: iconName,
+                    fileIcon: icon,
+                    fileCategory: category,
+                    selected: false
+                })
+                urisToQuery.push(cleanUrl)
+            }
+        }
+        if (urisToQuery.length > 0) {
+            root.updateSelectedCount()
+            root.queueGioQuery(urisToQuery)
+        }
+    }
+
+    property Timer saveTimer: Timer {
+        id: saveTimer
+        interval: 150
+        repeat: false
+        onTriggered: root.executeSaveState()
+    }
+
+    function saveState() {
+        saveTimer.restart()
+    }
+
+    function executeSaveState() {
+        if (saveStateProc.running) {
+            saveTimer.restart()
+            return
+        }
+        var uris = []
+        for (var i = 0; i < items.count; i++) {
+            uris.push(items.get(i).filePath)
+        }
+        var jsonStr = JSON.stringify(uris)
+        saveStateProc.command = ["python3", "-c",
+            "import sys, json, os; p = os.path.expanduser('~/.local/state/quickshell/qshelf-items.json'); os.makedirs(os.path.dirname(p), exist_ok=True); json.dump(json.loads(sys.argv[1]), open(p, 'w'), indent=2)",
+            jsonStr
+        ]
+        saveStateProc.running = true
+    }
+
+    property Process saveStateProc: Process {
+        id: saveStateProc
+    }
+
+    property Process loadStateProc: Process {
+        id: loadStateProc
+        command: ["cat", Quickshell.env("HOME") + "/.local/state/quickshell/qshelf-items.json"]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                try {
+                    var list = JSON.parse(text.trim())
+                    if (Array.isArray(list)) {
+                        root.populateFromSavedList(list)
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        loadStateProc.running = true
     }
 }

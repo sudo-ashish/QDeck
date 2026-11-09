@@ -15,6 +15,7 @@ set -euo pipefail
 APP_NAME="QDeck Screenshot"
 CLIPBOARD_ONLY=0
 SAVE_ONLY=0
+STAGE_QSHELF=1
 INCLUDE_CURSOR=0
 SEND_NOTIFY=1
 DELAY=0
@@ -113,6 +114,8 @@ Options:
   -f, --file PATH          Specify custom save path for the screenshot image
   -d, --delay SECONDS      Wait N seconds before taking screenshot
       --cursor             Include mouse cursor in screenshot
+      --shelf, --qshelf    Stage screenshot into QShelf (default: enabled)
+      --no-shelf, --no-qshelf Do not stage screenshot into QShelf
   -n, --no-notify          Disable desktop notifications
   -h, --help               Display this help message and exit
 
@@ -123,6 +126,7 @@ Single-Instance Limit:
 
 Default Behavior:
   Saves image to: $SCREENSHOT_DIR
+  Stages image into QShelf
   Copies to clipboard (if wl-copy is installed)
   Sends desktop notification (if notify-send is installed)
 
@@ -145,6 +149,24 @@ notify() {
 
     if [[ $SEND_NOTIFY -eq 1 ]] && command -v notify-send >/dev/null 2>&1; then
         notify-send -a "$APP_NAME" -i "$icon" "$title" "$message" || true
+    fi
+}
+
+add_to_qshelf() {
+    local img="$1"
+    [[ -f "$img" ]] || return 0
+
+    local abs_path
+    abs_path=$(realpath "$img" 2>/dev/null || readlink -f "$img" 2>/dev/null || echo "$img")
+    local bin_dir
+    bin_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    if [[ -x "$bin_dir/qdeck-qshelf" ]]; then
+        "$bin_dir/qdeck-qshelf" add "$abs_path" >/dev/null 2>&1 || true
+    elif command -v qdeck >/dev/null 2>&1; then
+        qdeck qshelf add "$abs_path" >/dev/null 2>&1 || true
+    elif command -v qs >/dev/null 2>&1; then
+        qs ipc call qshelf add "$abs_path" >/dev/null 2>&1 || qs ipc call shelf add "$abs_path" >/dev/null 2>&1 || true
     fi
 }
 
@@ -296,6 +318,14 @@ while [[ $# -gt 0 ]]; do
             SEND_NOTIFY=0
             shift
             ;;
+        --shelf|--qshelf)
+            STAGE_QSHELF=1
+            shift
+            ;;
+        --no-shelf|--no-qshelf)
+            STAGE_QSHELF=0
+            shift
+            ;;
         -h|--help)
             show_help
             exit 0
@@ -348,7 +378,7 @@ if [[ -n "$EXTRA_ARG" && "$EXTRA_ARG" =~ \.(png|jpg|jpeg|webp)$ && -z "$CUSTOM_F
 fi
 
 # Determine target file path
-if [[ $CLIPBOARD_ONLY -eq 0 ]]; then
+if [[ $CLIPBOARD_ONLY -eq 0 || $STAGE_QSHELF -eq 1 ]]; then
     if [[ -n "$CUSTOM_FILE" ]]; then
         TARGET_FILE="$CUSTOM_FILE"
     else
@@ -434,7 +464,32 @@ if [[ ${#GRIM_TARGET_ARGS[@]} -gt 0 ]]; then
 fi
 
 # Execute capture
-if [[ $CLIPBOARD_ONLY -eq 1 ]]; then
+if [[ -n "${TARGET_FILE:-}" ]]; then
+    if "${GRIM_CMD[@]}" "$TARGET_FILE"; then
+        # Copy to clipboard unless explicitly told save-only
+        if [[ $SAVE_ONLY -eq 0 ]] && command -v wl-copy >/dev/null 2>&1; then
+            wl-copy --type image/png < "$TARGET_FILE" || true
+        fi
+
+        # Automatically stage into QShelf
+        if [[ $STAGE_QSHELF -eq 1 ]]; then
+            add_to_qshelf "$TARGET_FILE"
+        fi
+
+        NOTIFY_DESC="Mode: ${MODE}\nSaved to $(basename "$TARGET_FILE")"
+        if [[ $STAGE_QSHELF -eq 1 ]]; then
+            NOTIFY_DESC+="\nStaged in QShelf"
+        fi
+        if [[ $SAVE_ONLY -eq 0 ]]; then
+            NOTIFY_DESC+="\nCopied to clipboard"
+        fi
+        notify "Screenshot Saved" "$NOTIFY_DESC" "$TARGET_FILE"
+
+        echo "$TARGET_FILE"
+    else
+        error_exit "Failed to save screenshot to '$TARGET_FILE'." 1
+    fi
+else
     if ! command -v wl-copy >/dev/null 2>&1; then
         error_exit "wl-copy is required for clipboard mode." 1
     fi
@@ -448,20 +503,5 @@ if [[ $CLIPBOARD_ONLY -eq 1 ]]; then
         ( sleep 4 && rm -f "$TMP_SHOT" ) >/dev/null 2>&1 &
     else
         error_exit "Failed to capture screenshot to clipboard." 1
-    fi
-else
-    if "${GRIM_CMD[@]}" "$TARGET_FILE"; then
-        # Copy to clipboard unless explicitly told save-only
-        if [[ $SAVE_ONLY -eq 0 ]] && command -v wl-copy >/dev/null 2>&1; then
-            wl-copy --type image/png < "$TARGET_FILE" || true
-        fi
-
-        NOTIFY_DESC="Mode: ${MODE}\nSaved to $(basename "$TARGET_FILE")"
-        [[ $SAVE_ONLY -eq 0 ]] && NOTIFY_DESC+="\nCopied to clipboard"
-        notify "Screenshot Saved" "$NOTIFY_DESC" "$TARGET_FILE"
-
-        echo "$TARGET_FILE"
-    else
-        error_exit "Failed to save screenshot to '$TARGET_FILE'." 1
     fi
 fi

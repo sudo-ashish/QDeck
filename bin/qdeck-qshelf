@@ -79,7 +79,26 @@ case "$CMD" in
   add)
     shift
     for file in "$@"; do
-      invoke_qshelf add "$file"
+      if ! invoke_qshelf add "$file" 2>/dev/null; then
+        # QuickShell not reachable; write directly to state file so it loads on start
+        python3 -c "
+import json, os, sys
+p = os.path.expanduser('~/.local/state/quickshell/qshelf-items.json')
+os.makedirs(os.path.dirname(p), exist_ok=True)
+raw = sys.argv[1]
+abs_p = os.path.abspath(raw)
+uri = 'file://' + abs_p
+try:
+    data = json.load(open(p)) if os.path.exists(p) else []
+except Exception:
+    data = []
+if uri not in data:
+    data.insert(0, uri)
+    with open(p, 'w') as f:
+        json.dump(data, f, indent=2)
+" "$file" 2>/dev/null || true
+        echo "added (persisted)"
+      fi
     done
     ;;
   remove|delete)
@@ -106,3 +125,4 @@ case "$CMD" in
     invoke_qshelf "$CMD" "${@:2}"
     ;;
 esac
+
