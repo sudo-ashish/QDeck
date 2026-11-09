@@ -55,24 +55,34 @@ Item {
         Column {
             id: mainCol
             anchors.fill: parent
+            anchors.margins: 6
             spacing: 12
 
-            // --- 1. Header (Display Icon + Name + Percentage) ---
+            // ================= 1. STANDARDIZED M3 HEADER =================
             Item {
                 width: parent.width
-                height: 38
+                height: 40
 
                 Row {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 12
 
-                    Text {
-                        text: "󰍹"
-                        font.family: Icons.effectiveFont("󰍹")
-                        font.pixelSize: 26
-                        color: Theme.accent
+                    // 40x40 Tonal Squircle Container
+                    Rectangle {
+                        width: 40
+                        height: 40
+                        radius: 12
+                        color: Theme.secondaryContainer
                         anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰍹"
+                            font.family: Icons.effectiveFont("󰍹")
+                            font.pixelSize: 22
+                            color: Theme.accent
+                        }
                     }
 
                     Column {
@@ -82,274 +92,309 @@ Item {
                         Text {
                             text: "Display"
                             font.family: Fonts.uiFont
-                            font.pixelSize: Fonts.sizeLarge
+                            font.pixelSize: 15
                             font.bold: true
-                            color: Theme.foreground
+                            color: Theme.bright_foreground
                         }
 
                         Text {
-                            text: root.service.brightnessName || "Internal Display"
+                            text: (root.service.brightnessName && root.service.brightnessName.toUpperCase() !== "SUN BLAST") ? ("SUN BLAST · " + root.service.brightnessName.toUpperCase()) : "SUN BLAST"
                             font.family: Fonts.uiFont
-                            font.pixelSize: 11
+                            font.pixelSize: 10
+                            font.bold: true
+                            font.letterSpacing: 1
                             color: Theme.muted
+                            opacity: 0.75
                         }
                     }
                 }
             }
 
-            // Divider
+            // ================= 2. BRIGHTNESS (Tonal Container Card) =================
             Rectangle {
                 width: parent.width
-                height: 1
-                color: Theme.selection
-            }
+                height: 64
+                radius: 12
+                color: Theme.surfaceContainer
 
-            // --- 2. BRIGHTNESS Section ---
-            Column {
-                width: parent.width
-                spacing: 8
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 8
 
-                Item {
-                    width: parent.width
-                    height: 18
+                    Item {
+                        width: parent.width
+                        height: 16
 
-                    Text {
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "BRIGHTNESS"
-                        font.family: Fonts.uiFont
-                        font.pixelSize: 11
-                        font.bold: true
-                        color: Theme.muted
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "BRIGHTNESS"
+                            font.family: Fonts.uiFont
+                            font.pixelSize: 10
+                            font.bold: true
+                            font.letterSpacing: 1
+                            color: Theme.muted
+                        }
+
+                        Text {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.service.brightness + "%"
+                            font.family: Fonts.monoFont
+                            font.pixelSize: 11
+                            font.bold: true
+                            color: Theme.bright_foreground
+                        }
                     }
 
-                    Text {
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: root.service.brightness + "%"
-                        font.family: Fonts.monoFont
-                        font.pixelSize: 12
-                        font.bold: true
-                        color: Theme.foreground
-                    }
-                }
-
-                // Continuous Slider
-                Item {
-                    id: brightSliderItem
-                    width: parent.width
-                    height: 24
-
-                    Rectangle {
-                        id: bTrack
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: 4
-                        radius: Appearance.radiusXs
-                        color: Theme.selection
+                    // Thick M3 Continuous Slider
+                    Item {
+                        id: brightSliderItem
+                        width: parent.width
+                        height: 20
 
                         Rectangle {
+                            id: bTrack
                             anchors.left: parent.left
-                            anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            width: Math.max(0, Math.min(parent.width, parent.width * (root.service.brightness / 100.0)))
-                            radius: Appearance.radiusXs
-                            color: Theme.accent
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: 14
+                            radius: 7
+                            color: Theme.surfaceContainerHigh
+                            clip: true
 
-                            Behavior on width {
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: Math.max(0, Math.min(parent.width, parent.width * (root.service.brightness / 100.0)))
+                                radius: 7
+                                color: Theme.accent
+
+                                Behavior on width {
+                                    enabled: !bMouse.pressed
+                                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                                }
+                            }
+                        }
+
+                        // M3 Vertical Pill Thumb
+                        Rectangle {
+                            id: bKnob
+                            width: 4
+                            height: 20
+                            radius: 2
+                            color: Theme.bright_foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: Math.max(0, Math.min(brightSliderItem.width - width, (brightSliderItem.width * (root.service.brightness / 100.0)) - (width / 2)))
+
+                            scale: bMouse.containsMouse || bMouse.pressed ? 1.25 : 1.0
+                            Behavior on scale { NumberAnimation { duration: 100 } }
+
+                            Behavior on x {
                                 enabled: !bMouse.pressed
                                 NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                             }
                         }
-                    }
 
-                    Rectangle {
-                        id: bKnob
-                        width: 14
-                        height: 14
-                        radius: 7
-                        color: Theme.bright_foreground
-                        anchors.verticalCenter: parent.verticalCenter
-                        x: Math.max(0, Math.min(brightSliderItem.width - width, (brightSliderItem.width * (root.service.brightness / 100.0)) - (width / 2)))
+                        MouseArea {
+                            id: bMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
 
-                        scale: bMouse.containsMouse || bMouse.pressed ? 1.15 : 1.0
-                        Behavior on scale { NumberAnimation { duration: 100 } }
+                            function updateFromPos(mouseX) {
+                                root.service.inhibitOsd(2000)
+                                var pct = Math.max(1, Math.min(100, Math.round((mouseX / brightSliderItem.width) * 100)))
+                                root.service.setBrightness(pct)
+                            }
 
-                        Behavior on x {
-                            enabled: !bMouse.pressed
-                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-                        }
-                    }
-
-                    MouseArea {
-                        id: bMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-
-                        function updateFromPos(mouseX) {
-                            root.service.inhibitOsd(2000)
-                            var pct = Math.max(1, Math.min(100, Math.round((mouseX / brightSliderItem.width) * 100)))
-                            root.service.setBrightness(pct)
-                        }
-
-                        onPressed: function(mouse) { updateFromPos(mouse.x) }
-                        onPositionChanged: function(mouse) {
-                            if (pressed) updateFromPos(mouse.x)
-                        }
-                    }
-                }
-            }
-
-            // Divider
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: Theme.selection
-            }
-
-            // --- 3. TEXT SIZE Section (Stepped Notch Slider) ---
-            Column {
-                width: parent.width
-                spacing: 8
-
-                Item {
-                    width: parent.width
-                    height: 18
-
-                    Text {
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "TEXT SIZE"
-                        font.family: Fonts.uiFont
-                        font.pixelSize: 11
-                        font.bold: true
-                        color: Theme.muted
-                    }
-
-                    Text {
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: root.service.textSize + "px"
-                        font.family: Fonts.monoFont
-                        font.pixelSize: 12
-                        font.bold: true
-                        color: Theme.foreground
-                    }
-                }
-
-                Item {
-                    id: textSliderItem
-                    width: parent.width
-                    height: 24
-
-                    readonly property var stops: root.service.textSizeStops
-                    readonly property int activeIndex: {
-                        var idx = stops.indexOf(root.service.textSize)
-                        if (idx >= 0) return idx
-                        var best = 0
-                        var bestDiff = 1e9
-                        for (var i = 0; i < stops.length; i++) {
-                            var d = Math.abs(stops[i] - root.service.textSize)
-                            if (d < bestDiff) {
-                                bestDiff = d
-                                best = i
+                            onPressed: function(mouse) { updateFromPos(mouse.x) }
+                            onPositionChanged: function(mouse) {
+                                if (pressed) updateFromPos(mouse.x)
                             }
                         }
-                        return best
+                    }
+                }
+            }
+
+            // ================= 3. TEXT SIZE (Tonal Container with Tick Dots) =================
+            Rectangle {
+                width: parent.width
+                height: 64
+                radius: 12
+                color: Theme.surfaceContainer
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 8
+
+                    Item {
+                        width: parent.width
+                        height: 16
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "TEXT SIZE"
+                            font.family: Fonts.uiFont
+                            font.pixelSize: 10
+                            font.bold: true
+                            font.letterSpacing: 1
+                            color: Theme.muted
+                        }
+
+                        Text {
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.service.textSize + "px"
+                            font.family: Fonts.monoFont
+                            font.pixelSize: 11
+                            font.bold: true
+                            color: Theme.bright_foreground
+                        }
                     }
 
-                    // Stepped Segments Track
-                    Row {
-                        anchors.fill: parent
-                        anchors.topMargin: 10
-                        anchors.bottomMargin: 10
-                        spacing: 4
+                    // Thick M3 Stepped Slider with Tick Dots
+                    Item {
+                        id: textSliderItem
+                        width: parent.width
+                        height: 20
 
-                        Repeater {
-                            model: textSliderItem.stops.length - 1
+                        readonly property var stops: root.service.textSizeStops
+                        readonly property int activeIndex: {
+                            var idx = stops.indexOf(root.service.textSize)
+                            if (idx >= 0) return idx
+                            var best = 0
+                            var bestDiff = 1e9
+                            for (var i = 0; i < stops.length; i++) {
+                                var d = Math.abs(stops[i] - root.service.textSize)
+                                if (d < bestDiff) {
+                                    bestDiff = d
+                                    best = i
+                                }
+                            }
+                            return best
+                        }
 
+                        Rectangle {
+                            id: tTrack
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: 14
+                            radius: 7
+                            color: Theme.surfaceContainerHigh
+                            clip: true
+
+                            // Filled portion
                             Rectangle {
-                                required property int index
-                                width: (textSliderItem.width - (4 * (textSliderItem.stops.length - 2))) / (textSliderItem.stops.length - 1)
-                                height: 4
-                                radius: Appearance.radiusXs
-                                color: (index < textSliderItem.activeIndex) ? Theme.accent : Theme.selection
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: {
+                                    var count = textSliderItem.stops.length
+                                    if (count <= 1) return 0
+                                    var ratio = textSliderItem.activeIndex / (count - 1)
+                                    return parent.width * ratio
+                                }
+                                radius: 7
+                                color: Theme.accent
+
+                                Behavior on width {
+                                    NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
+                                }
                             }
-                        }
-                    }
 
-                    // Stepped Knob Handle
-                    Rectangle {
-                        id: tKnob
-                        width: 14
-                        height: 14
-                        radius: 7
-                        color: Theme.bright_foreground
-                        anchors.verticalCenter: parent.verticalCenter
-                        x: {
-                            var count = textSliderItem.stops.length
-                            if (count <= 1) return 0
-                            var ratio = textSliderItem.activeIndex / (count - 1)
-                            return Math.max(0, Math.min(textSliderItem.width - width, (ratio * (textSliderItem.width - width))))
-                        }
+                            // Circular 4x4 Tick Dots inside track
+                            Repeater {
+                                model: textSliderItem.stops.length
 
-                        scale: tMouse.containsMouse || tMouse.pressed ? 1.15 : 1.0
-                        Behavior on scale { NumberAnimation { duration: 100 } }
-
-                        Behavior on x {
-                            NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
-                        }
-                    }
-
-                    MouseArea {
-                        id: tMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-
-                        function updateFromPos(mouseX) {
-                            var count = textSliderItem.stops.length
-                            var ratio = Math.max(0, Math.min(1.0, mouseX / textSliderItem.width))
-                            var nearestIndex = Math.round(ratio * (count - 1))
-                            var newSize = textSliderItem.stops[nearestIndex]
-                            if (newSize !== root.service.textSize) {
-                                root.service.setTextSize(newSize)
+                                Rectangle {
+                                    required property int index
+                                    width: 4
+                                    height: 4
+                                    radius: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    x: {
+                                        var count = textSliderItem.stops.length
+                                        if (count <= 1) return 0
+                                        var ratio = index / (count - 1)
+                                        return (tTrack.width - width) * ratio
+                                    }
+                                    color: (index <= textSliderItem.activeIndex) ? Theme.dark_background : Theme.surfaceContainerHighest
+                                    opacity: 0.8
+                                }
                             }
                         }
 
-                        onPressed: function(mouse) { updateFromPos(mouse.x) }
-                        onPositionChanged: function(mouse) {
-                            if (pressed) updateFromPos(mouse.x)
+                        // M3 Vertical Pill Thumb
+                        Rectangle {
+                            id: tKnob
+                            width: 4
+                            height: 20
+                            radius: 2
+                            color: Theme.bright_foreground
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: {
+                                var count = textSliderItem.stops.length
+                                if (count <= 1) return 0
+                                var ratio = textSliderItem.activeIndex / (count - 1)
+                                return Math.max(0, Math.min(textSliderItem.width - width, (ratio * (textSliderItem.width - width))))
+                            }
+
+                            scale: tMouse.containsMouse || tMouse.pressed ? 1.25 : 1.0
+                            Behavior on scale { NumberAnimation { duration: 100 } }
+
+                            Behavior on x {
+                                NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
+                            }
+                        }
+
+                        MouseArea {
+                            id: tMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+
+                            function updateFromPos(mouseX) {
+                                var count = textSliderItem.stops.length
+                                var ratio = Math.max(0, Math.min(1.0, mouseX / textSliderItem.width))
+                                var nearestIndex = Math.round(ratio * (count - 1))
+                                var newSize = textSliderItem.stops[nearestIndex]
+                                if (newSize !== root.service.textSize) {
+                                    root.service.setTextSize(newSize)
+                                }
+                            }
+
+                            onPressed: function(mouse) { updateFromPos(mouse.x) }
+                            onPositionChanged: function(mouse) {
+                                if (pressed) updateFromPos(mouse.x)
+                            }
                         }
                     }
                 }
             }
 
-            // Divider
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: Theme.selection
-            }
-
-            // --- 4. SCALE Section (Segmented Pill Buttons) ---
+            // ================= 4. SCALE (M3 Segmented Button Row) =================
             Column {
                 width: parent.width
-                spacing: 8
+                spacing: 6
 
                 Item {
                     width: parent.width
-                    height: 18
+                    height: 16
 
                     Text {
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
                         text: "SCALE"
                         font.family: Fonts.uiFont
-                        font.pixelSize: 11
+                        font.pixelSize: 10
                         font.bold: true
+                        font.letterSpacing: 1
                         color: Theme.muted
                     }
 
@@ -367,10 +412,10 @@ Item {
                 Row {
                     id: scaleRow
                     width: parent.width
-                    spacing: 6
+                    spacing: 3
 
                     readonly property int count: root.service.scalePresets.length
-                    readonly property real pillWidth: (width - (spacing * (count - 1))) / count
+                    readonly property real segWidth: (width - (spacing * (count - 1))) / count
 
                     Repeater {
                         model: root.service.scalePresets
@@ -385,20 +430,31 @@ Item {
                                 var tgt = parseFloat(modelData)
                                 return !isNaN(cur) && !isNaN(tgt) && Math.abs(cur - tgt) < 0.05
                             }
+                            readonly property bool isFirst: index === 0
+                            readonly property bool isLast: index === (scaleRow.count - 1)
 
-                            width: scaleRow.pillWidth
-                            height: 28
-                            radius: Appearance.radiusSmall
-                            color: isActive ? Theme.selection : (pillMouse.containsMouse ? Theme.lighter_background : Theme.dark_background)
-                            border.color: isActive ? Theme.accent : Theme.selection
-                            border.width: 1
+                            width: scaleRow.segWidth
+                            height: 32
+
+                            topLeftRadius: isActive ? 12 : (isFirst ? 12 : 4)
+                            bottomLeftRadius: isActive ? 12 : (isFirst ? 12 : 4)
+                            topRightRadius: isActive ? 12 : (isLast ? 12 : 4)
+                            bottomRightRadius: isActive ? 12 : (isLast ? 12 : 4)
+
+                            color: isActive ? Theme.secondaryContainer : (pillMouse.containsMouse ? Theme.surfaceContainerHigh : Theme.surfaceContainer)
+
+                            Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                            Behavior on topLeftRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                            Behavior on bottomLeftRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                            Behavior on topRightRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                            Behavior on bottomRightRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
                             Text {
                                 anchors.centerIn: parent
                                 text: scalePill.modelData + "x"
                                 font.family: Fonts.uiFont
                                 font.pixelSize: 11
-                                font.bold: scalePill.isActive 
+                                font.bold: scalePill.isActive
                                 color: scalePill.isActive ? Theme.accent : Theme.foreground
                             }
 
@@ -414,29 +470,23 @@ Item {
                 }
             }
 
-            // Divider
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: Theme.selection
-            }
-
-            // --- 5. REFRESH RATE Section (Segmented Pill Buttons) ---
+            // ================= 5. REFRESH RATE (M3 Segmented Button Row) =================
             Column {
                 width: parent.width
-                spacing: 8
+                spacing: 6
 
                 Item {
                     width: parent.width
-                    height: 18
+                    height: 16
 
                     Text {
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
                         text: "REFRESH RATE"
                         font.family: Fonts.uiFont
-                        font.pixelSize: 11
+                        font.pixelSize: 10
                         font.bold: true
+                        font.letterSpacing: 1
                         color: Theme.muted
                     }
 
@@ -456,9 +506,9 @@ Item {
                         Text {
                             text: root.service.currentRefreshRate + "Hz"
                             font.family: Fonts.monoFont
-                            font.pixelSize: 12
+                            font.pixelSize: 11
                             font.bold: true
-                            color: Theme.foreground
+                            color: Theme.bright_foreground
                         }
                     }
                 }
@@ -466,30 +516,39 @@ Item {
                 Row {
                     id: hzRow
                     width: parent.width
-                    spacing: 6
+                    spacing: 3
 
                     readonly property int maxHz: root.service.maxRefreshRate
                     readonly property bool canSwitch: maxHz > 60
+                    readonly property real segWidth: canSwitch ? (width - spacing) / 2 : width
 
                     // 60 Hz Pill
                     Rectangle {
                         id: hz60Pill
-                        width: hzRow.canSwitch ? (hzRow.width - hzRow.spacing) / 2 : hzRow.width
-                        height: 28
-                        radius: Appearance.radiusSmall
+                        width: hzRow.segWidth
+                        height: 32
 
                         readonly property bool isActive: Math.abs(root.service.currentRefreshRate - 60) <= 2
 
-                        color: isActive ? Theme.selection : (p60Mouse.containsMouse ? Theme.lighter_background : Theme.dark_background)
-                        border.color: isActive ? Theme.accent : Theme.selection
-                        border.width: 1
+                        topLeftRadius: isActive ? 12 : 12
+                        bottomLeftRadius: isActive ? 12 : 12
+                        topRightRadius: isActive ? 12 : (hzRow.canSwitch ? 4 : 12)
+                        bottomRightRadius: isActive ? 12 : (hzRow.canSwitch ? 4 : 12)
+
+                        color: isActive ? Theme.secondaryContainer : (p60Mouse.containsMouse ? Theme.surfaceContainerHigh : Theme.surfaceContainer)
+
+                        Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on topLeftRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on bottomLeftRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on topRightRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on bottomRightRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
                         Text {
                             anchors.centerIn: parent
                             text: "60 Hz" + (hzRow.canSwitch ? "" : " (Max)")
                             font.family: Fonts.uiFont
                             font.pixelSize: 11
-                            font.bold: hz60Pill.isActive 
+                            font.bold: hz60Pill.isActive
                             color: hz60Pill.isActive ? Theme.accent : Theme.foreground
                         }
 
@@ -506,22 +565,30 @@ Item {
                     Rectangle {
                         id: hzMaxPill
                         visible: hzRow.canSwitch
-                        width: (hzRow.width - hzRow.spacing) / 2
-                        height: 28
-                        radius: Appearance.radiusSmall
+                        width: hzRow.segWidth
+                        height: 32
 
                         readonly property bool isActive: Math.abs(root.service.currentRefreshRate - hzRow.maxHz) <= 2
 
-                        color: isActive ? Theme.selection : (pMaxMouse.containsMouse ? Theme.lighter_background : Theme.dark_background)
-                        border.color: isActive ? Theme.accent : Theme.selection
-                        border.width: 1
+                        topLeftRadius: isActive ? 12 : 4
+                        bottomLeftRadius: isActive ? 12 : 4
+                        topRightRadius: isActive ? 12 : 12
+                        bottomRightRadius: isActive ? 12 : 12
+
+                        color: isActive ? Theme.secondaryContainer : (pMaxMouse.containsMouse ? Theme.surfaceContainerHigh : Theme.surfaceContainer)
+
+                        Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on topLeftRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on bottomLeftRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on topRightRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                        Behavior on bottomRightRadius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
                         Text {
                             anchors.centerIn: parent
                             text: hzRow.maxHz + " Hz (Max)"
                             font.family: Fonts.uiFont
                             font.pixelSize: 11
-                            font.bold: hzMaxPill.isActive 
+                            font.bold: hzMaxPill.isActive
                             color: hzMaxPill.isActive ? Theme.accent : Theme.foreground
                         }
 
@@ -536,23 +603,18 @@ Item {
                 }
             }
 
-            // --- 6. Displays (shown if multiple monitors exist) ---
+            // ================= 6. DISPLAYS (Multiple Monitors) =================
             Column {
                 visible: root.service.displays.length > 1
                 width: parent.width
                 spacing: 6
 
-                Rectangle {
-                    width: parent.width
-                    height: 1
-                    color: Theme.selection
-                }
-
                 Text {
                     text: "DISPLAYS"
                     font.family: Fonts.uiFont
-                    font.pixelSize: 11
+                    font.pixelSize: 10
                     font.bold: true
+                    font.letterSpacing: 1
                     color: Theme.muted
                 }
 
@@ -562,15 +624,15 @@ Item {
                     Rectangle {
                         required property var modelData
                         width: parent.width
-                        height: 32
-                        radius: Appearance.radiusSmall
-                        color: modelData.focused ? Theme.selection : (dispMouse.containsMouse ? Theme.lighter_background : "transparent")
-                        border.width: modelData.focused ? 1 : 0
-                        border.color: modelData.focused ? Theme.accent : "transparent"
+                        height: 36
+                        radius: 12
+                        color: modelData.focused ? Theme.secondaryContainer : (dispMouse.containsMouse ? Theme.surfaceContainerHigh : Theme.surfaceContainer)
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
 
                         Row {
                             anchors.left: parent.left
-                            anchors.leftMargin: 10
+                            anchors.leftMargin: 12
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 8
 
@@ -586,8 +648,8 @@ Item {
                                 text: modelData.name + (modelData.focused ? " · active" : "") + " (" + modelData.refreshRate + "Hz)"
                                 font.family: Fonts.uiFont
                                 font.pixelSize: 11
-                                font.bold: modelData.focused 
-                                color: modelData.focused ? Theme.foreground : Theme.muted
+                                font.bold: modelData.focused
+                                color: modelData.focused ? Theme.bright_foreground : Theme.foreground
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }

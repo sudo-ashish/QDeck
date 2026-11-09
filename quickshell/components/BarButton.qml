@@ -22,11 +22,11 @@ Rectangle {
     implicitHeight: Appearance.barButtonHeight
     width: implicitWidth
     height: implicitHeight
-    radius: Appearance.buttonRadius
+    radius: 10
 
     color: {
-        if (active) return Theme.selection
-        if (mouseArea.containsMouse) return Theme.lighter_background
+        if (active) return Theme.secondaryContainer
+        if (mouseArea.containsMouse) return Theme.surfaceContainerHigh
         return "transparent"
     }
 
@@ -71,17 +71,6 @@ Rectangle {
             color: root.active ? Theme.accent : Theme.foreground
             anchors.verticalCenter: parent.verticalCenter
         }
-    }
-
-    // Active bottom indicator line
-    Rectangle {
-        visible: root.active
-        anchors.bottom: parent.bottom
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: Math.min(parent.width - 4, 16)
-        height: Appearance.borderWidthMedium
-        radius: Appearance.borderWidthThin
-        color: Theme.accent
     }
 
     MouseArea {

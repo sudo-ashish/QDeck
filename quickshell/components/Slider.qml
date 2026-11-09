@@ -36,15 +36,16 @@ Item {
             height: parent.height
             anchors.verticalCenter: parent.verticalCenter
 
-            // Track background
+            // M3 Expressive Thick Track background (16px, radius 8)
             Rectangle {
                 id: trackBg
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                height: Appearance.sliderTrackHeight
-                radius: Appearance.sliderTrackRadius
-                color: Theme.selection
+                height: 16
+                radius: 8
+                color: Theme.surfaceContainerHigh
+                clip: true
 
                 // Filled portion
                 Rectangle {
@@ -52,22 +53,20 @@ Item {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     width: Math.max(0, Math.min(parent.width, parent.width * ((root.value - root.from) / (root.to - root.from))))
-                    radius: Appearance.sliderTrackRadius
+                    radius: 8
                     color: root.fillColor
                 }
             }
 
-            // Knob
+            // M3 Vertical Pill Thumb (width 4, height 22, radius 2)
             Rectangle {
                 id: knob
                 x: Math.max(0, Math.min(trackBg.width - width, (trackBg.width * ((root.value - root.from) / (root.to - root.from))) - (width / 2)))
                 anchors.verticalCenter: parent.verticalCenter
-                width: Appearance.sliderKnobSize
-                height: Appearance.sliderKnobSize
-                radius: Appearance.sliderKnobRadius
-                color: Theme.foreground
-                border.color: Theme.accent
-                border.width: Appearance.sliderKnobBorderWidth
+                width: 4
+                height: 22
+                radius: 2
+                color: Theme.bright_foreground
 
                 scale: sliderMouse.containsMouse || sliderMouse.pressed ? 1.25 : 1.0
                 Behavior on scale {

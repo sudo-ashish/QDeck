@@ -57,7 +57,7 @@ Item {
         }
     }
 
-    // High-performance, zero-latency slider
+    // High-performance, zero-latency M3 thick slider
     component AudioSlider: Item {
         id: sliderRoot
         property real value: 0
@@ -75,27 +75,29 @@ Item {
         signal rightClicked()
 
         implicitWidth: parent ? parent.width : 290
-        implicitHeight: Appearance.audioSliderHeight
-        height: Appearance.audioSliderHeight
+        implicitHeight: 20
+        height: 20
 
         readonly property real range: Math.max(0.001, to - from)
         readonly property real progress: Math.max(0.0, Math.min(1.0, (liveValue - from) / range))
 
+        // M3 Thick Track (14px, radius 7)
         Rectangle {
             id: track
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            height: Appearance.audioSliderTrackHeight
-            radius: Appearance.audioSliderTrackRadius
-            color: Theme.selection
+            height: 14
+            radius: 7
+            color: Theme.surfaceContainerHigh
+            clip: true
 
             Rectangle {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 width: parent.width * sliderRoot.progress
-                radius: Appearance.audioSliderTrackRadius
+                radius: 7
                 color: sliderRoot.muted ? Theme.muted : Theme.accent
 
                 Behavior on width {
@@ -105,16 +107,17 @@ Item {
             }
         }
 
+        // M3 Vertical Pill Thumb (4x20, radius 2)
         Rectangle {
             id: knob
-            width: 14
-            height: 14
-            radius: 7
+            width: 4
+            height: 20
+            radius: 2
             anchors.verticalCenter: track.verticalCenter
             x: Math.max(0, Math.min(track.width - width, track.width * sliderRoot.progress - width / 2))
             color: sliderRoot.muted ? Theme.muted : Theme.bright_foreground
 
-            scale: sliderMouse.containsMouse || sliderRoot.dragging ? 1.2 : 1.0
+            scale: sliderMouse.containsMouse || sliderRoot.dragging ? 1.25 : 1.0
             Behavior on scale { NumberAnimation { duration: 100 } }
 
             Behavior on x {
@@ -169,30 +172,40 @@ Item {
         id: audioPopup
         anchorItem: audioButton
         showDefaultHeader: false
-        contentWidth: 330
+        contentWidth: 340
         contentHeight: audioCol.implicitHeight + 24
 
         Column {
             id: audioCol
             anchors.fill: parent
+            anchors.margins: 6
             spacing: 12
 
-            // ================= 1. HERO HEADER =================
+            // ================= 1. STANDARDIZED M3 HEADER =================
             Item {
                 width: parent.width
-                height: 38
+                height: 40
 
                 Row {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 12
 
-                    Text {
-                        text: root.service.muted ? "󰝟" : "󰕾"
-                        font.family: Icons.effectiveFont(text)
-                        font.pixelSize: 24
-                        color: root.service.muted ? Theme.muted : Theme.foreground
+                    // 40x40 Tonal Squircle Container
+                    Rectangle {
+                        width: 40
+                        height: 40
+                        radius: 12
+                        color: Theme.secondaryContainer
                         anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.service.muted ? "󰝟" : "󰕾"
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 22
+                            color: root.service.muted ? Theme.muted : Theme.accent
+                        }
                     }
 
                     Column {
@@ -202,36 +215,30 @@ Item {
                         Text {
                             text: "Audio"
                             font.family: Fonts.uiFont
-                            font.pixelSize: Fonts.sizeMedium
+                            font.pixelSize: 15
                             font.bold: true
-                            color: Theme.foreground
+                            color: Theme.bright_foreground
                         }
 
                         Text {
-                            text: root.service.volumeName.toUpperCase()
+                            text: "STREAMING VIKINGS"
                             font.family: Fonts.uiFont
                             font.pixelSize: 10
                             font.bold: true
-                            font.letterSpacing: 1.1
+                            font.letterSpacing: 1
                             color: Theme.muted
+                            opacity: 0.75
                         }
                     }
                 }
 
-                // Rectangular Toggle Switch
+                // M3 Pill Toggle Switch
                 ToggleSwitch {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     checked: !root.service.muted
                     onToggled: root.service.toggleMute()
                 }
-            }
-
-            // Hairline Divider
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: Theme.selection
             }
 
             // ================= 2. OUTPUT SECTION =================
@@ -248,8 +255,9 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "OUTPUT"
                         font.family: Fonts.uiFont
-                        font.pixelSize: 11
+                        font.pixelSize: 10
                         font.bold: true
+                        font.letterSpacing: 1
                         color: Theme.muted
                     }
 
@@ -260,7 +268,7 @@ Item {
                         font.family: Fonts.monoFont
                         font.pixelSize: 11
                         font.bold: true
-                        color: Theme.foreground
+                        color: Theme.bright_foreground
                     }
                 }
 
@@ -275,6 +283,7 @@ Item {
                     onRightClicked: root.service.toggleMute()
                 }
 
+                // Output Sinks (Speaker etc.)
                 Column {
                     width: parent.width
                     spacing: 4
@@ -286,17 +295,17 @@ Item {
                             id: sinkBox
                             required property var modelData
                             width: parent.width
-                            height: 34
-                            radius: Appearance.radiusSmall
-                            color: modelData.isDefault ? Theme.selection : (sinkMouse.containsMouse ? Theme.lighter_background : "transparent")
-                            border.color: modelData.isDefault ? Theme.accent : "transparent"
-                            border.width: 1
+                            height: 38
+                            radius: 12
+                            color: modelData.isDefault ? Theme.secondaryContainer : (sinkMouse.containsMouse ? Theme.surfaceContainerHigh : Theme.surfaceContainer)
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
 
                             Row {
                                 anchors.left: parent.left
-                                anchors.leftMargin: 10
+                                anchors.leftMargin: 12
                                 anchors.right: parent.right
-                                anchors.rightMargin: 10
+                                anchors.rightMargin: 12
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 10
 
@@ -304,7 +313,7 @@ Item {
                                     text: sinkBox.modelData.glyph
                                     font.family: Icons.effectiveFont(text)
                                     font.pixelSize: 15
-                                    color: Theme.foreground
+                                    color: sinkBox.modelData.isDefault ? Theme.accent : Theme.foreground
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
 
@@ -312,10 +321,19 @@ Item {
                                     text: sinkBox.modelData.displayName
                                     font.family: Fonts.uiFont
                                     font.pixelSize: 12
-                                    font.bold: sinkBox.modelData.isDefault 
-                                    color: Theme.foreground
+                                    font.bold: sinkBox.modelData.isDefault
+                                    color: sinkBox.modelData.isDefault ? Theme.bright_foreground : Theme.foreground
                                     elide: Text.ElideRight
-                                    width: parent.width - 32
+                                    width: parent.width - 50
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Text {
+                                    visible: sinkBox.modelData.isDefault
+                                    text: "✓"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    color: Theme.accent
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
                             }
@@ -332,14 +350,6 @@ Item {
                 }
             }
 
-            // Hairline Divider
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: Theme.selection
-                visible: root.service.audioStreams.length > 0
-            }
-
             // ================= 3. APPLICATIONS SECTION =================
             Column {
                 width: parent.width
@@ -349,8 +359,9 @@ Item {
                 Text {
                     text: "APPLICATIONS"
                     font.family: Fonts.uiFont
-                    font.pixelSize: 11
+                    font.pixelSize: 10
                     font.bold: true
+                    font.letterSpacing: 1
                     color: Theme.muted
                 }
 
@@ -366,19 +377,14 @@ Item {
                         readonly property string streamName: Model.streamLabel(streamNode) || "App"
 
                         width: parent.width
-                        height: 58
-                        radius: Appearance.radiusSmall
-                        color: Theme.dark_background
-                        border.color: Theme.selection
-                        border.width: 1
+                        height: 64
+                        radius: 12
+                        color: Theme.surfaceContainer
 
                         Column {
                             anchors.fill: parent
-                            anchors.topMargin: 8
-                            anchors.bottomMargin: 8
-                            anchors.leftMargin: 10
-                            anchors.rightMargin: 10
-                            spacing: 6
+                            anchors.margins: 10
+                            spacing: 8
 
                             RowLayout {
                                 width: parent.width
@@ -406,7 +412,7 @@ Item {
                                         font.family: Fonts.uiFont
                                         font.pixelSize: 12
                                         font.bold: true
-                                        color: Theme.foreground
+                                        color: Theme.bright_foreground
                                         elide: Text.ElideRight
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -417,7 +423,7 @@ Item {
                                     font.family: Fonts.monoFont
                                     font.pixelSize: 11
                                     font.bold: true
-                                    color: Theme.foreground
+                                    color: Theme.bright_foreground
                                 }
                             }
 

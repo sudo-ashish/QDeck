@@ -92,26 +92,35 @@ Item {
         Column {
             id: netMainCol
             anchors.fill: parent
-            spacing: 8
+            anchors.margins: 6
+            spacing: 12
 
-            // ================= 1. HEADER ROW =================
+            // ================= 1. STANDARDIZED M3 HEADER =================
             Item {
                 width: parent.width
-                height: 38
+                height: 40
 
-                // Left: Wi-Fi Icon + SSID + Phrase
+                // Left: 40x40 Squircle + Title + Subtitle
                 Row {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: 10
+                    spacing: 12
 
-                    Text {
-                        text: !root.service.wifiEnabled ? Icons.wifiOff : root.service.icon
-                        font.family: Icons.effectiveFont(text)
-                        font.pixelSize: 22
-                        color: !root.service.wifiEnabled ? Theme.muted : Theme.foreground
-                        opacity: !root.service.wifiEnabled ? 0.6 : 1.0
+                    // 40x40 Tonal Squircle Container
+                    Rectangle {
+                        width: 40
+                        height: 40
+                        radius: 12
+                        color: Theme.secondaryContainer
                         anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: !root.service.wifiEnabled ? Icons.wifiOff : root.service.icon
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 22
+                            color: !root.service.wifiEnabled ? Theme.muted : Theme.accent
+                        }
                     }
 
                     Column {
@@ -122,52 +131,53 @@ Item {
                             text: {
                                 if (!root.service.wifiEnabled) return "Wi-Fi"
                                 if (root.service.connectingSsid) return root.service.connectingSsid
-                                return root.service.currentSsid || "Not Connected"
+                                return root.service.currentSsid || "Wi-Fi"
                             }
                             font.family: Fonts.uiFont
-                            font.pixelSize: 14
+                            font.pixelSize: 15
                             font.bold: true
-                            color: Theme.foreground
+                            color: Theme.bright_foreground
                             elide: Text.ElideRight
-                            width: 140
+                            width: 135
                         }
 
                         Text {
                             text: {
                                 if (!root.service.wifiEnabled) return "TURNED OFF"
                                 if (root.service.connectingSsid) return "CONNECTING..."
-                                if (root.service.currentSsid) return root.service.connectionPhrase
-                                return "DISCONNECTED"
+                                return "ROUTING CRUMBS"
                             }
                             font.family: Fonts.uiFont
                             font.pixelSize: 10
                             font.bold: true
+                            font.letterSpacing: 1
                             color: root.service.connectingSsid ? Theme.accent : Theme.muted
+                            opacity: 0.75
                         }
                     }
                 }
 
-                // Right Actions: QR, Quick Disconnect, Toggle Switch
+                // Right Actions: QR, Quick Disconnect, M3 Pill Toggle Switch
                 Row {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
 
-                    // Quick Disconnect Button (visible when connected)
+                    // Quick Disconnect Button (32x32 tonal squircle, zero border)
                     Rectangle {
                         visible: root.service.wifiEnabled && root.service.currentSsid !== ""
-                        width: 28
-                        height: 28
-                        radius: Appearance.radiusSmall
-                        color: topDisMouse.containsMouse ? Theme.darker_background : Theme.dark_background
-                        border.color: topDisMouse.containsMouse ? Theme.red : Theme.selection
-                        border.width: 1
+                        width: 32
+                        height: 32
+                        radius: 10
+                        color: topDisMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
 
                         Text {
                             anchors.centerIn: parent
                             text: "󰌙"
                             font.family: Icons.effectiveFont("󰌙")
-                            font.pixelSize: 14
+                            font.pixelSize: 15
                             color: topDisMouse.containsMouse ? Theme.red : Theme.muted
                         }
 
@@ -180,22 +190,22 @@ Item {
                         }
                     }
 
-                    // QR Code Button
+                    // QR Code Button (32x32 tonal squircle, zero border)
                     Rectangle {
                         visible: root.service.wifiEnabled && root.service.currentSsid !== "" && !root.showQrView
-                        width: 28
-                        height: 28
-                        radius: Appearance.radiusSmall
-                        color: root.showQrView ? Theme.selection : (qrMouse.containsMouse ? Theme.lighter_background : Theme.dark_background)
-                        border.color: root.showQrView ? Theme.accent : Theme.selection
-                        border.width: 1
+                        width: 32
+                        height: 32
+                        radius: 10
+                        color: root.showQrView ? Theme.secondaryContainer : (qrMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer)
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
 
                         Text {
                             anchors.centerIn: parent
                             text: "󰐲"
                             font.family: Icons.effectiveFont("󰐲")
                             font.pixelSize: 16
-                            color: root.showQrView ? Theme.accent : Theme.foreground
+                            color: root.showQrView ? Theme.accent : Theme.bright_foreground
                         }
 
                         MouseArea {
@@ -212,20 +222,13 @@ Item {
                         }
                     }
 
-                    // Wi-Fi On/Off Rectangular Toggle Switch
+                    // Wi-Fi On/Off M3 Pill Toggle Switch
                     ToggleSwitch {
                         id: wifiToggle
                         checked: root.service.wifiEnabled
                         onToggled: root.service.toggleWifi()
                     }
                 }
-            }
-
-            // Divider
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: Theme.selection
             }
 
             // ================= QR CODE OVERLAY VIEW =================
@@ -350,7 +353,7 @@ Item {
                 width: parent.width
                 spacing: 12
 
-                // --- 2. DNS PROVIDER Section (Segmented Buttons) ---
+                // --- 2. DNS PROVIDER Section (M3 Expressive Segmented Buttons) ---
                 Column {
                     width: parent.width
                     spacing: 8
@@ -366,7 +369,7 @@ Item {
                     Row {
                         id: dnsRow
                         width: parent.width
-                        spacing: 5
+                        spacing: 3
 
                         readonly property int count: root.service.dnsProviders.length
                         readonly property real cellWidth: (width - (spacing * (count - 1))) / count
@@ -382,11 +385,13 @@ Item {
                                 readonly property bool isActive: (root.service.dnsProvider === modelData)
 
                                 width: dnsRow.cellWidth
-                                height: 28
-                                radius: Appearance.radiusSmall
-                                color: isActive ? Theme.selection : (dnsMouse.containsMouse ? Theme.lighter_background : Theme.dark_background)
-                                border.color: isActive ? Theme.accent : (dnsMouse.containsMouse ? Theme.muted : Theme.selection)
-                                border.width: 1
+                                height: 32
+                                radius: isActive ? 12 : 6
+                                color: isActive ? Theme.secondaryContainer : (dnsMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer)
+                                border.width: 0
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on radius { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
                                 Text {
                                     anchors.centerIn: parent
@@ -394,7 +399,7 @@ Item {
                                     font.family: Fonts.uiFont
                                     font.pixelSize: 11
                                     font.bold: dnsPill.isActive 
-                                    color: Theme.foreground
+                                    color: dnsPill.isActive ? Theme.accent : (dnsMouse.containsMouse ? Theme.bright_foreground : Theme.muted)
                                 }
 
                                 MouseArea {
@@ -407,14 +412,6 @@ Item {
                             }
                         }
                     }
-                }
-
-                // Divider
-                Rectangle {
-                    visible: root.hasNetworks || root.showPasswordInput
-                    width: parent.width
-                    height: 1
-                    color: Theme.selection
                 }
 
                 // Empty / Scanning state when no networks are found
@@ -438,10 +435,9 @@ Item {
                     visible: root.showPasswordInput
                     width: parent.width
                     height: root.showPasswordInput ? 72 : 0
-                    radius: Appearance.radiusSmall
-                    color: Theme.lighter_background
-                    border.color: Theme.accent
-                    border.width: 1
+                    radius: 12
+                    color: Theme.surfaceContainer
+                    border.width: 0
 
                     Column {
                         anchors.fill: parent
@@ -463,11 +459,11 @@ Item {
                             spacing: 8
 
                             Rectangle {
-                                width: parent.width - 130
+                                width: parent.width - 144
                                 height: 28
-                                radius: Appearance.radiusSmall
-                                color: Theme.dark_background
-                                border.color: pwInput.activeFocus ? Theme.accent : Theme.selection
+                                radius: 8
+                                color: Theme.surfaceContainerHigh
+                                border.color: pwInput.activeFocus ? Theme.accent : "transparent"
                                 border.width: 1
 
                                 MouseArea {
@@ -485,8 +481,8 @@ Item {
                                     echoMode: TextInput.Password
                                     font.family: Fonts.monoFont
                                     font.pixelSize: 11
-                                    color: Theme.foreground
-                                    selectionColor: Theme.selection
+                                    color: Theme.bright_foreground
+                                    selectionColor: Theme.secondaryContainer
                                     selectedTextColor: Theme.bright_foreground
                                     cursorVisible: activeFocus
                                     activeFocusOnPress: true
@@ -506,9 +502,9 @@ Item {
                             Rectangle {
                                 id: joinBtn
                                 readonly property bool isJoining: root.service.connectingSsid === root.selectedSsid
-                                width: isJoining ? 70 : 56
+                                width: isJoining ? 76 : 64
                                 height: 28
-                                radius: Appearance.radiusSmall
+                                radius: 14
                                 color: Theme.accent
 
                                 function join() {
@@ -524,7 +520,7 @@ Item {
                                     font.family: Fonts.uiFont
                                     font.pixelSize: 11
                                     font.bold: true
-                                    color: Theme.bright_foreground
+                                    color: Theme.darker_background
                                 }
 
                                 MouseArea {
@@ -536,10 +532,11 @@ Item {
                             }
 
                             Rectangle {
-                                width: 56
+                                width: 64
                                 height: 28
-                                radius: Appearance.radiusSmall
-                                color: Theme.dark_background
+                                radius: 14
+                                color: cancelMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+                                border.width: 0
 
                                 Text {
                                     anchors.centerIn: parent
@@ -550,7 +547,9 @@ Item {
                                 }
 
                                 MouseArea {
+                                    id: cancelMouse
                                     anchors.fill: parent
+                                    hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         root.showPasswordInput = false
@@ -590,11 +589,10 @@ Item {
                             readonly property bool hasError: root.service.connectionErrorSsid === modelData.ssid
 
                             width: parent.width
-                            height: 42
-                            radius: Appearance.radiusSmall
-                            color: isConnected ? Theme.selection : (isSelected || isConnecting ? Theme.selection : (kMouse.containsMouse ? Theme.lighter_background : "transparent"))
-                            border.color: isConnected ? Theme.accent : (isSelected || isConnecting ? Theme.selection : "transparent")
-                            border.width: (isConnected || isSelected || isConnecting) ? 1 : 0
+                            height: 44
+                            radius: 12
+                            color: isConnected ? Theme.secondaryContainer : (isSelected || isConnecting ? Theme.secondaryContainer : (kMouse.containsMouse ? Theme.surfaceContainerHigh : "transparent"))
+                            border.width: 0
 
                             Row {
                                 anchors.left: parent.left
@@ -602,12 +600,19 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 10
 
-                                Text {
-                                    text: root.service.wifiIconFor(knownRow.modelData.signal)
-                                    font.family: Icons.effectiveFont(text)
-                                    font.pixelSize: 16
-                                    color: (knownRow.isConnected || knownRow.isConnecting) ? Theme.accent : Theme.foreground
+                                // Uniform 28x28 icon container
+                                Item {
+                                    width: 28
+                                    height: 28
                                     anchors.verticalCenter: parent.verticalCenter
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: root.service.wifiIconFor(knownRow.modelData.signal)
+                                        font.family: Icons.effectiveFont(text)
+                                        font.pixelSize: 16
+                                        color: (knownRow.isConnected || knownRow.isConnecting) ? Theme.accent : Theme.foreground
+                                    }
                                 }
 
                                 Column {
@@ -619,7 +624,7 @@ Item {
                                         font.family: Fonts.uiFont
                                         font.pixelSize: 12
                                         font.bold: knownRow.isConnected 
-                                        color: Theme.foreground
+                                        color: Theme.bright_foreground
                                         elide: Text.ElideRight
                                         width: 115
                                     }
@@ -650,24 +655,25 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
 
-                                // Connect / Disconnect Button
+                                // Connect / Disconnect M3 Pill Button
                                 Rectangle {
                                     id: connBtn
-                                    width: knownRow.isConnecting ? 76 : (knownRow.isConnected ? 68 : 54)
-                                    height: 24
-                                    radius: Appearance.radiusSmall
-                                    color: knownRow.isConnecting ? Theme.selection : (knownRow.isConnected ? (connMouse.containsMouse ? Theme.darker_background : Theme.dark_background) : (connMouse.containsMouse ? Theme.selection : Theme.dark_background))
-                                    border.color: knownRow.isConnecting ? Theme.accent : (knownRow.isConnected ? (connMouse.containsMouse ? Theme.red : Theme.selection) : (connMouse.containsMouse ? Theme.accent : Theme.selection))
-                                    border.width: 1
+                                    width: knownRow.isConnecting ? 80 : (knownRow.isConnected ? 76 : 64)
+                                    height: 28
+                                    radius: 14
+                                    color: knownRow.isConnecting ? Theme.secondaryContainer : (knownRow.isConnected ? (connMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.20) : Theme.surfaceContainerHighest) : (connMouse.containsMouse ? Theme.accent : Theme.surfaceContainerHighest))
+                                    border.width: 0
                                     anchors.verticalCenter: parent.verticalCenter
+
+                                    Behavior on color { ColorAnimation { duration: 150 } }
 
                                     Text {
                                         anchors.centerIn: parent
                                         text: knownRow.isConnecting ? "Connecting…" : (knownRow.isConnected ? "Disconnect" : "Connect")
                                         font.family: Fonts.uiFont
-                                        font.pixelSize: 10
+                                        font.pixelSize: 11
                                         font.bold: true
-                                        color: knownRow.isConnecting ? Theme.accent : (knownRow.isConnected ? (connMouse.containsMouse ? Theme.red : Theme.foreground) : (connMouse.containsMouse ? Theme.accent : Theme.foreground))
+                                        color: knownRow.isConnecting ? Theme.accent : (knownRow.isConnected ? (connMouse.containsMouse ? Theme.red : Theme.bright_foreground) : (connMouse.containsMouse ? Theme.darker_background : Theme.bright_foreground))
                                     }
 
                                     MouseArea {
@@ -687,22 +693,23 @@ Item {
                                     }
                                 }
 
-                                // Forget Button
+                                // Forget M3 Pill Button
                                 Rectangle {
                                     id: fgtBtn
-                                    width: 48
-                                    height: 24
-                                    radius: Appearance.radiusSmall
-                                    color: fgtMouse.containsMouse ? Theme.darker_background : Theme.dark_background
-                                    border.color: fgtMouse.containsMouse ? Theme.red : Theme.selection
-                                    border.width: 1
+                                    width: 54
+                                    height: 28
+                                    radius: 14
+                                    color: fgtMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.20) : Theme.surfaceContainerHighest
+                                    border.width: 0
                                     anchors.verticalCenter: parent.verticalCenter
+
+                                    Behavior on color { ColorAnimation { duration: 150 } }
 
                                     Text {
                                         anchors.centerIn: parent
                                         text: "Forget"
                                         font.family: Fonts.uiFont
-                                        font.pixelSize: 10
+                                        font.pixelSize: 11
                                         font.bold: true
                                         color: fgtMouse.containsMouse ? Theme.red : Theme.muted
                                     }
@@ -723,7 +730,7 @@ Item {
                             MouseArea {
                                 id: kMouse
                                 anchors.fill: parent
-                                anchors.rightMargin: knownRow.isConnecting ? 155 : 135
+                                anchors.rightMargin: knownRow.isConnecting ? 155 : 148
                                 enabled: !knownRow.isConnecting
                                 hoverEnabled: true
                                 cursorShape: knownRow.isConnecting ? Qt.ArrowCursor : Qt.PointingHandCursor
@@ -756,7 +763,7 @@ Item {
                     Rectangle {
                         id: otherScrollContainer
                         width: parent.width
-                        height: Math.min(216, root.service.otherNetworks.length * 36)
+                        height: Math.min(216, root.service.otherNetworks.length * 40)
                         implicitHeight: height
                         color: "transparent"
                         clip: true
@@ -764,7 +771,7 @@ Item {
                         ListView {
                             id: otherList
                             anchors.fill: parent
-                            spacing: 2
+                            spacing: 4
                             model: root.service.otherNetworks
                             boundsBehavior: Flickable.StopAtBounds
                             ScrollBar.vertical: ScrollBar {
@@ -779,11 +786,10 @@ Item {
                                 readonly property bool hasError: root.service.connectionErrorSsid === modelData.ssid
 
                                 width: otherList.width
-                                height: (isConnecting || hasError) ? 40 : 34
-                                radius: Appearance.radiusSmall
-                                color: isConnecting ? Theme.selection : (oMouse.containsMouse ? Theme.lighter_background : "transparent")
-                                border.color: isConnecting ? Theme.selection : "transparent"
-                                border.width: isConnecting ? 1 : 0
+                                height: (isConnecting || hasError) ? 44 : 38
+                                radius: 12
+                                color: isConnecting ? Theme.secondaryContainer : (oMouse.containsMouse ? Theme.surfaceContainerHigh : "transparent")
+                                border.width: 0
 
                                 Row {
                                     anchors.left: parent.left
@@ -791,12 +797,19 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                     spacing: 10
 
-                                    Text {
-                                        text: root.service.wifiIconFor(otherRow.modelData.signal)
-                                        font.family: Icons.effectiveFont(text)
-                                        font.pixelSize: 16
-                                        color: otherRow.isConnecting ? Theme.accent : Theme.foreground
+                                    // Uniform 28x28 icon container
+                                    Item {
+                                        width: 28
+                                        height: 28
                                         anchors.verticalCenter: parent.verticalCenter
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: root.service.wifiIconFor(otherRow.modelData.signal)
+                                            font.family: Icons.effectiveFont(text)
+                                            font.pixelSize: 16
+                                            color: otherRow.isConnecting ? Theme.accent : Theme.foreground
+                                        }
                                     }
 
                                     Column {
@@ -807,7 +820,7 @@ Item {
                                             text: otherRow.modelData.ssid
                                             font.family: Fonts.uiFont
                                             font.pixelSize: 12
-                                            color: Theme.foreground
+                                            color: Theme.bright_foreground
                                             font.bold: otherRow.modelData.active 
                                             elide: Text.ElideRight
                                             width: (otherRow.isConnecting || otherRow.hasError) ? 140 : 170
@@ -840,23 +853,24 @@ Item {
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
 
-                                    // Connect Button
+                                    // Connect M3 Pill Button
                                     Rectangle {
-                                        width: otherRow.isConnecting ? 76 : 54
-                                        height: 24
-                                        radius: Appearance.radiusSmall
-                                        color: otherRow.isConnecting ? Theme.selection : (oConnMouse.containsMouse ? Theme.selection : Theme.dark_background)
-                                        border.color: otherRow.isConnecting ? Theme.accent : (oConnMouse.containsMouse ? Theme.accent : Theme.selection)
-                                        border.width: 1
+                                        width: otherRow.isConnecting ? 80 : 64
+                                        height: 28
+                                        radius: 14
+                                        color: otherRow.isConnecting ? Theme.secondaryContainer : (oConnMouse.containsMouse ? Theme.accent : Theme.surfaceContainerHighest)
+                                        border.width: 0
                                         anchors.verticalCenter: parent.verticalCenter
+
+                                        Behavior on color { ColorAnimation { duration: 150 } }
 
                                         Text {
                                             anchors.centerIn: parent
                                             text: otherRow.isConnecting ? "Connecting…" : "Connect"
                                             font.family: Fonts.uiFont
-                                            font.pixelSize: 10
+                                            font.pixelSize: 11
                                             font.bold: true
-                                            color: (otherRow.isConnecting || oConnMouse.containsMouse) ? Theme.accent : Theme.foreground
+                                            color: otherRow.isConnecting ? Theme.accent : (oConnMouse.containsMouse ? Theme.darker_background : Theme.bright_foreground)
                                         }
 
                                         MouseArea {
@@ -880,7 +894,7 @@ Item {
                                 MouseArea {
                                     id: oMouse
                                     anchors.fill: parent
-                                    anchors.rightMargin: otherRow.isConnecting ? 88 : 65
+                                    anchors.rightMargin: otherRow.isConnecting ? 90 : 74
                                     enabled: !otherRow.isConnecting
                                     hoverEnabled: true
                                     cursorShape: otherRow.isConnecting ? Qt.ArrowCursor : Qt.PointingHandCursor

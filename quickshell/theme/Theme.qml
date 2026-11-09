@@ -66,6 +66,31 @@ QtObject {
         return Qt.rgba(colorVal.r, colorVal.g, colorVal.b, alphaVal)
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Material Design 3 (M3) Expressive Tonal Surface Hierarchy
+    // ─────────────────────────────────────────────────────────────────────────
+    readonly property color surfaceBase: root.withAlpha(root.background, root.baseOpacity)
+    readonly property color surfaceContainer: Qt.rgba(
+        Math.min(1.0, root.background.r + (1.0 - root.background.r) * 0.05),
+        Math.min(1.0, root.background.g + (1.0 - root.background.g) * 0.05),
+        Math.min(1.0, root.background.b + (1.0 - root.background.b) * 0.05),
+        root.baseOpacity
+    )
+    readonly property color surfaceContainerHigh: Qt.rgba(
+        Math.min(1.0, root.background.r + (1.0 - root.background.r) * 0.09),
+        Math.min(1.0, root.background.g + (1.0 - root.background.g) * 0.09),
+        Math.min(1.0, root.background.b + (1.0 - root.background.b) * 0.09),
+        root.baseOpacity
+    )
+    readonly property color surfaceContainerHighest: Qt.rgba(
+        Math.min(1.0, root.background.r + (1.0 - root.background.r) * 0.14),
+        Math.min(1.0, root.background.g + (1.0 - root.background.g) * 0.14),
+        Math.min(1.0, root.background.b + (1.0 - root.background.b) * 0.14),
+        root.baseOpacity
+    )
+    readonly property color secondaryContainer: root.withAlpha(root.accent, 0.20)
+    readonly property color onSecondaryContainer: root.bright_foreground
+
     function setBlurState(enabled) {
         root.blurEnabled = enabled
         var stateStr = enabled ? "on" : "off"

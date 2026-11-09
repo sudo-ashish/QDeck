@@ -135,10 +135,10 @@ PanelWindow {
         y: Math.round(root.cardY)
         width: root.contentWidth
         height: root.contentHeight
-        color: Theme.withAlpha(Theme.dark_background, Theme.baseOpacity)
-        border.color: "transparent"
-        border.width: Appearance.borderWidthNone
-        radius: Appearance.popupRadius
+        color: Theme.surfaceBase
+        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.width: 1
+        radius: 18
 
         // M3 Shared Axis Y + Z entrance
         opacity: root.enterProgress
