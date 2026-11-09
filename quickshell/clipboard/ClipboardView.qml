@@ -142,53 +142,14 @@ Item {
             }
         }
 
-        // Title & Monospace / Uppercase Subtitle Stack
-        Column {
+        // Header Title
+        Text {
             Layout.alignment: Qt.AlignVCenter
-            spacing: 1
-
-            Row {
-                spacing: 8
-
-                Text {
-                    text: "Clipboard"
-                    font.family: root.fontFamily
-                    font.pixelSize: 14
-                    font.weight: Fonts.weightBold
-                    color: Theme.foreground
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                // Live item count badge pill
-                Rectangle {
-                    visible: root.clipboardService ? root.clipboardService.count > 0 : false
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(22, countBadgeText.implicitWidth + 10)
-                    height: 20
-                    radius: 10
-                    color: Theme.withAlpha(Theme.lighter_background, 0.35)
-
-                    Text {
-                        id: countBadgeText
-                        anchors.centerIn: parent
-                        text: String(root.clipboardService ? root.clipboardService.count : 0)
-                        font.family: root.fontFamily
-                        font.pixelSize: 10
-                        font.weight: Fonts.weightBold
-                        color: Theme.muted
-                    }
-                }
-            }
-
-            Text {
-                text: "CLIPBOARD HISTORY"
-                font.family: root.fontFamily
-                font.pixelSize: 9
-                font.weight: Fonts.weightBold
-                font.letterSpacing: 1.2
-                color: Theme.muted
-                opacity: 0.6
-            }
+            text: "Clipboard"
+            font.family: root.fontFamily
+            font.pixelSize: 15
+            font.weight: Fonts.weightBold
+            color: Theme.foreground
         }
 
         Item { Layout.fillWidth: true }
@@ -322,8 +283,6 @@ Item {
                     : null
                 readonly property string rawText: itemData ? String(itemData.text || "") : ""
                 readonly property int itemTs: itemData ? (itemData.timestamp || 0) : 0
-                readonly property int lineCount: itemData ? (itemData.lines || 1) : 1
-                readonly property int charCount: itemData ? (itemData.chars || 0) : 0
 
                 readonly property string category: root.detectCategory(rawText)
                 readonly property bool isSelected: clipboardListView.currentIndex === itemDelegate.index
@@ -425,42 +384,24 @@ Item {
                             elide: Text.ElideRight
                         }
 
-                        // Secondary Row: Lines, Chars & Time Ago
-                        Row {
-                            spacing: 6
-
-                            Text {
-                                text: itemDelegate.lineCount + (itemDelegate.lineCount === 1 ? " line" : " lines") + " · " + itemDelegate.charCount + " chars"
-                                font.family: root.fontFamily
-                                font.pixelSize: 10
-                                color: Theme.muted
-                            }
-
-                            Text {
-                                text: "·"
-                                font.family: root.fontFamily
-                                font.pixelSize: 10
-                                color: Theme.withAlpha(Theme.muted, 0.5)
-                            }
-
-                            Text {
-                                text: root.formatTimeAgo(itemDelegate.itemTs)
-                                font.family: root.fontFamily
-                                font.pixelSize: 10
-                                color: Theme.withAlpha(Theme.muted, 0.85)
-                            }
+                        // Secondary Row: Time Ago
+                        Text {
+                            text: root.formatTimeAgo(itemDelegate.itemTs)
+                            font.family: root.fontFamily
+                            font.pixelSize: 10
+                            color: Theme.withAlpha(Theme.muted, 0.85)
                         }
                     }
 
-                    // Right Side: "Copied! ✓" Flash Feedback OR Delete (✕) on Hover
+                    // Right Side: "Copied! ✓" Flash Feedback
                     Item {
-                        Layout.preferredWidth: 32
+                        Layout.preferredWidth: itemDelegate.isCopiedFlash ? 64 : 0
                         Layout.preferredHeight: 32
                         Layout.alignment: Qt.AlignVCenter
+                        visible: itemDelegate.isCopiedFlash
 
                         // Copied! Feedback Badge
                         Rectangle {
-                            visible: itemDelegate.isCopiedFlash
                             anchors.centerIn: parent
                             width: copiedRow.implicitWidth + 12
                             height: 22
@@ -487,42 +428,6 @@ Item {
                                     font.weight: Fonts.weightBold
                                     color: Theme.darker_background
                                     anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                        }
-
-                        // Delete Button (✕)
-                        Rectangle {
-                            visible: !itemDelegate.isCopiedFlash && (itemMouse.containsMouse || delMouse.containsMouse)
-                            anchors.centerIn: parent
-                            width: 24
-                            height: 24
-                            radius: 12
-                            color: delMouse.containsMouse
-                                ? Theme.withAlpha(Theme.urgent, 0.28)
-                                : Theme.withAlpha(Theme.lighter_background, 0.30)
-
-                            Behavior on color { ColorAnimation { duration: 100 } }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: Icons.close || "󰅖"
-                                font.family: Icons.effectiveFont(text)
-                                font.pixelSize: 11
-                                color: delMouse.containsMouse ? Theme.urgent : Theme.muted
-                            }
-
-                            MouseArea {
-                                id: delMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                preventStealing: true
-                                onClicked: function(mouse) {
-                                    mouse.accepted = true
-                                    if (root.clipboardService) {
-                                        root.clipboardService.removeItem(itemDelegate.realIndex)
-                                    }
                                 }
                             }
                         }

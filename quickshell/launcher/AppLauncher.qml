@@ -1373,26 +1373,6 @@ PanelWindow {
                                 color: (root.clipboardService && root.clipboardService.isOpen) ? Theme.darker_background : Theme.foreground
                                 anchors.verticalCenter: parent.verticalCenter
                             }
-
-                            // Live counter badge when count > 0
-                            Rectangle {
-                                visible: root.clipboardService ? root.clipboardService.count > 0 : false
-                                width: Math.max(18, clipBadgeText.implicitWidth + 8)
-                                height: 18
-                                radius: 9
-                                color: (root.clipboardService && root.clipboardService.isOpen) ? Theme.darker_background : Theme.accent
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                Text {
-                                    id: clipBadgeText
-                                    anchors.centerIn: parent
-                                    text: root.clipboardService ? String(root.clipboardService.count) : "0"
-                                    font.family: root.fontFamily
-                                    font.pixelSize: 10
-                                    font.weight: Fonts.weightBold
-                                    color: (root.clipboardService && root.clipboardService.isOpen) ? Theme.accent : Theme.darker_background
-                                }
-                            }
                         }
 
                         MouseArea {

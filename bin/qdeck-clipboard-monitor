@@ -19,3 +19,4 @@ fi
 
 export PYTHONUNBUFFERED=1
 exec wl-paste -t text --watch python3 "$PYTHON_RECORD"
+
