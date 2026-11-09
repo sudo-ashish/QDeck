@@ -92,9 +92,10 @@ PanelWindow {
 
     readonly property real targetHeight: {
         if (root.currentView === "apps" || root.currentView === "shelf") return Appearance.launcherHeight
-        if (root.currentView === "power") return 178
-        if (root.currentView === "wallpaper") return 218
-        return 248 // theme view
+        if (root.currentView === "power") return 130
+        if (root.currentView === "wallpaper") return 180
+        if (root.currentView === "theme") return 210
+        return Appearance.launcherHeight
     }
 
     // Material Design 3 (M3) Shared Axis Y + Z physics from bottom
@@ -906,260 +907,6 @@ PanelWindow {
             }
         }
 
-        // ── Top: Unified Navigation Tabs Bar (Visible on Session, Theme, Wallpaper — Hidden on Apps Launcher) ─
-        RowLayout {
-            id: navHeader
-            anchors {
-                top: parent.top
-                left: parent.left
-                right: parent.right
-                topMargin: 12
-                leftMargin: 16
-                rightMargin: 16
-            }
-            height: 28
-            spacing: 8
-            visible: root.currentView !== "apps"
-
-            // Segmented View Switcher Tabs
-            Row {
-                spacing: 4
-                Layout.alignment: Qt.AlignVCenter
-
-                // Tab 1: Apps
-                Rectangle {
-                    width: appsTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "apps")
-                        ? Theme.accent
-                        : (appsTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: appsTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.apps
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "apps") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Apps"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "apps") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "apps") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: appsTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("apps")
-                    }
-                }
-
-                // Tab 2: Session (Power)
-                Rectangle {
-                    width: sessionTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "power")
-                        ? Theme.accent
-                        : (sessionTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: sessionTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.power
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "power") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Session"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "power") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "power") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: sessionTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("power")
-                    }
-                }
-
-                // Tab 3: Themes
-                Rectangle {
-                    width: themeTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "theme")
-                        ? Theme.accent
-                        : (themeTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: themeTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.palette
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "theme") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Themes"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "theme") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "theme") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: themeTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("theme")
-                    }
-                }
-
-                // Tab 4: Wallpapers
-                Rectangle {
-                    width: wallpaperTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "wallpaper")
-                        ? Theme.accent
-                        : (wallpaperTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: wallpaperTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.wallpaper
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "wallpaper") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Wallpapers"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "wallpaper") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "wallpaper") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: wallpaperTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("wallpaper")
-                    }
-                }
-
-                // Tab 5: Shelf
-                Rectangle {
-                    width: shelfTabRow.implicitWidth + 14
-                    height: 26
-                    radius: 13
-                    color: (root.currentView === "shelf")
-                        ? Theme.accent
-                        : (shelfTabMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.4) : "transparent")
-
-                    Behavior on color { ColorAnimation { duration: 150 } }
-
-                    Row {
-                        id: shelfTabRow
-                        anchors.centerIn: parent
-                        spacing: 5
-
-                        Text {
-                            text: Icons.folder
-                            font.family: Icons.effectiveFont(text)
-                            font.pixelSize: 12
-                            color: (root.currentView === "shelf") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "Shelf"
-                            font.family: root.fontFamily
-                            font.pixelSize: 11
-                            font.weight: (root.currentView === "shelf") ? Fonts.weightBold : Fonts.weightMedium
-                            color: (root.currentView === "shelf") ? Theme.darker_background : Theme.foreground
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        // Live Counter Badge
-                        Rectangle {
-                            visible: root.shelfService ? root.shelfService.count > 0 : false
-                            width: Math.max(16, tabShelfBadge.implicitWidth + 6)
-                            height: 16
-                            radius: 8
-                            color: (root.currentView === "shelf") ? Theme.darker_background : Theme.accent
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Text {
-                                id: tabShelfBadge
-                                anchors.centerIn: parent
-                                text: root.shelfService ? String(root.shelfService.count) : "0"
-                                font.family: root.fontFamily
-                                font.pixelSize: 9
-                                font.weight: Fonts.weightBold
-                                color: (root.currentView === "shelf") ? Theme.accent : Theme.darker_background
-                            }
-                        }
-                    }
-
-                    MouseArea {
-                        id: shelfTabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.switchToView("shelf")
-                    }
-                }
-            }
-
-            Item { Layout.fillWidth: true }
-        }
-
         // ─────────────────────────────────────────────────────────────────────
         // VIEW 1: Apps & Actions Launcher
         // ─────────────────────────────────────────────────────────────────────
@@ -1575,14 +1322,7 @@ PanelWindow {
         // ─────────────────────────────────────────────────────────────────────
         Item {
             id: powerViewContainer
-            anchors {
-                top: navHeader.bottom
-                topMargin: 8
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-                bottomMargin: 12
-            }
+            anchors.fill: parent
             visible: root.currentView === "power"
 
             Row {
@@ -1745,11 +1485,8 @@ PanelWindow {
         Item {
             id: themeViewContainer
             anchors {
-                top: navHeader.bottom
-                topMargin: 4
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
+                fill: parent
+                topMargin: 12
                 bottomMargin: 8
             }
             visible: root.currentView === "theme"
@@ -1977,11 +1714,8 @@ PanelWindow {
         Item {
             id: wallpaperViewContainer
             anchors {
-                top: navHeader.bottom
-                topMargin: 4
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
+                fill: parent
+                topMargin: 12
                 bottomMargin: 8
             }
             visible: root.currentView === "wallpaper"
@@ -2135,14 +1869,8 @@ PanelWindow {
         ShelfView {
             id: shelfView
             anchors {
-                top: navHeader.bottom
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-                topMargin: 8
-                bottomMargin: 10
-                leftMargin: 12
-                rightMargin: 12
+                fill: parent
+                margins: 12
             }
             visible: root.currentView === "shelf"
             shelfService: root.shelfService
