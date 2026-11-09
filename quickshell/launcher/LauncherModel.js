@@ -107,13 +107,13 @@ var BUILTIN_ACTIONS = [
     },
     {
         id: "act-shelf",
-        name: "Toggle Staging Shelf",
+        name: "Toggle QShelf",
         type: "action",
         iconGlyph: "folder",
         category: "Files",
-        defaultMeta: "Drop Shelf",
-        cmd: "qs ipc call shelf toggle",
-        keywords: ["shelf", "drop", "staging", "dnd", "drag", "files", "clipboard", "tray"]
+        defaultMeta: "QShelf Drop",
+        cmd: "qs ipc call qshelf toggle",
+        keywords: ["qshelf", "shelf", "drop", "staging", "dnd", "drag", "files", "clipboard", "tray"]
     },
     {
         id: "act-terminal",

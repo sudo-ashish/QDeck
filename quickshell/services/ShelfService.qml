@@ -421,9 +421,9 @@ QtObject {
         return JSON.stringify(arr)
     }
 
-    // IPC Handler for controlling Staging Shelf via CLI (qs ipc call shelf ...)
+    // IPC Handlers for controlling QShelf via CLI (qs ipc call qshelf ... / qs ipc call shelf ...)
     property IpcHandler ipcHandler: IpcHandler {
-        target: "shelf"
+        target: "qshelf"
 
         function toggle(): string {
             root.toggle()
@@ -494,5 +494,25 @@ QtObject {
             var ok = root.addUrl(path)
             return ok ? "added" : "skipped"
         }
+    }
+
+    // Backwards compatibility alias for target "shelf"
+    property IpcHandler legacyIpcHandler: IpcHandler {
+        target: "shelf"
+
+        function toggle(): string { return root.ipcHandler.toggle() }
+        function open(): string { return root.ipcHandler.open() }
+        function close(): string { return root.ipcHandler.close() }
+        function clear(): string { return root.ipcHandler.clear() }
+        function count(): string { return root.ipcHandler.count() }
+        function list(): string { return root.ipcHandler.list() }
+        function remove(indexStr: string): string { return root.ipcHandler.remove(indexStr) }
+        function removeSelected(): string { return root.ipcHandler.removeSelected() }
+        function selectAll(): string { return root.ipcHandler.selectAll() }
+        function toggleItem(indexStr: string): string { return root.ipcHandler.toggleItem(indexStr) }
+        function clearSelection(): string { return root.ipcHandler.clearSelection() }
+        function selectedCount(): string { return root.ipcHandler.selectedCount() }
+        function selectedUris(): string { return root.ipcHandler.selectedUris() }
+        function add(path: string): string { return root.ipcHandler.add(path) }
     }
 }

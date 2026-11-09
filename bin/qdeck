@@ -41,7 +41,7 @@ Control Center & Widgets:
   qdeck powermenu [action]       Toggle power & session menu
   qdeck wallpaper [action]       Toggle wallpaper picker or switch wallpaper
   qdeck theme [action]           Toggle theme switcher or switch active theme
-  qdeck shelf [action]           Toggle or control drag-and-drop staging shelf
+  qdeck qshelf [action]          Toggle or control drag-and-drop staging QShelf (or: qdeck shelf)
   qdeck bar [action|mode]        Toggle, hide, show, or switch layout (floating, islands, wide, compact)
   qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
   qdeck text-size [size]         Get or adjust system and shell font size
@@ -127,9 +127,9 @@ case "$CMD" in
     exec "$BIN_DIR/qdeck-themeswitcher" "$@"
     ;;
 
-  shelf|stagingshelf)
+  qshelf|shelf|stagingshelf)
     shift
-    exec "$BIN_DIR/qdeck-shelf" "$@"
+    exec "$BIN_DIR/qdeck-qshelf" "$@"
     ;;
 
   bar|bar-style)

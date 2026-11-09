@@ -1241,7 +1241,7 @@ PanelWindow {
                             }
 
                             Text {
-                                text: "Shelf"
+                                text: "QShelf"
                                 font.family: root.fontFamily
                                 font.pixelSize: 12
                                 font.weight: (root.shelfService && root.shelfService.isOpen) ? Fonts.weightBold : Fonts.weightMedium

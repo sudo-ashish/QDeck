@@ -264,7 +264,7 @@ Item {
             spacing: 8
 
             Text {
-                text: "Staging Shelf"
+                text: "QShelf"
                 font.family: root.fontFamily
                 font.pixelSize: 13
                 font.weight: Fonts.weightBold
@@ -791,7 +791,7 @@ Item {
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "Shelf is empty"
+            text: "QShelf is empty"
             font.family: root.fontFamily
             font.pixelSize: 14
             font.weight: Fonts.weightBold
