@@ -11,6 +11,7 @@ import "components"
 import "polkit"
 import "powermenu"
 import "shelf"
+import "clipboard"
 import "theme"
 
 ShellRoot {
@@ -27,6 +28,7 @@ ShellRoot {
     property ThemeSwitcherService themeSwitcherService: ThemeSwitcherService { }
     property WallpaperSwitcherService wallpaperSwitcherService: WallpaperSwitcherService { }
     property ShelfService shelfService: ShelfService { id: shelfService }
+    property ClipboardService clipboardService: ClipboardService { id: clipboardService }
 
     IpcHandler {
         target: "bar"
@@ -70,6 +72,7 @@ ShellRoot {
         themeService: root.themeSwitcherService
         wallpaperService: root.wallpaperSwitcherService
         shelfService: root.shelfService
+        clipboardService: root.clipboardService
     }
 
     // Power Confirmation Dialog (centered overlay)

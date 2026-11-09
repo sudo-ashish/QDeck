@@ -113,7 +113,17 @@ var BUILTIN_ACTIONS = [
         category: "Files",
         defaultMeta: "QShelf Drop",
         cmd: "qs ipc call qshelf toggle",
-        keywords: ["qshelf", "shelf", "drop", "staging", "dnd", "drag", "files", "clipboard", "tray"]
+        keywords: ["qshelf", "shelf", "drop", "staging", "dnd", "drag", "files", "tray"]
+    },
+    {
+        id: "act-clipboard",
+        name: "Clipboard History",
+        type: "action",
+        iconGlyph: "clipboard",
+        category: "Utility",
+        defaultMeta: "Clipboard Manager",
+        cmd: "qdeck-clipboard",
+        keywords: ["clipboard", "copy", "paste", "history", "snippets", "wl-clipboard", "v"]
     },
     {
         id: "act-terminal",

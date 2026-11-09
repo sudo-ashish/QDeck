@@ -42,6 +42,7 @@ Control Center & Widgets:
   qdeck wallpaper [action]       Toggle wallpaper picker or switch wallpaper
   qdeck theme [action]           Toggle theme switcher or switch active theme
   qdeck qshelf [action]          Toggle or control drag-and-drop staging QShelf (or: qdeck shelf)
+  qdeck clipboard [action]       Toggle or control text clipboard manager (wl-clipboard backed)
   qdeck bar [action|mode]        Toggle, hide, show, or switch layout (floating, islands, wide, compact)
   qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
   qdeck text-size [size]         Get or adjust system and shell font size
@@ -130,6 +131,11 @@ case "$CMD" in
   qshelf|shelf|stagingshelf)
     shift
     exec "$BIN_DIR/qdeck-qshelf" "$@"
+    ;;
+
+  clipboard|clip)
+    shift
+    exec "$BIN_DIR/qdeck-clipboard" "$@"
     ;;
 
   bar|bar-style)

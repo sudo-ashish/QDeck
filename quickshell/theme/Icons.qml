@@ -43,6 +43,10 @@ QtObject {
     readonly property string settings: root.useMaterialSymbols ? "settings" : "󰒓"
     readonly property string refresh: root.useMaterialSymbols ? "refresh" : "󰑐"
     readonly property string spinner: root.useMaterialSymbols ? "progress_activity" : "󰑮"
+    readonly property string clipboard: root.useMaterialSymbols ? "content_paste" : "󰅍"
+    readonly property string copy: root.useMaterialSymbols ? "content_copy" : "󰆏"
+    readonly property string link: root.useMaterialSymbols ? "link" : "󰌹"
+    readonly property string code: root.useMaterialSymbols ? "code" : "󰅩"
 
     // Power & Session
     readonly property string power: root.useMaterialSymbols ? "power_settings_new" : "󰐥"

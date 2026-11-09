@@ -10,6 +10,7 @@ import "../theme"
 import "../components"
 import "../services"
 import "../shelf"
+import "../clipboard"
 import "LauncherModel.js" as LauncherModel
 
 PanelWindow {
@@ -21,9 +22,10 @@ PanelWindow {
     property ThemeSwitcherService themeService: null
     property WallpaperSwitcherService wallpaperService: null
     property ShelfService shelfService: null
+    property ClipboardService clipboardService: null
 
     property bool isOpen: false
-    property string currentView: "apps" // "apps" | "power" | "theme" | "wallpaper" | "shelf"
+    property string currentView: "apps" // "apps" | "power" | "theme" | "wallpaper" | "shelf" | "clipboard"
     property real animProgress: 0.0
 
     // Transitions between views
@@ -84,7 +86,7 @@ PanelWindow {
 
     // Dynamic target dimensions per view
     readonly property real targetWidth: {
-        if (root.currentView === "apps" || root.currentView === "shelf") return Appearance.launcherWidth
+        if (root.currentView === "apps" || root.currentView === "shelf" || root.currentView === "clipboard") return Appearance.launcherWidth
         if (root.currentView === "power") return 500
         if (root.currentView === "theme") return 720
         if (root.currentView === "wallpaper") return 720
@@ -106,6 +108,19 @@ PanelWindow {
             var itemContentH = (count * Appearance.launcherItemHeight) + (Math.max(0, count - 1) * 2)
             var totalH = 92 + itemContentH
             return Math.min(Appearance.launcherHeight, totalH)
+        }
+        if (root.currentView === "clipboard") {
+            var clipCount = clipboardView ? clipboardView.filteredCount : (root.clipboardService ? root.clipboardService.items.count : 0)
+            var isClipSearching = clipboardView && clipboardView.isSearching
+            if (clipCount <= 0) {
+                return isClipSearching ? 160 : 230
+            }
+            // Dynamic height based on number of items:
+            // Fixed vertical chrome: 142px (header 38px + margins ~20px + search box 56px + outer margins 28px)
+            // Each item: 58px height + 4px spacing = 62px
+            var clipContentH = (clipCount * 58) + (Math.max(0, clipCount - 1) * 4)
+            var totalClipH = 142 + clipContentH
+            return Math.min(Appearance.launcherHeight, Math.max(200, totalClipH))
         }
         if (root.currentView === "shelf") return Appearance.launcherHeight
         if (root.currentView === "power") return 130
@@ -140,6 +155,7 @@ PanelWindow {
                 if (root.themeService) root.themeService.isOpen = false
                 if (root.wallpaperService) root.wallpaperService.isOpen = false
                 if (root.shelfService) root.shelfService.isOpen = false
+                if (root.clipboardService) root.clipboardService.isOpen = false
                 root.currentView = "apps"
             }
         }
@@ -159,6 +175,7 @@ PanelWindow {
         if (root.themeService) root.themeService.isOpen = false
         if (root.wallpaperService) root.wallpaperService.isOpen = false
         if (root.shelfService) root.shelfService.isOpen = false
+        if (root.clipboardService) root.clipboardService.isOpen = false
         root.loadHistory()
         root.loadApps()
         searchInput.text = (typeof initialQuery === "string") ? initialQuery : ""
@@ -183,6 +200,7 @@ PanelWindow {
         if (root.themeService) root.themeService.isOpen = false
         if (root.wallpaperService) root.wallpaperService.isOpen = false
         if (root.shelfService) root.shelfService.isOpen = false
+        if (root.clipboardService) root.clipboardService.isOpen = false
         root.powerIndex = 0
         if (root.powerService) root.powerService.powerMenuOpen = true
         root.isOpen = true
@@ -202,6 +220,7 @@ PanelWindow {
         if (root.powerService) root.powerService.powerMenuOpen = false
         if (root.wallpaperService) root.wallpaperService.isOpen = false
         if (root.shelfService) root.shelfService.isOpen = false
+        if (root.clipboardService) root.clipboardService.isOpen = false
         if (root.themeService) {
             root.themeService.refresh()
             root.themeService.isOpen = true
@@ -234,6 +253,7 @@ PanelWindow {
         if (root.powerService) root.powerService.powerMenuOpen = false
         if (root.themeService) root.themeService.isOpen = false
         if (root.shelfService) root.shelfService.isOpen = false
+        if (root.clipboardService) root.clipboardService.isOpen = false
         if (root.wallpaperService) {
             root.wallpaperService.refresh()
             root.wallpaperService.isOpen = true
@@ -258,6 +278,8 @@ PanelWindow {
     function close() {
         if (!root.isOpen && !openAnim.running) return
         openAnim.stop()
+        if (root.shelfService) root.shelfService.isOpen = false
+        if (root.clipboardService) root.clipboardService.isOpen = false
         root.isOpen = false
         closeAnim.restart()
     }
@@ -304,6 +326,7 @@ PanelWindow {
         if (root.powerService) root.powerService.powerMenuOpen = false
         if (root.themeService) root.themeService.isOpen = false
         if (root.wallpaperService) root.wallpaperService.isOpen = false
+        if (root.clipboardService) root.clipboardService.isOpen = false
         if (root.shelfService) {
             root.shelfService.isOpen = true
         }
@@ -322,9 +345,40 @@ PanelWindow {
         }
     }
 
+    function openClipboard() {
+        var wasOpen = root.isOpen
+        if (closeAnim.running) {
+            closeAnim.stop()
+            root.animProgress = 1.0
+        }
+        root.currentView = "clipboard"
+        if (root.powerService) root.powerService.powerMenuOpen = false
+        if (root.themeService) root.themeService.isOpen = false
+        if (root.wallpaperService) root.wallpaperService.isOpen = false
+        if (root.shelfService) root.shelfService.isOpen = false
+        if (root.clipboardService) {
+            root.clipboardService.isOpen = true
+        }
+        root.isOpen = true
+        if (!wasOpen || root.animProgress < 1.0) {
+            openAnim.restart()
+        }
+        Qt.callLater(function() {
+            if (clipboardView) clipboardView.focusSearch()
+        })
+    }
+
+    function toggleClipboard() {
+        if (root.isOpen && root.currentView === "clipboard") {
+            root.close()
+        } else {
+            root.openClipboard()
+        }
+    }
+
     function switchToView(viewName) {
         if (root.currentView === viewName) {
-            if (viewName === "shelf") {
+            if (viewName === "shelf" || viewName === "clipboard") {
                 root.close()
             }
             return
@@ -339,6 +393,8 @@ PanelWindow {
             root.openWallpaper()
         } else if (viewName === "shelf") {
             root.openShelf()
+        } else if (viewName === "clipboard") {
+            root.openClipboard()
         }
     }
 
@@ -585,6 +641,9 @@ PanelWindow {
             } else if (item.id === "act-shelf") {
                 root.openShelf()
                 return
+            } else if (item.id === "act-clipboard") {
+                root.openClipboard()
+                return
             } else if (item.cmd) {
                 Quickshell.execDetached(["bash", "-c", item.cmd])
             }
@@ -649,6 +708,8 @@ PanelWindow {
         if (root.isOpen) {
             if (root.currentView === "apps") {
                 Qt.callLater(function() { searchInput.forceActiveFocus() })
+            } else if (root.currentView === "clipboard") {
+                Qt.callLater(function() { if (clipboardView) clipboardView.focusSearch() })
             } else {
                 Qt.callLater(function() { keyCatcher.forceActiveFocus() })
             }
@@ -796,6 +857,24 @@ PanelWindow {
         }
         function onOpenRequested() {
             root.openShelf()
+        }
+    }
+
+    Connections {
+        target: root.clipboardService
+        function onIsOpenChanged() {
+            if (root.clipboardService && root.clipboardService.isOpen) {
+                if (root.currentView !== "clipboard" || !root.isOpen) {
+                    root.openClipboard()
+                }
+            } else if (!root.clipboardService || !root.clipboardService.isOpen) {
+                if (root.isOpen && root.currentView === "clipboard") {
+                    root.close()
+                }
+            }
+        }
+        function onOpenRequested() {
+            root.openClipboard()
         }
     }
 
@@ -1174,7 +1253,7 @@ PanelWindow {
 
                     Text {
                         anchors.left: parent.left
-                        anchors.right: shelfToggleBtn.left
+                        anchors.right: clipToggleBtn.left
                         anchors.rightMargin: 10
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
@@ -1190,7 +1269,7 @@ PanelWindow {
                     TextInput {
                         id: searchInput
                         anchors.left: parent.left
-                        anchors.right: shelfToggleBtn.left
+                        anchors.right: clipToggleBtn.left
                         anchors.rightMargin: 10
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
@@ -1253,6 +1332,76 @@ PanelWindow {
                                     listView.positionViewAtIndex(listView.currentIndex, ListView.Contain)
                                 }
                                 event.accepted = true
+                            }
+                        }
+                    }
+
+                    // Quick-access Clipboard Toggle Button
+                    Rectangle {
+                        id: clipToggleBtn
+                        anchors.right: shelfToggleBtn.left
+                        anchors.rightMargin: 6
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 34
+                        width: clipToggleRow.implicitWidth + 18
+                        radius: 17
+                        color: (root.clipboardService && root.clipboardService.isOpen)
+                            ? Theme.accent
+                            : (clipMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.45) : Theme.withAlpha(Theme.lighter_background, 0.22))
+                        border.width: 0
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+
+                        Row {
+                            id: clipToggleRow
+                            anchors.centerIn: parent
+                            spacing: 6
+
+                            Text {
+                                text: Icons.clipboard || "󰅍"
+                                font.family: Icons.effectiveFont(text)
+                                font.pixelSize: 13
+                                color: (root.clipboardService && root.clipboardService.isOpen) ? Theme.darker_background : Theme.foreground
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: "Clipboard"
+                                font.family: root.fontFamily
+                                font.pixelSize: 12
+                                font.weight: (root.clipboardService && root.clipboardService.isOpen) ? Fonts.weightBold : Fonts.weightMedium
+                                color: (root.clipboardService && root.clipboardService.isOpen) ? Theme.darker_background : Theme.foreground
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // Live counter badge when count > 0
+                            Rectangle {
+                                visible: root.clipboardService ? root.clipboardService.count > 0 : false
+                                width: Math.max(18, clipBadgeText.implicitWidth + 8)
+                                height: 18
+                                radius: 9
+                                color: (root.clipboardService && root.clipboardService.isOpen) ? Theme.darker_background : Theme.accent
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    id: clipBadgeText
+                                    anchors.centerIn: parent
+                                    text: root.clipboardService ? String(root.clipboardService.count) : "0"
+                                    font.family: root.fontFamily
+                                    font.pixelSize: 10
+                                    font.weight: Fonts.weightBold
+                                    color: (root.clipboardService && root.clipboardService.isOpen) ? Theme.accent : Theme.darker_background
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: clipMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.switchToView("clipboard")
                             }
                         }
                     }
@@ -1919,6 +2068,20 @@ PanelWindow {
             }
             visible: root.currentView === "shelf"
             shelfService: root.shelfService
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // VIEW 6: Text-Only Clipboard Manager View
+        // ─────────────────────────────────────────────────────────────────────
+        ClipboardView {
+            id: clipboardView
+            anchors {
+                fill: parent
+                margins: 12
+            }
+            visible: root.currentView === "clipboard"
+            clipboardService: root.clipboardService
+            onRequestClose: root.close()
         }
     }
 
