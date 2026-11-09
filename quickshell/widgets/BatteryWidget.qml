@@ -46,9 +46,10 @@ Item {
         anchorItem: batButton
         showDefaultHeader: false
         contentWidth: 360
-        contentHeight: 225
+        contentHeight: batCol.implicitHeight + 24
 
         Column {
+            id: batCol
             anchors.fill: parent
             spacing: 12
 

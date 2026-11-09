@@ -62,7 +62,11 @@ Item {
         anchorItem: btButton
         showDefaultHeader: false
         contentWidth: 330
-        contentHeight: root.service.bluetoothEnabled ? 340 : 110
+        contentHeight: {
+            if (!root.service.bluetoothEnabled) return 115
+            var listH = Math.min(320, btScrollCol.implicitHeight)
+            return Math.max(120, listH + 84)
+        }
 
         Binding {
             target: root.service
@@ -143,6 +147,7 @@ Item {
             Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.preferredHeight: Math.min(320, btScrollCol.implicitHeight)
                 visible: root.service.bluetoothEnabled
 
                 ScrollView {
@@ -152,6 +157,7 @@ Item {
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
                     Column {
+                        id: btScrollCol
                         width: parent.width
                         spacing: 10
 

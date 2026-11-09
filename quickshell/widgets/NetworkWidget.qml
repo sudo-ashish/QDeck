@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell.Wayland
 import "../theme"
@@ -55,11 +56,10 @@ Item {
         showDefaultHeader: false
         contentWidth: 360
         contentHeight: {
-            if (!root.service.wifiEnabled) return 128
+            if (!root.service.wifiEnabled && !root.showQrView) return 128
             if (root.showQrView) return 420
-            if (root.showPasswordInput) return 530
-            if (!root.hasNetworks) return 132
-            return 470
+            var h = netMainCol.implicitHeight + 24
+            return Math.max(132, Math.min(540, h))
         }
         keyboardFocus: root.showPasswordInput ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
@@ -90,6 +90,7 @@ Item {
         }
 
         Column {
+            id: netMainCol
             anchors.fill: parent
             spacing: 8
 
@@ -416,6 +417,22 @@ Item {
                     color: Theme.selection
                 }
 
+                // Empty / Scanning state when no networks are found
+                Item {
+                    visible: root.service.wifiEnabled && !root.hasNetworks && !root.showQrView
+                    width: parent.width
+                    height: 38
+                    implicitHeight: 38
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.service.scanning ? "Searching for networks…" : "No networks in range"
+                        font.family: Fonts.uiFont
+                        font.pixelSize: 11
+                        color: Theme.muted
+                    }
+                }
+
                 // --- Password Input Overlay (if joining a secured network) ---
                 Rectangle {
                     visible: root.showPasswordInput
@@ -737,8 +754,10 @@ Item {
 
                     // Scrollable list for other networks
                     Rectangle {
+                        id: otherScrollContainer
                         width: parent.width
-                        height: Math.min(140, root.service.otherNetworks.length * 36)
+                        height: Math.min(216, root.service.otherNetworks.length * 36)
+                        implicitHeight: height
                         color: "transparent"
                         clip: true
 
@@ -748,6 +767,9 @@ Item {
                             spacing: 2
                             model: root.service.otherNetworks
                             boundsBehavior: Flickable.StopAtBounds
+                            ScrollBar.vertical: ScrollBar {
+                                policy: ScrollBar.AsNeeded
+                            }
 
                             delegate: Rectangle {
                                 id: otherRow

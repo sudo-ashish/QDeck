@@ -222,8 +222,8 @@ Item {
                 ToggleSwitch {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    checked: root.service.anyAudible
-                    onToggled: root.service.toggleAllMuted()
+                    checked: !root.service.muted
+                    onToggled: root.service.toggleMute()
                 }
             }
 
@@ -337,124 +337,17 @@ Item {
                 width: parent.width
                 height: 1
                 color: Theme.selection
-                visible: root.service.sources.length > 0 || root.service.source !== null
-            }
-
-            // ================= 3. INPUT SECTION =================
-            Column {
-                width: parent.width
-                spacing: 8
-                visible: root.service.sources.length > 0 || root.service.source !== null
-
-                Item {
-                    width: parent.width
-                    height: 16
-
-                    Text {
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "INPUT"
-                        font.family: Fonts.uiFont
-                        font.pixelSize: 11
-                        font.bold: true
-                        color: Theme.muted
-                    }
-
-                    Text {
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: root.service.inputMuted ? "MUTED" : (Math.round(inSlider.liveValue) + "%")
-                        font.family: Fonts.monoFont
-                        font.pixelSize: 11
-                        font.bold: true
-                        color: Theme.foreground
-                    }
-                }
-
-                AudioSlider {
-                    id: inSlider
-                    width: parent.width
-                    from: 0
-                    to: 100
-                    value: root.service.inputVolume
-                    muted: root.service.inputMuted
-                    onMoved: function(v) { root.service.setInputVolume(v) }
-                    onRightClicked: root.service.toggleInputMute()
-                }
-
-                Column {
-                    width: parent.width
-                    spacing: 4
-
-                    Repeater {
-                        model: root.service.sources
-
-                        Rectangle {
-                            id: srcBox
-                            required property var modelData
-                            width: parent.width
-                            height: 34
-                            radius: Appearance.radiusSmall
-                            color: modelData.isDefault ? Theme.selection : (srcMouse.containsMouse ? Theme.lighter_background : "transparent")
-                            border.color: modelData.isDefault ? Theme.accent : "transparent"
-                            border.width: 1
-
-                            Row {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 10
-                                anchors.right: parent.right
-                                anchors.rightMargin: 10
-                                anchors.verticalCenter: parent.verticalCenter
-                                spacing: 10
-
-                                Text {
-                                    text: srcBox.modelData.glyph
-                                    font.family: Icons.effectiveFont(text)
-                                    font.pixelSize: 15
-                                    color: Theme.foreground
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-
-                                Text {
-                                    text: srcBox.modelData.displayName
-                                    font.family: Fonts.uiFont
-                                    font.pixelSize: 12
-                                    font.bold: srcBox.modelData.isDefault 
-                                    color: Theme.foreground
-                                    elide: Text.ElideRight
-                                    width: parent.width - 32
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-
-                            MouseArea {
-                                id: srcMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.service.setDefaultSource(srcBox.modelData.node)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Hairline Divider
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: Theme.selection
                 visible: root.service.audioStreams.length > 0
             }
 
-            // ================= 4. SOURCES SECTION =================
+            // ================= 3. APPLICATIONS SECTION =================
             Column {
                 width: parent.width
                 spacing: 8
                 visible: root.service.audioStreams.length > 0
 
                 Text {
-                    text: "SOURCES"
+                    text: "APPLICATIONS"
                     font.family: Fonts.uiFont
                     font.pixelSize: 11
                     font.bold: true
