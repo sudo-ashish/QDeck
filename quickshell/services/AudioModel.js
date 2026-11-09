@@ -136,13 +136,39 @@ function isHeadphones(node) {
     p["device.icon-name"] || "",
     p["device.product.name"] || "",
     p["node.description"] || "",
-    p["node.nick"] || ""
+    p["node.nick"] || "",
+    p["device.form_factor"] || "",
+    p["device.form-factor"] || "",
+    p["media.name"] || "",
+    p["api.bluez5.profile"] || ""
   ].join(" ")).toLowerCase()
-  return blob.indexOf("headphone") !== -1
+
+  // Direct keyword matching for headphone/earphone devices
+  if (blob.indexOf("headphone") !== -1
     || blob.indexOf("headset") !== -1
     || blob.indexOf("earbud") !== -1
     || blob.indexOf("earphone") !== -1
     || blob.indexOf("airpod") !== -1
+    || blob.indexOf("airdopes") !== -1
+    || blob.indexOf("buds") !== -1
+    || blob.indexOf("tws") !== -1
+    || blob.indexOf("in-ear") !== -1
+    || blob.indexOf("over-ear") !== -1
+    || blob.indexOf("wireless audio") !== -1
+    || blob.indexOf("audio-headset") !== -1
+    || blob.indexOf("audio-headphones") !== -1) {
+    return true
+  }
+
+  // Bluetooth audio sinks that are not specifically speakers or TVs
+  var isBt = String(node.name || "").indexOf("bluez_output") !== -1 || blob.indexOf("bluetooth") !== -1
+  if (isBt) {
+    if (blob.indexOf("speaker") === -1 && blob.indexOf("soundbar") === -1 && blob.indexOf("tv") === -1) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function sinkGlyph(node) {

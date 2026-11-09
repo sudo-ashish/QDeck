@@ -36,14 +36,14 @@ Item {
             height: parent.height
             anchors.verticalCenter: parent.verticalCenter
 
-            // M3 Expressive Thick Track background (16px, radius 8)
+            // Slim M3 Track background (8px, radius 4)
             Rectangle {
                 id: trackBg
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                height: 16
-                radius: 8
+                height: 8
+                radius: 4
                 color: Theme.surfaceContainerHigh
                 clip: true
 
@@ -53,19 +53,19 @@ Item {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     width: Math.max(0, Math.min(parent.width, parent.width * ((root.value - root.from) / (root.to - root.from))))
-                    radius: 8
+                    radius: 4
                     color: root.fillColor
                 }
             }
 
-            // M3 Vertical Pill Thumb (width 4, height 22, radius 2)
+            // Slim M3 Vertical Pill Thumb (width 3, height 14, radius 1.5)
             Rectangle {
                 id: knob
                 x: Math.max(0, Math.min(trackBg.width - width, (trackBg.width * ((root.value - root.from) / (root.to - root.from))) - (width / 2)))
                 anchors.verticalCenter: parent.verticalCenter
-                width: 4
-                height: 22
-                radius: 2
+                width: 3
+                height: 14
+                radius: 1.5
                 color: Theme.bright_foreground
 
                 scale: sliderMouse.containsMouse || sliderMouse.pressed ? 1.25 : 1.0

@@ -122,11 +122,11 @@ Item {
                 }
             }
 
-            // ================= 2. THICK M3 CAPSULE PROGRESS BAR =================
+            // ================= 2. SLIM M3 CAPSULE PROGRESS BAR =================
             Rectangle {
                 width: parent.width
-                height: 12
-                radius: 6
+                height: 8
+                radius: 4
                 color: Theme.surfaceContainerHigh
                 clip: true
 
@@ -134,8 +134,8 @@ Item {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: Math.max(12, Math.min(parent.width, parent.width * (root.batteryService.capacity / 100.0)))
-                    radius: 6
+                    width: Math.max(8, Math.min(parent.width, parent.width * (root.batteryService.capacity / 100.0)))
+                    radius: 4
                     color: {
                         if (root.batteryService.capacity <= 20) return Theme.red
                         if (root.batteryService.capacity <= 40) return Theme.yellow

@@ -149,7 +149,7 @@ Item {
                         }
                     }
 
-                    // Thick M3 Continuous Slider
+                    // Slim M3 Continuous Slider
                     Item {
                         id: brightSliderItem
                         width: parent.width
@@ -160,8 +160,8 @@ Item {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
-                            height: 14
-                            radius: 7
+                            height: 8
+                            radius: 4
                             color: Theme.surfaceContainerHigh
                             clip: true
 
@@ -170,7 +170,7 @@ Item {
                                 anchors.top: parent.top
                                 anchors.bottom: parent.bottom
                                 width: Math.max(0, Math.min(parent.width, parent.width * (root.service.brightness / 100.0)))
-                                radius: 7
+                                radius: 4
                                 color: Theme.accent
 
                                 Behavior on width {
@@ -180,12 +180,12 @@ Item {
                             }
                         }
 
-                        // M3 Vertical Pill Thumb
+                        // Slim M3 Vertical Pill Thumb
                         Rectangle {
                             id: bKnob
-                            width: 4
-                            height: 20
-                            radius: 2
+                            width: 3
+                            height: 14
+                            radius: 1.5
                             color: Theme.bright_foreground
                             anchors.verticalCenter: parent.verticalCenter
                             x: Math.max(0, Math.min(brightSliderItem.width - width, (brightSliderItem.width * (root.service.brightness / 100.0)) - (width / 2)))
@@ -286,8 +286,8 @@ Item {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
-                            height: 14
-                            radius: 7
+                            height: 8
+                            radius: 4
                             color: Theme.surfaceContainerHigh
                             clip: true
 
@@ -303,7 +303,7 @@ Item {
                                     var usableW = tTrack.width - (2 * textSliderItem.dotInset)
                                     return Math.round(textSliderItem.dotInset + (ratio * usableW))
                                 }
-                                radius: 7
+                                radius: 4
                                 color: Theme.accent
 
                                 Behavior on width {
@@ -311,22 +311,22 @@ Item {
                                 }
                             }
 
-                            // Circular 4x4 Tick Dots inside track (inset past rounded end-caps)
+                            // Circular 3x3 Tick Dots inside track (inset past rounded end-caps)
                             Repeater {
                                 model: textSliderItem.stops.length
 
                                 Rectangle {
                                     required property int index
-                                    width: 4
-                                    height: 4
-                                    radius: 2
+                                    width: 3
+                                    height: 3
+                                    radius: 1.5
                                     anchors.verticalCenter: parent.verticalCenter
                                     x: {
                                         var count = textSliderItem.stops.length
-                                        if (count <= 1) return textSliderItem.dotInset - 2
+                                        if (count <= 1) return textSliderItem.dotInset - 1.5
                                         var ratio = index / (count - 1)
                                         var usableW = tTrack.width - (2 * textSliderItem.dotInset)
-                                        return Math.round(textSliderItem.dotInset + (ratio * usableW) - 2)
+                                        return Math.round(textSliderItem.dotInset + (ratio * usableW) - 1.5)
                                     }
                                     color: (index <= textSliderItem.activeIndex) ? Theme.surfaceBase : Theme.bright_foreground
                                     opacity: (index <= textSliderItem.activeIndex) ? 0.85 : 0.45
@@ -334,20 +334,20 @@ Item {
                             }
                         }
 
-                        // M3 Vertical Pill Thumb
+                        // Slim M3 Vertical Pill Thumb
                         Rectangle {
                             id: tKnob
-                            width: 4
-                            height: 20
-                            radius: 2
+                            width: 3
+                            height: 14
+                            radius: 1.5
                             color: Theme.bright_foreground
                             anchors.verticalCenter: parent.verticalCenter
                             x: {
                                 var count = textSliderItem.stops.length
-                                if (count <= 1) return textSliderItem.dotInset - 2
+                                if (count <= 1) return textSliderItem.dotInset - 1.5
                                 var ratio = textSliderItem.activeIndex / (count - 1)
                                 var usableW = textSliderItem.width - (2 * textSliderItem.dotInset)
-                                return Math.round(textSliderItem.dotInset + (ratio * usableW) - 2)
+                                return Math.round(textSliderItem.dotInset + (ratio * usableW) - 1.5)
                             }
 
                             scale: tMouse.containsMouse || tMouse.pressed ? 1.25 : 1.0

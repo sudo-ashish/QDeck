@@ -595,52 +595,27 @@ Item {
                             color: isConnected ? Theme.secondaryContainer : (isSelected || isConnecting ? Theme.secondaryContainer : (kMouse.containsMouse ? Theme.surfaceContainerHigh : "transparent"))
                             border.width: 0
 
-                            Row {
+                            // Left Wi-Fi Signal Icon Container
+                            Item {
+                                id: kNetIcon
+                                width: 28
+                                height: 28
                                 anchors.left: parent.left
                                 anchors.leftMargin: 8
                                 anchors.verticalCenter: parent.verticalCenter
-                                spacing: 10
 
-                                // Uniform 28x28 icon container
-                                Item {
-                                    width: 28
-                                    height: 28
-                                    anchors.verticalCenter: parent.verticalCenter
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: root.service.wifiIconFor(knownRow.modelData.signal)
-                                        font.family: Icons.effectiveFont(text)
-                                        font.pixelSize: 16
-                                        color: (knownRow.isConnected || knownRow.isConnecting) ? Theme.accent : Theme.foreground
-                                    }
-                                }
-
-                                Column {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 1
-
-                                    Text {
-                                        text: knownRow.modelData.ssid
-                                        font.family: Fonts.uiFont
-                                        font.pixelSize: 12
-                                        font.bold: knownRow.isConnected 
-                                        color: Theme.bright_foreground
-                                        elide: Text.ElideRight
-                                        width: 115
-                                    }
-
-                                    Text {
-                                        text: knownRow.isConnecting ? "Connecting..." : (knownRow.hasError ? root.service.connectionErrorMessage : (knownRow.isConnected ? "Connected" : "Saved"))
-                                        font.family: Fonts.uiFont
-                                        font.pixelSize: 10
-                                        color: knownRow.isConnecting ? Theme.accent : (knownRow.hasError ? Theme.red : (knownRow.isConnected ? Theme.accent : Theme.muted))
-                                    }
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: root.service.wifiIconFor(knownRow.modelData.signal)
+                                    font.family: Icons.effectiveFont(text)
+                                    font.pixelSize: 16
+                                    color: (knownRow.isConnected || knownRow.isConnecting) ? Theme.accent : Theme.foreground
                                 }
                             }
 
                             // Right Actions: Lock Icon + Connect/Disconnect + Forget
                             Row {
+                                id: kNetActions
                                 anchors.right: parent.right
                                 anchors.rightMargin: 8
                                 anchors.verticalCenter: parent.verticalCenter
@@ -659,7 +634,7 @@ Item {
                                 // Connect / Disconnect M3 Pill Button
                                 Rectangle {
                                     id: connBtn
-                                    width: knownRow.isConnecting ? 80 : (knownRow.isConnected ? 76 : 64)
+                                    width: knownRow.isConnecting ? 84 : (knownRow.isConnected ? 76 : 64)
                                     height: 28
                                     radius: 14
                                     color: knownRow.isConnecting ? Theme.secondaryContainer : (knownRow.isConnected ? (connMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.20) : Theme.surfaceContainerHighest) : (connMouse.containsMouse ? Theme.accent : Theme.surfaceContainerHighest))
@@ -728,10 +703,40 @@ Item {
                                 }
                             }
 
+                            // Center text column strictly bounded between icon and action buttons
+                            Column {
+                                anchors.left: kNetIcon.right
+                                anchors.leftMargin: 10
+                                anchors.right: kNetActions.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 1
+                                clip: true
+
+                                Text {
+                                    width: parent.width
+                                    text: knownRow.modelData.ssid
+                                    font.family: Fonts.uiFont
+                                    font.pixelSize: 12
+                                    font.bold: knownRow.isConnected 
+                                    color: Theme.bright_foreground
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    text: knownRow.isConnecting ? "Connecting..." : (knownRow.hasError ? root.service.connectionErrorMessage : (knownRow.isConnected ? "Connected" : "Saved"))
+                                    font.family: Fonts.uiFont
+                                    font.pixelSize: 10
+                                    color: knownRow.isConnecting ? Theme.accent : (knownRow.hasError ? Theme.red : (knownRow.isConnected ? Theme.accent : Theme.muted))
+                                    elide: Text.ElideRight
+                                }
+                            }
+
                             MouseArea {
                                 id: kMouse
                                 anchors.fill: parent
-                                anchors.rightMargin: knownRow.isConnecting ? 155 : 148
+                                anchors.rightMargin: kNetActions.width + 16
                                 enabled: !knownRow.isConnecting
                                 hoverEnabled: true
                                 cursorShape: knownRow.isConnecting ? Qt.ArrowCursor : Qt.PointingHandCursor
@@ -777,6 +782,13 @@ Item {
                             boundsBehavior: Flickable.StopAtBounds
                             ScrollBar.vertical: ScrollBar {
                                 policy: ScrollBar.AsNeeded
+                                width: 4
+                                contentItem: Rectangle {
+                                    implicitWidth: 4
+                                    radius: 2
+                                    color: Theme.muted
+                                    opacity: parent.active ? 0.6 : 0.25
+                                }
                             }
 
                             delegate: Rectangle {
@@ -792,53 +804,27 @@ Item {
                                 color: isConnecting ? Theme.secondaryContainer : (oMouse.containsMouse ? Theme.surfaceContainerHigh : "transparent")
                                 border.width: 0
 
-                                Row {
+                                // Left Wi-Fi Signal Icon Container
+                                Item {
+                                    id: oNetIcon
+                                    width: 28
+                                    height: 28
                                     anchors.left: parent.left
                                     anchors.leftMargin: 8
                                     anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 10
 
-                                    // Uniform 28x28 icon container
-                                    Item {
-                                        width: 28
-                                        height: 28
-                                        anchors.verticalCenter: parent.verticalCenter
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: root.service.wifiIconFor(otherRow.modelData.signal)
-                                            font.family: Icons.effectiveFont(text)
-                                            font.pixelSize: 16
-                                            color: otherRow.isConnecting ? Theme.accent : Theme.foreground
-                                        }
-                                    }
-
-                                    Column {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        spacing: 1
-
-                                        Text {
-                                            text: otherRow.modelData.ssid
-                                            font.family: Fonts.uiFont
-                                            font.pixelSize: 12
-                                            color: Theme.bright_foreground
-                                            font.bold: otherRow.modelData.active 
-                                            elide: Text.ElideRight
-                                            width: (otherRow.isConnecting || otherRow.hasError) ? 140 : 170
-                                        }
-
-                                        Text {
-                                            visible: otherRow.isConnecting || otherRow.hasError
-                                            text: otherRow.isConnecting ? "Connecting..." : (otherRow.hasError ? root.service.connectionErrorMessage : "")
-                                            font.family: Fonts.uiFont
-                                            font.pixelSize: 9
-                                            color: otherRow.isConnecting ? Theme.accent : Theme.red
-                                        }
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: root.service.wifiIconFor(otherRow.modelData.signal)
+                                        font.family: Icons.effectiveFont(text)
+                                        font.pixelSize: 16
+                                        color: otherRow.isConnecting ? Theme.accent : Theme.foreground
                                     }
                                 }
 
                                 // Right Actions: Lock Icon + Connect Button
                                 Row {
+                                    id: oNetActions
                                     anchors.right: parent.right
                                     anchors.rightMargin: 8
                                     anchors.verticalCenter: parent.verticalCenter
@@ -856,7 +842,8 @@ Item {
 
                                     // Connect M3 Pill Button
                                     Rectangle {
-                                        width: otherRow.isConnecting ? 80 : 64
+                                        id: oConnBtn
+                                        width: otherRow.isConnecting ? 84 : 64
                                         height: 28
                                         radius: 14
                                         color: otherRow.isConnecting ? Theme.secondaryContainer : (oConnMouse.containsMouse ? Theme.accent : Theme.surfaceContainerHighest)
@@ -892,10 +879,41 @@ Item {
                                     }
                                 }
 
+                                // Center text column strictly bounded between icon and action button
+                                Column {
+                                    anchors.left: oNetIcon.right
+                                    anchors.leftMargin: 10
+                                    anchors.right: oNetActions.left
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 1
+                                    clip: true
+
+                                    Text {
+                                        width: parent.width
+                                        text: otherRow.modelData.ssid
+                                        font.family: Fonts.uiFont
+                                        font.pixelSize: 12
+                                        color: Theme.bright_foreground
+                                        font.bold: otherRow.modelData.active 
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        visible: otherRow.isConnecting || otherRow.hasError
+                                        width: parent.width
+                                        text: otherRow.isConnecting ? "Connecting..." : (otherRow.hasError ? root.service.connectionErrorMessage : "")
+                                        font.family: Fonts.uiFont
+                                        font.pixelSize: 9
+                                        color: otherRow.isConnecting ? Theme.accent : Theme.red
+                                        elide: Text.ElideRight
+                                    }
+                                }
+
                                 MouseArea {
                                     id: oMouse
                                     anchors.fill: parent
-                                    anchors.rightMargin: otherRow.isConnecting ? 90 : 74
+                                    anchors.rightMargin: oNetActions.width + 16
                                     enabled: !otherRow.isConnecting
                                     hoverEnabled: true
                                     cursorShape: otherRow.isConnecting ? Qt.ArrowCursor : Qt.PointingHandCursor

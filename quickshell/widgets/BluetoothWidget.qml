@@ -164,7 +164,16 @@ Item {
                     anchors.fill: parent
                     clip: true
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                        width: 4
+                        contentItem: Rectangle {
+                            implicitWidth: 4
+                            radius: 2
+                            color: Theme.muted
+                            opacity: parent.active ? 0.6 : 0.25
+                        }
+                    }
 
                     Column {
                         id: btScrollCol
@@ -189,6 +198,7 @@ Item {
                                 model: root.service.connectedDevices
 
                                 delegate: Rectangle {
+                                    id: connDevRow
                                     required property var modelData
                                     width: parent.width
                                     height: 48
@@ -196,75 +206,80 @@ Item {
                                     color: Theme.secondaryContainer
                                     border.width: 0
 
-                                    RowLayout {
-                                        anchors.fill: parent
+                                    Item {
+                                        id: cIcon
+                                        width: 28
+                                        height: 28
+                                        anchors.left: parent.left
                                         anchors.leftMargin: 10
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "󰂱"
+                                            font.family: Icons.effectiveFont("󰂱")
+                                            font.pixelSize: 16
+                                            color: Theme.accent
+                                        }
+                                    }
+
+                                    // Disconnect Button (circular tonal pill)
+                                    Rectangle {
+                                        id: disBtn
+                                        anchors.right: parent.right
                                         anchors.rightMargin: 10
-                                        spacing: 10
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 28
+                                        height: 28
+                                        radius: 14
+                                        color: disMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.20) : Theme.surfaceContainerHighest
+                                        border.width: 0
 
-                                        Item {
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                            Layout.alignment: Qt.AlignVCenter
+                                        Behavior on color { ColorAnimation { duration: 150 } }
 
-                                            Text {
-                                                anchors.centerIn: parent
-                                                text: "󰂱"
-                                                font.family: Icons.effectiveFont("󰂱")
-                                                font.pixelSize: 16
-                                                color: Theme.accent
-                                            }
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "󰅙"
+                                            font.family: Icons.effectiveFont("󰅙")
+                                            font.pixelSize: 13
+                                            color: disMouse.containsMouse ? Theme.red : Theme.muted
                                         }
 
-                                        Column {
-                                            Layout.fillWidth: true
-                                            Layout.alignment: Qt.AlignVCenter
-                                            spacing: 1
+                                        MouseArea {
+                                            id: disMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.service.disconnectDevice(connDevRow.modelData.mac)
+                                        }
+                                    }
 
-                                            Text {
-                                                text: modelData.name || modelData.mac
-                                                font.family: Fonts.uiFont
-                                                font.pixelSize: 12
-                                                font.bold: true
-                                                color: Theme.bright_foreground
-                                                elide: Text.ElideRight
-                                                Layout.fillWidth: true
-                                            }
+                                    Column {
+                                        anchors.left: cIcon.right
+                                        anchors.leftMargin: 10
+                                        anchors.right: disBtn.left
+                                        anchors.rightMargin: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        spacing: 1
+                                        clip: true
 
-                                            Text {
-                                                text: modelData.battery || "Connected"
-                                                font.family: Fonts.uiFont
-                                                font.pixelSize: 10
-                                                color: Theme.accent
-                                            }
+                                        Text {
+                                            width: parent.width
+                                            text: connDevRow.modelData.name || connDevRow.modelData.mac
+                                            font.family: Fonts.uiFont
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            color: Theme.bright_foreground
+                                            elide: Text.ElideRight
                                         }
 
-                                        // Disconnect Button (circular tonal pill)
-                                        Rectangle {
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                            Layout.alignment: Qt.AlignVCenter
-                                            radius: 14
-                                            color: disMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.20) : Theme.surfaceContainerHighest
-                                            border.width: 0
-
-                                            Behavior on color { ColorAnimation { duration: 150 } }
-
-                                            Text {
-                                                anchors.centerIn: parent
-                                                text: "󰅙"
-                                                font.family: Icons.effectiveFont("󰅙")
-                                                font.pixelSize: 13
-                                                color: disMouse.containsMouse ? Theme.red : Theme.muted
-                                            }
-
-                                            MouseArea {
-                                                id: disMouse
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onClicked: root.service.disconnectDevice(modelData.mac)
-                                            }
+                                        Text {
+                                            width: parent.width
+                                            text: connDevRow.modelData.battery || "Connected"
+                                            font.family: Fonts.uiFont
+                                            font.pixelSize: 10
+                                            color: Theme.accent
+                                            elide: Text.ElideRight
                                         }
                                     }
                                 }
@@ -300,58 +315,40 @@ Item {
                                     color: isConnecting ? Theme.secondaryContainer : (pMouse.containsMouse ? Theme.surfaceContainerHigh : "transparent")
                                     border.width: 0
 
-                                    RowLayout {
-                                        anchors.fill: parent
+                                    Item {
+                                        id: pIcon
+                                        width: 28
+                                        height: 28
+                                        anchors.left: parent.left
                                         anchors.leftMargin: 10
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "󰂯"
+                                            font.family: Icons.effectiveFont("󰂯")
+                                            font.pixelSize: 15
+                                            color: isConnecting ? Theme.accent : Theme.muted
+                                        }
+                                    }
+
+                                    // Right Action Buttons Row
+                                    Row {
+                                        id: pActions
+                                        anchors.right: parent.right
                                         anchors.rightMargin: 10
-                                        spacing: 10
-
-                                        Item {
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                            Layout.alignment: Qt.AlignVCenter
-
-                                            Text {
-                                                anchors.centerIn: parent
-                                                text: "󰂯"
-                                                font.family: Icons.effectiveFont("󰂯")
-                                                font.pixelSize: 15
-                                                color: isConnecting ? Theme.accent : Theme.muted
-                                            }
-                                        }
-
-                                        Column {
-                                            Layout.fillWidth: true
-                                            Layout.alignment: Qt.AlignVCenter
-                                            spacing: 1
-
-                                            Text {
-                                                text: modelData.name || modelData.mac
-                                                font.family: Fonts.uiFont
-                                                font.pixelSize: 12
-                                                font.bold: true
-                                                color: Theme.bright_foreground
-                                                elide: Text.ElideRight
-                                                Layout.fillWidth: true
-                                            }
-
-                                            Text {
-                                                text: pairedRow.isConnecting ? "Connecting..." : (pairedRow.hasError ? root.service.actionErrorMessage : "Offline")
-                                                font.family: Fonts.uiFont
-                                                font.pixelSize: 10
-                                                color: pairedRow.isConnecting ? Theme.accent : (pairedRow.hasError ? Theme.red : Theme.muted)
-                                            }
-                                        }
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        spacing: 6
 
                                         // Connect M3 Pill Button
                                         Rectangle {
                                             id: connBtn
-                                            Layout.preferredWidth: pairedRow.isConnecting ? 80 : 64
-                                            Layout.preferredHeight: 28
-                                            Layout.alignment: Qt.AlignVCenter
+                                            width: pairedRow.isConnecting ? 84 : 64
+                                            height: 28
                                             radius: 14
                                             color: pairedRow.isConnecting ? Theme.secondaryContainer : (cMouse.containsMouse ? Theme.accent : Theme.surfaceContainerHighest)
                                             border.width: 0
+                                            anchors.verticalCenter: parent.verticalCenter
 
                                             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -370,19 +367,19 @@ Item {
                                                 enabled: !pairedRow.isConnecting
                                                 hoverEnabled: true
                                                 cursorShape: pairedRow.isConnecting ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                                onClicked: root.service.connectDevice(modelData.mac, true)
+                                                onClicked: root.service.connectDevice(pairedRow.modelData.mac, true)
                                             }
                                         }
 
                                         // Forget circular tonal button
                                         Rectangle {
                                             id: forgetBtn
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                            Layout.alignment: Qt.AlignVCenter
+                                            width: 28
+                                            height: 28
                                             radius: 14
                                             color: forgetMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.20) : "transparent"
                                             border.width: 0
+                                            anchors.verticalCenter: parent.verticalCenter
 
                                             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -399,19 +396,49 @@ Item {
                                                 anchors.fill: parent
                                                 hoverEnabled: true
                                                 cursorShape: Qt.PointingHandCursor
-                                                onClicked: root.service.forgetDevice(modelData.mac)
+                                                onClicked: root.service.forgetDevice(pairedRow.modelData.mac)
                                             }
+                                        }
+                                    }
+
+                                    // Center text container strictly bounded between icon and action buttons
+                                    Column {
+                                        anchors.left: pIcon.right
+                                        anchors.leftMargin: 10
+                                        anchors.right: pActions.left
+                                        anchors.rightMargin: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        spacing: 1
+                                        clip: true
+
+                                        Text {
+                                            width: parent.width
+                                            text: pairedRow.modelData.name || pairedRow.modelData.mac
+                                            font.family: Fonts.uiFont
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            color: Theme.bright_foreground
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            width: parent.width
+                                            text: pairedRow.isConnecting ? "Connecting..." : (pairedRow.hasError ? root.service.actionErrorMessage : "Offline")
+                                            font.family: Fonts.uiFont
+                                            font.pixelSize: 10
+                                            color: pairedRow.isConnecting ? Theme.accent : (pairedRow.hasError ? Theme.red : Theme.muted)
+                                            elide: Text.ElideRight
                                         }
                                     }
 
                                     MouseArea {
                                         id: pMouse
                                         anchors.fill: parent
-                                        anchors.rightMargin: pairedRow.isConnecting ? 120 : 105
+                                        anchors.rightMargin: pActions.width + 16
                                         enabled: !pairedRow.isConnecting
                                         hoverEnabled: true
                                         cursorShape: pairedRow.isConnecting ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                        onClicked: root.service.connectDevice(modelData.mac, true)
+                                        onClicked: root.service.connectDevice(pairedRow.modelData.mac, true)
                                     }
                                 }
                             }
@@ -447,88 +474,94 @@ Item {
                                     color: (isPairing || isConnecting) ? Theme.secondaryContainer : (aMouse.containsMouse ? Theme.surfaceContainerHigh : "transparent")
                                     border.width: 0
 
-                                    RowLayout {
-                                        anchors.fill: parent
+                                    Item {
+                                        id: aIcon
+                                        width: 28
+                                        height: 28
+                                        anchors.left: parent.left
                                         anchors.leftMargin: 10
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "󰂯"
+                                            font.family: Icons.effectiveFont("󰂯")
+                                            font.pixelSize: 15
+                                            color: (availRow.isPairing || availRow.isConnecting) ? Theme.accent : Theme.muted
+                                        }
+                                    }
+
+                                    // Pair/Connect M3 Pill Button
+                                    Rectangle {
+                                        id: pairBtn
+                                        anchors.right: parent.right
                                         anchors.rightMargin: 10
-                                        spacing: 10
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: (availRow.isPairing || availRow.isConnecting) ? 80 : 60
+                                        height: 28
+                                        radius: 14
+                                        color: (availRow.isPairing || availRow.isConnecting) ? Theme.secondaryContainer : (pairMouse.containsMouse ? Theme.accent : Theme.surfaceContainerHighest)
+                                        border.width: 0
 
-                                        Item {
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                            Layout.alignment: Qt.AlignVCenter
+                                        Behavior on color { ColorAnimation { duration: 150 } }
 
-                                            Text {
-                                                anchors.centerIn: parent
-                                                text: "󰂯"
-                                                font.family: Icons.effectiveFont("󰂯")
-                                                font.pixelSize: 15
-                                                color: (isPairing || isConnecting) ? Theme.accent : Theme.muted
-                                            }
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: availRow.isPairing ? "Pairing…" : (availRow.isConnecting ? "Connecting…" : "Pair")
+                                            font.family: Fonts.uiFont
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                            color: (availRow.isPairing || availRow.isConnecting) ? Theme.accent : (pairMouse.containsMouse ? Theme.darker_background : Theme.bright_foreground)
                                         }
 
-                                        Column {
-                                            Layout.fillWidth: true
-                                            Layout.alignment: Qt.AlignVCenter
-                                            spacing: 1
+                                        MouseArea {
+                                            id: pairMouse
+                                            anchors.fill: parent
+                                            enabled: !availRow.isPairing && !availRow.isConnecting
+                                            hoverEnabled: true
+                                            cursorShape: (availRow.isPairing || availRow.isConnecting) ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                            onClicked: root.service.pairDevice(availRow.modelData.mac)
+                                        }
+                                    }
 
-                                            Text {
-                                                text: modelData.name || modelData.mac
-                                                font.family: Fonts.uiFont
-                                                font.pixelSize: 12
-                                                color: Theme.bright_foreground
-                                                elide: Text.ElideRight
-                                                Layout.fillWidth: true
-                                            }
+                                    // Center text container strictly bounded between icon and action button
+                                    Column {
+                                        anchors.left: aIcon.right
+                                        anchors.leftMargin: 10
+                                        anchors.right: pairBtn.left
+                                        anchors.rightMargin: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        spacing: 1
+                                        clip: true
 
-                                            Text {
-                                                visible: availRow.isPairing || availRow.isConnecting || availRow.hasError
-                                                text: availRow.isPairing ? "Pairing..." : (availRow.isConnecting ? "Connecting..." : (availRow.hasError ? root.service.actionErrorMessage : ""))
-                                                font.family: Fonts.uiFont
-                                                font.pixelSize: 9
-                                                color: (availRow.isPairing || availRow.isConnecting) ? Theme.accent : Theme.red
-                                            }
+                                        Text {
+                                            width: parent.width
+                                            text: availRow.modelData.name || availRow.modelData.mac
+                                            font.family: Fonts.uiFont
+                                            font.pixelSize: 12
+                                            color: Theme.bright_foreground
+                                            elide: Text.ElideRight
                                         }
 
-                                        // Pair/Connect M3 Pill Button
-                                        Rectangle {
-                                            Layout.preferredWidth: (availRow.isPairing || availRow.isConnecting) ? 80 : 60
-                                            Layout.preferredHeight: 28
-                                            Layout.alignment: Qt.AlignVCenter
-                                            radius: 14
-                                            color: (availRow.isPairing || availRow.isConnecting) ? Theme.secondaryContainer : (pairMouse.containsMouse ? Theme.accent : Theme.surfaceContainerHighest)
-                                            border.width: 0
-
-                                            Behavior on color { ColorAnimation { duration: 150 } }
-
-                                            Text {
-                                                anchors.centerIn: parent
-                                                text: availRow.isPairing ? "Pairing…" : (availRow.isConnecting ? "Connecting…" : "Pair")
-                                                font.family: Fonts.uiFont
-                                                font.pixelSize: 11
-                                                font.bold: true
-                                                color: (availRow.isPairing || availRow.isConnecting) ? Theme.accent : (pairMouse.containsMouse ? Theme.darker_background : Theme.bright_foreground)
-                                            }
-
-                                            MouseArea {
-                                                id: pairMouse
-                                                anchors.fill: parent
-                                                enabled: !availRow.isPairing && !availRow.isConnecting
-                                                hoverEnabled: true
-                                                cursorShape: (availRow.isPairing || availRow.isConnecting) ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                                onClicked: root.service.pairDevice(modelData.mac)
-                                            }
+                                        Text {
+                                            visible: availRow.isPairing || availRow.isConnecting || availRow.hasError
+                                            width: parent.width
+                                            text: availRow.isPairing ? "Pairing..." : (availRow.isConnecting ? "Connecting..." : (availRow.hasError ? root.service.actionErrorMessage : ""))
+                                            font.family: Fonts.uiFont
+                                            font.pixelSize: 9
+                                            color: (availRow.isPairing || availRow.isConnecting) ? Theme.accent : Theme.red
+                                            elide: Text.ElideRight
                                         }
                                     }
 
                                     MouseArea {
                                         id: aMouse
                                         anchors.fill: parent
-                                        anchors.rightMargin: (availRow.isPairing || availRow.isConnecting) ? 90 : 70
+                                        anchors.rightMargin: pairBtn.width + 16
                                         enabled: !availRow.isPairing && !availRow.isConnecting
                                         hoverEnabled: true
                                         cursorShape: (availRow.isPairing || availRow.isConnecting) ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                        onClicked: root.service.pairDevice(modelData.mac)
+                                        onClicked: root.service.pairDevice(availRow.modelData.mac)
                                     }
                                 }
                             }

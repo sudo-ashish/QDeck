@@ -81,14 +81,14 @@ Item {
         readonly property real range: Math.max(0.001, to - from)
         readonly property real progress: Math.max(0.0, Math.min(1.0, (liveValue - from) / range))
 
-        // M3 Thick Track (14px, radius 7)
+        // Slim M3 Track (8px, radius 4)
         Rectangle {
             id: track
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            height: 14
-            radius: 7
+            height: 8
+            radius: 4
             color: Theme.surfaceContainerHigh
             clip: true
 
@@ -97,7 +97,7 @@ Item {
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 width: parent.width * sliderRoot.progress
-                radius: 7
+                radius: 4
                 color: sliderRoot.muted ? Theme.muted : Theme.accent
 
                 Behavior on width {
@@ -107,12 +107,12 @@ Item {
             }
         }
 
-        // M3 Vertical Pill Thumb (4x20, radius 2)
+        // Slim M3 Vertical Pill Thumb (3x14, radius 1.5)
         Rectangle {
             id: knob
-            width: 4
-            height: 20
-            radius: 2
+            width: 3
+            height: 14
+            radius: 1.5
             anchors.verticalCenter: track.verticalCenter
             x: Math.max(0, Math.min(track.width - width, track.width * sliderRoot.progress - width / 2))
             color: sliderRoot.muted ? Theme.muted : Theme.bright_foreground
@@ -202,7 +202,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: root.service.muted ? "󰝟" : "󰕾"
+                            text: root.service.icon
                             font.family: Icons.effectiveFont(text)
                             font.pixelSize: 22
                             color: root.service.muted ? Theme.muted : Theme.accent
