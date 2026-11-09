@@ -207,6 +207,12 @@ Item {
                             font.pixelSize: 22
                             color: root.service.muted ? Theme.muted : Theme.accent
                         }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.service.toggleMute()
+                        }
                     }
 
                     Column {

@@ -21,6 +21,10 @@ QtObject {
             root.requestToggleMenu()
             return "ok"
         }
+        function mute(): string {
+            root.toggleMute()
+            return "ok"
+        }
     }
 
     readonly property var sink: Pipewire.defaultAudioSink
@@ -287,11 +291,12 @@ QtObject {
 
     function toggleMute() {
         root.inhibitOsd(2000)
+        var targetMute = !root.muted
         if (sink && sink.audio) {
-            sink.audio.muted = !sink.audio.muted
+            sink.audio.muted = targetMute
         }
-        Quickshell.execDetached(["wpctl", "--no-osd", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"])
-        root.volumeAdjusted(root.volume, root.muted)
+        Quickshell.execDetached(["wpctl", "--no-osd", "set-mute", "@DEFAULT_AUDIO_SINK@", targetMute ? "1" : "0"])
+        root.volumeAdjusted(root.volume, targetMute)
     }
 
     function setInputVolume(percent) {
@@ -306,10 +311,11 @@ QtObject {
 
     function toggleInputMute() {
         root.inhibitOsd(2000)
+        var targetMute = !root.inputMuted
         if (source && source.audio) {
-            source.audio.muted = !source.audio.muted
+            source.audio.muted = targetMute
         }
-        Quickshell.execDetached(["wpctl", "--no-osd", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
+        Quickshell.execDetached(["wpctl", "--no-osd", "set-mute", "@DEFAULT_AUDIO_SOURCE@", targetMute ? "1" : "0"])
     }
 
     function toggleAllMuted() {
@@ -345,11 +351,14 @@ QtObject {
     }
 
     function toggleStreamMute(streamNode) {
+        if (!streamNode) return
         root.inhibitOsd(2000)
-        if (!streamNode || !streamNode.audio) return
-        streamNode.audio.muted = !streamNode.audio.muted
+        var targetMute = (streamNode.audio && streamNode.audio.muted !== undefined) ? !streamNode.audio.muted : true
+        if (streamNode.audio) {
+            streamNode.audio.muted = targetMute
+        }
         if (streamNode.id !== undefined) {
-            Quickshell.execDetached(["wpctl", "--no-osd", "set-mute", String(streamNode.id), "toggle"])
+            Quickshell.execDetached(["wpctl", "--no-osd", "set-mute", String(streamNode.id), targetMute ? "1" : "0"])
         }
     }
 
