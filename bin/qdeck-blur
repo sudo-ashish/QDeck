@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# QDeck: Dynamic Dual Alpha + Hyprland blur controller (qdeck-blur / qdeck blur)
+# ==============================================================================
+# QDeck: Dynamic Dual Alpha + Hyprland blur & opacity controller (qdeck-blur / qdeck blur)
+# Toggles Quickshell dual-alpha surface transparency and Hyprland compositor
+# window blur + active/inactive opacity.
+# ==============================================================================
 set -euo pipefail
 
 CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STATE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/blur-state"
 
 # Source shared IPC helper
 if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
@@ -14,22 +19,68 @@ elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
 fi
 
+apply_hyprland_blur_and_opacity() {
+  local state="$1"
+  if command -v hyprctl >/dev/null 2>&1; then
+    if [[ "$state" == "on" ]]; then
+      hyprctl eval 'hl.config({ decoration = { blur = { enabled = true }, active_opacity = 0.95, inactive_opacity = 0.88 } })' >/dev/null 2>&1 || true
+      hyprctl eval 'hl.layer_rule({ name = "qdeck-blur", match = { namespace = "^quickshell-.*" }, blur = true, blur_popups = true, ignore_alpha = 0.57 })' >/dev/null 2>&1 || true
+    else
+      hyprctl eval 'hl.config({ decoration = { blur = { enabled = false }, active_opacity = 1.0, inactive_opacity = 1.0 } })' >/dev/null 2>&1 || true
+      hyprctl eval 'hl.layer_rule({ name = "qdeck-blur", match = { namespace = "^quickshell-.*" }, blur = false, blur_popups = false })' >/dev/null 2>&1 || true
+    fi
+  fi
+}
+
+get_current_state() {
+  local ipc_res
+  if ipc_res="$(call_ipc theme getBlur 2>/dev/null)" && [[ -n "$ipc_res" ]]; then
+    echo "$ipc_res"
+    return 0
+  fi
+  if [[ -f "$STATE_FILE" ]]; then
+    local s
+    s="$(tr -d '[:space:]' < "$STATE_FILE" | tr '[:upper:]' '[:lower:]')"
+    if [[ "$s" == "off" || "$s" == "false" || "$s" == "0" ]]; then
+      echo "off"
+      return 0
+    fi
+  fi
+  echo "on"
+}
+
+set_state() {
+  local target_state="$1" # "on" or "off"
+  mkdir -p "$(dirname "$STATE_FILE")"
+  printf '%s' "$target_state" > "$STATE_FILE"
+
+  # 1. Update Quickshell theme dual alpha via IPC if running
+  call_ipc theme setBlur "$target_state" >/dev/null 2>&1 || true
+
+  # 2. Update Hyprland compositor blur & window opacity
+  apply_hyprland_blur_and_opacity "$target_state"
+
+  echo "Blur & opacity is now: $target_state"
+}
+
 case "$CMD" in
   toggle)
-    res=$(call_ipc theme toggleBlur)
-    echo "Blur is now: $res"
+    cur="$(get_current_state)"
+    if [[ "$cur" == "on" ]]; then
+      set_state "off"
+    else
+      set_state "on"
+    fi
     ;;
   on|enable|true|1)
-    res=$(call_ipc theme setBlur on)
-    echo "Blur is now: $res"
+    set_state "on"
     ;;
   off|disable|false|0)
-    res=$(call_ipc theme setBlur off)
-    echo "Blur is now: $res"
+    set_state "off"
     ;;
   status|get)
-    res=$(call_ipc theme getBlur)
-    echo "Blur is: $res"
+    cur="$(get_current_state)"
+    echo "Blur & opacity is: $cur"
     ;;
   *)
     echo "Usage: qdeck-blur [toggle|on|off|status]" >&2

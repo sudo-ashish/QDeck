@@ -113,8 +113,10 @@ QtObject {
         var cmd = "mkdir -p \"$(dirname \"" + root.blurStatePath + "\")\" && printf '%s' \"" + stateStr + "\" > \"" + root.blurStatePath + "\""
         if (enabled) {
             cmd += " && hyprctl eval 'hl.layer_rule({ name = \"qdeck-blur\", match = { namespace = \"^quickshell-.*\" }, blur = true, blur_popups = true, ignore_alpha = 0.57 })' 2>/dev/null || true"
+            cmd += " && hyprctl eval 'hl.config({ decoration = { blur = { enabled = true }, active_opacity = 0.95, inactive_opacity = 0.88 } })' 2>/dev/null || true"
         } else {
             cmd += " && hyprctl eval 'hl.layer_rule({ name = \"qdeck-blur\", match = { namespace = \"^quickshell-.*\" }, blur = false, blur_popups = false })' 2>/dev/null || true"
+            cmd += " && hyprctl eval 'hl.config({ decoration = { blur = { enabled = false }, active_opacity = 1.0, inactive_opacity = 1.0 } })' 2>/dev/null || true"
         }
         Quickshell.execDetached(["sh", "-c", cmd])
     }
