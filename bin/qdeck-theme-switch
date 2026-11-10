@@ -251,16 +251,14 @@ switch_theme() {
 
     mkdir -p "$THEMES_DIR"
 
-    # 1. Update active theme symlink atomically
-    ln -sfn "$target_dir" "$CURRENT_LINK"
-
-    # 2. If dedicated theme-switch utility exists, execute it for deep editor & app integrations
+    # 1. If dedicated theme-switch utility exists, execute it for deep editor & app integrations
     if command -v theme-switch >/dev/null 2>&1; then
         theme-switch "$theme" 2>/dev/null || true
     elif [[ -x "$SWITCH_BIN" ]]; then
         "$SWITCH_BIN" "$theme" 2>/dev/null || true
     else
         # Fallback when theme-switch is not installed
+        ln -sfn "$target_dir" "$CURRENT_LINK"
         apply_icon_theme "$target_dir"
         local wp=""
         if [[ -d "$target_dir/backgrounds" ]]; then

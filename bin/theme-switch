@@ -605,10 +605,10 @@ reload_neovim() {
     shopt -u nullglob
 
     if (( ${#sockets[@]} > 0 )) && command -v nvim >/dev/null 2>&1; then
-        local lua_expr='pcall(function() local p = vim.fn.expand("~/.config/themes/current/neovim.lua"); local ok, spec = pcall(dofile, p); if ok and type(spec) == "table" then for _, item in ipairs(spec) do if item.opts and item.opts.colorscheme then if item.opts.background then vim.o.background = item.opts.background end; pcall(vim.cmd.colorscheme, item.opts.colorscheme) end end end end)'
+        local remote_cmd='<Cmd>lua pcall(function() local p = vim.fn.expand("~/.config/themes/current/neovim.lua"); local ok, spec = pcall(dofile, p); if ok and type(spec) == "table" then for _, item in ipairs(spec) do if type(item) == "table" and item[1] and item[1] ~= "LazyVim/LazyVim" then local name = item.name or item[1]:match("/([^/]+)$") or item[1]; pcall(function() if package.loaded["lazy"] then require("lazy").load({ plugins = { name } }) end end) end; if item.opts and item.opts.colorscheme then if item.opts.background then if item.opts.background == "dark" or item.opts.background == "light" then pcall(function() vim.o.background = item.opts.background end) else pcall(function() vim.g.everforest_background = item.opts.background end) pcall(function() vim.g.gruvbox_material_background = item.opts.background end) end end; pcall(vim.cmd.colorscheme, item.opts.colorscheme) end end; pcall(vim.cmd, "redraw!") end end)<CR>'
         for sock in "${sockets[@]}"; do
             [[ -S "$sock" ]] || continue
-            nvim --server "$sock" --remote-expr "luaeval('$lua_expr')" >/dev/null 2>&1 &
+            nvim --server "$sock" --remote-send "$remote_cmd" >/dev/null 2>&1 &
         done
     fi
 }
@@ -628,12 +628,12 @@ if [[ -n "$kitty_link_tmp" ]]; then
     reload_kitty
 fi
 apply_icon_theme "$theme_dir"
+reload_neovim
 if (( theme_changed == 1 )); then
     apply_wallpaper
     reload_waybar
     reload_swaync
     reload_hyprland
-    reload_neovim
     reload_quickshell
 fi
 
