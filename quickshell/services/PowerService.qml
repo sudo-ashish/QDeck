@@ -23,6 +23,8 @@ QtObject {
     }
 
     function rebootSystem() {
+        var runtime = Quickshell.env("XDG_RUNTIME_DIR") || ("/run/user/" + Quickshell.env("UID"))
+        Quickshell.execDetached(["rm", "-f", runtime + "/quickshell/clipboard-history.json", Quickshell.env("HOME") + "/.local/state/quickshell/clipboard-history.json"])
         Quickshell.execDetached(["systemctl", "reboot"])
     }
 
@@ -72,6 +74,8 @@ QtObject {
     }
 
     function shutdownSystem() {
+        var runtime = Quickshell.env("XDG_RUNTIME_DIR") || ("/run/user/" + Quickshell.env("UID"))
+        Quickshell.execDetached(["rm", "-f", runtime + "/quickshell/clipboard-history.json", Quickshell.env("HOME") + "/.local/state/quickshell/clipboard-history.json"])
         Quickshell.execDetached(["systemctl", "poweroff"])
     }
 

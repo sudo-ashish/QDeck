@@ -95,7 +95,11 @@ QtObject {
 
     function clear() {
         items.clear()
-        saveTimer.restart()
+        saveStateProc.command = [
+            "python3", "-c",
+            "import os; r = os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'); p1 = os.path.join(r, 'quickshell', 'clipboard-history.json'); p2 = os.path.expanduser('~/.local/state/quickshell/clipboard-history.json'); [os.remove(p) for p in (p1, p2) if os.path.exists(p)]"
+        ]
+        saveStateProc.running = true
         clearProc.command = ["wl-copy", "-c"]
         clearProc.running = true
         return true
@@ -186,7 +190,8 @@ QtObject {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Disk State Persistence (~/.local/state/quickshell/clipboard-history.json)
+    // Ephemeral Runtime State Persistence (tmpfs in $XDG_RUNTIME_DIR)
+    // Deleted on QDeck restart and system reboot/poweroff
     // ─────────────────────────────────────────────────────────────────────────
     property Timer saveTimer: Timer {
         id: saveTimer
@@ -217,41 +222,15 @@ QtObject {
         var jsonStr = JSON.stringify(arr)
         saveStateProc.command = [
             "python3", "-c",
-            "import sys, json, os; p = os.path.expanduser('~/.local/state/quickshell/clipboard-history.json'); os.makedirs(os.path.dirname(p), exist_ok=True); json.dump(json.loads(sys.argv[1]), open(p, 'w'), indent=2)",
+            "import sys, json, os; r = os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'); d = os.path.join(r, 'quickshell') if os.path.isdir(r) else os.path.expanduser('~/.local/state/quickshell'); os.makedirs(d, exist_ok=True); p = os.path.join(d, 'clipboard-history.json'); json.dump(json.loads(sys.argv[1]), open(p, 'w'), indent=2)",
             jsonStr
         ]
         saveStateProc.running = true
     }
 
-    property Process loadStateProc: Process {
-        id: loadStateProc
-        command: ["cat", Quickshell.env("HOME") + "/.local/state/quickshell/clipboard-history.json"]
-        stdout: StdioCollector {
-            waitForEnd: true
-            onStreamFinished: {
-                try {
-                    var list = JSON.parse(text.trim())
-                    if (Array.isArray(list)) {
-                        for (var i = 0; i < list.length; i++) {
-                            var it = list[i]
-                            if (it && it.text && it.text.trim()) {
-                                items.append({
-                                    id: String(i),
-                                    text: it.text,
-                                    timestamp: it.timestamp || 0,
-                                    lines: it.lines || it.text.split("\n").length,
-                                    chars: it.chars || it.text.length
-                                })
-                            }
-                        }
-                    }
-                } catch (e) {}
-            }
-        }
-    }
-
     Component.onCompleted: {
-        loadStateProc.running = true
+        // Ephemeral session-only clipboard history:
+        // Starts empty on each QDeck session; cleaned up on restart and poweroff
     }
 }
 

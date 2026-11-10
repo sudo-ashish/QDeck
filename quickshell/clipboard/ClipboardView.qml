@@ -324,48 +324,11 @@ Item {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
+                    anchors.leftMargin: 14
+                    anchors.rightMargin: 14
                     spacing: 12
 
-                    // Left Category Glyph / Color Swatch Container
-                    Item {
-                        Layout.preferredWidth: 32
-                        Layout.preferredHeight: 32
-                        Layout.alignment: Qt.AlignVCenter
-
-                        // Color swatch preview if item is hex color
-                        Rectangle {
-                            visible: itemDelegate.category === "color"
-                            anchors.centerIn: parent
-                            width: 26
-                            height: 26
-                            radius: 13
-                            color: itemDelegate.rawText.trim()
-                            border.color: Theme.withAlpha(Theme.foreground, 0.25)
-                            border.width: 1
-                        }
-
-                        // Category Squircle for other items
-                        Rectangle {
-                            visible: itemDelegate.category !== "color"
-                            anchors.fill: parent
-                            radius: 8
-                            color: itemDelegate.isSelected
-                                ? Theme.withAlpha(Theme.accent, 0.28)
-                                : Theme.withAlpha(Theme.lighter_background, 0.28)
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: root.categoryGlyph(itemDelegate.category)
-                                font.family: Icons.effectiveFont(text)
-                                font.pixelSize: 15
-                                color: itemDelegate.isSelected ? Theme.accent : Theme.foreground
-                            }
-                        }
-                    }
-
-                    // Middle Column: Text Preview & Metadata Subtitle
+                    // Text Preview & Metadata Subtitle
                     ColumnLayout {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter

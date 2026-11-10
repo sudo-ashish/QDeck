@@ -1027,7 +1027,6 @@ PanelWindow {
                 ListView {
                     id: listView
                     anchors.fill: parent
-                    anchors.rightMargin: scrollbar.visible ? 8 : 0
                     clip: true
                     spacing: 2
                     boundsBehavior: Flickable.StopAtBounds
@@ -1048,8 +1047,8 @@ PanelWindow {
                         color: isSelected
                             ? Theme.withAlpha(Theme.accent, 0.16)
                             : (isHovered ? Theme.withAlpha(Theme.lighter_background, 0.28) : "transparent")
-                        border.color: isSelected ? Theme.withAlpha(Theme.accent, 0.35) : "transparent"
-                        border.width: 1
+                        border.width: 0
+                        border.color: "transparent"
 
                         RowLayout {
                             anchors.fill: parent
@@ -1069,8 +1068,7 @@ PanelWindow {
                                     radius: 8
                                     visible: modelData.type === "action"
                                     color: itemDelegate.isSelected ? Theme.withAlpha(Theme.accent, 0.25) : Theme.withAlpha(Theme.lighter_background, 0.35)
-                                    border.color: itemDelegate.isSelected ? Theme.accent : Theme.withAlpha(Theme.border, 0.3)
-                                    border.width: 1
+                                    border.width: 0
 
                                     Text {
                                         anchors.centerIn: parent
@@ -1111,8 +1109,7 @@ PanelWindow {
                                     radius: 8
                                     visible: modelData.type === "app" && !appIconImg.visible
                                     color: itemDelegate.isSelected ? Theme.selection : Theme.withAlpha(Theme.accent, 0.18)
-                                    border.color: itemDelegate.isSelected ? Theme.accent : Theme.selection
-                                    border.width: 1
+                                    border.width: 0
 
                                     Text {
                                         anchors.centerIn: parent
@@ -1169,35 +1166,6 @@ PanelWindow {
                                 root.executeCurrentItem()
                             }
                         }
-                    }
-                }
-
-                // Scrollbar
-                Rectangle {
-                    id: scrollbar
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: 4
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 4
-                    width: 4
-                    radius: 2
-                    color: Theme.withAlpha(Theme.dark_background, 0.5)
-                    clip: true
-                    visible: listView.visibleArea.heightRatio < 1.0 && listView.count > 0
-
-                    Rectangle {
-                        id: scrollbarHandle
-                        width: parent.width
-                        radius: 2
-                        color: Theme.accent
-
-                        readonly property real rawHeight: Math.max(24, listView.visibleArea.heightRatio * scrollbar.height)
-                        readonly property real clampedHeight: Math.min(scrollbar.height, rawHeight)
-                        readonly property real maxY: Math.max(0, scrollbar.height - clampedHeight)
-
-                        height: clampedHeight
-                        y: Math.max(0, Math.min(maxY, listView.visibleArea.yPosition * scrollbar.height))
                     }
                 }
 

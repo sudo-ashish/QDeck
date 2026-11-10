@@ -8,7 +8,8 @@ set -euo pipefail
 CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-STATE_FILE="$HOME/.local/state/quickshell/clipboard-history.json"
+STATE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/quickshell/clipboard-history.json"
+FALLBACK_STATE_FILE="$HOME/.local/state/quickshell/clipboard-history.json"
 
 # Choose CLI binary
 if command -v qs >/dev/null 2>&1; then

@@ -97,6 +97,12 @@ case "$CMD" in
   stop|kill)
     echo "==> Terminating QDeck..."
     killall -q qs quickshell 2>/dev/null || true
+    # Wipe ephemeral clipboard history on stop
+    rm -f "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/quickshell/clipboard-history.json" \
+          "$HOME/.local/state/quickshell/clipboard-history.json" 2>/dev/null || true
+    if command -v wl-copy >/dev/null 2>&1; then
+      wl-copy -c 2>/dev/null || true
+    fi
     echo "    QDeck stopped."
     exit 0
     ;;
@@ -218,6 +224,12 @@ systemctl --user stop hyprpolkitagent.service 2>/dev/null || true
 
 # 2. Terminate any previous or stale QuickShell instances cleanly
 killall -q qs quickshell 2>/dev/null || true
+# Wipe ephemeral clipboard history on QDeck start/restart
+rm -f "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/quickshell/clipboard-history.json" \
+      "$HOME/.local/state/quickshell/clipboard-history.json" 2>/dev/null || true
+if command -v wl-copy >/dev/null 2>&1; then
+  wl-copy -c 2>/dev/null || true
+fi
 sleep 0.3
 
 # 3. Ensure PipeWire audio server is running

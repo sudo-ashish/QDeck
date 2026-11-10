@@ -9,7 +9,8 @@ import os
 import json
 import time
 
-STATE_DIR = os.path.expanduser("~/.local/state/quickshell")
+runtime_dir = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+STATE_DIR = os.path.join(runtime_dir, "quickshell") if os.path.isdir(runtime_dir) else os.path.expanduser("~/.local/state/quickshell")
 STATE_FILE = os.path.join(STATE_DIR, "clipboard-history.json")
 MAX_ITEMS = 100
 MAX_CHAR_COUNT = 150000
