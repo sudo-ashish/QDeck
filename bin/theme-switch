@@ -195,6 +195,7 @@ extension_is_installed() {
     case "$editor_bin" in
         codium) extension_registry="$HOME/.vscode-oss/extensions/extensions.json" ;;
         code) extension_registry="$HOME/.vscode/extensions/extensions.json" ;;
+        *antigravity*) extension_registry="$HOME/.antigravity-ide/extensions/extensions.json" ;;
     esac
 
     # The on-disk registry is effectively instant. Keep the official CLI as a
@@ -268,6 +269,16 @@ if command -v code >/dev/null 2>&1; then
     editor_bins+=(code)
     editor_settings_paths+=("$code_settings")
 fi
+if command -v antigravity-ide >/dev/null 2>&1; then
+    editor_bins+=(antigravity-ide)
+    editor_settings_paths+=("$CONFIG_HOME/Antigravity IDE/User/settings.json")
+elif [[ -x "/opt/antigravity-ide/antigravity-ide" ]]; then
+    editor_bins+=(/opt/antigravity-ide/antigravity-ide)
+    editor_settings_paths+=("$CONFIG_HOME/Antigravity IDE/User/settings.json")
+elif [[ -d "$CONFIG_HOME/Antigravity IDE" ]]; then
+    editor_bins+=(antigravity-ide)
+    editor_settings_paths+=("$CONFIG_HOME/Antigravity IDE/User/settings.json")
+fi
 
 if (( ${#editor_bins[@]} > 0 )); then
     if [[ -f "$theme_dir/vscode.json" ]]; then
@@ -288,7 +299,7 @@ if (( ${#editor_bins[@]} > 0 )); then
         warn "theme '$theme_name' has no optional vscode.json; editor theme update skipped"
     fi
 elif (( theme_changed == 1 )); then
-    warn "neither codium nor code is installed; editor theme update skipped"
+    warn "neither codium, code, nor antigravity-ide is installed; editor theme update skipped"
 fi
 
 # A manual per-theme kitty color file is optional. When present, stage a symlink

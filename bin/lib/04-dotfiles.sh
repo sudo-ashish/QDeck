@@ -48,6 +48,17 @@ if [[ -f "$VSCODIUM_SETTINGS" ]]; then
   fi
 fi
 
+# Sync / copy extensions from VSCodium to Antigravity IDE
+if [[ -d "$HOME/.vscode-oss/extensions" ]] && (command -v antigravity-ide >/dev/null 2>&1 || [[ -d "$HOME/.config/Antigravity IDE" ]]); then
+  echo "    Syncing VSCodium extensions to Antigravity IDE..."
+  mkdir -p "$HOME/.antigravity-ide/extensions"
+  cp -rn "$HOME/.vscode-oss/extensions"/* "$HOME/.antigravity-ide/extensions/" 2>/dev/null || true
+  if [[ -f "$HOME/.vscode-oss/extensions/extensions.json" ]]; then
+    sed 's|/\.vscode-oss/extensions|/\.antigravity-ide/extensions|g' \
+      "$HOME/.vscode-oss/extensions/extensions.json" > "$HOME/.antigravity-ide/extensions/extensions.json" 2>/dev/null || true
+  fi
+fi
+
 # 6. Themes configuration (~/.config/themes)
 THEMES_SRC=""
 if [[ -d "$REPO_ROOT/themes" && -n "$(ls -A "$REPO_ROOT/themes" 2>/dev/null)" ]]; then

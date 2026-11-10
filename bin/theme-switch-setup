@@ -107,6 +107,7 @@ editor_paths=(
     "$CONFIG_HOME/VSCodium/User/settings.json"
     "$CONFIG_HOME/Code/User/settings.json"
     "$CONFIG_HOME/Code - OSS/User/settings.json"
+    "$CONFIG_HOME/Antigravity IDE/User/settings.json"
 )
 declare -a editor_before=()
 for editor_path in "${editor_paths[@]}"; do
@@ -352,6 +353,21 @@ if command -v codium >/dev/null 2>&1; then
 fi
 if command -v code >/dev/null 2>&1; then
     install_editor_theme_extensions code
+fi
+if command -v antigravity-ide >/dev/null 2>&1; then
+    install_editor_theme_extensions antigravity-ide
+elif [[ -x "/opt/antigravity-ide/antigravity-ide" ]]; then
+    install_editor_theme_extensions "/opt/antigravity-ide/antigravity-ide"
+fi
+
+# Sync all installed VSCodium extensions to Antigravity IDE if present
+if [[ -d "$HOME/.vscode-oss/extensions" && -d "$CONFIG_HOME/Antigravity IDE" ]]; then
+    mkdir -p "$HOME/.antigravity-ide/extensions"
+    cp -rn "$HOME/.vscode-oss/extensions"/* "$HOME/.antigravity-ide/extensions/" 2>/dev/null || true
+    if [[ -f "$HOME/.vscode-oss/extensions/extensions.json" ]]; then
+        sed 's|/\.vscode-oss/extensions|/\.antigravity-ide/extensions|g' \
+            "$HOME/.vscode-oss/extensions/extensions.json" > "$HOME/.antigravity-ide/extensions/extensions.json" 2>/dev/null || true
+    fi
 fi
 
 declare -a verification_lines=()
