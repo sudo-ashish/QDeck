@@ -70,8 +70,34 @@ case "$CMD" in
   select)
     call_ipc themeswitcher select "${2:-0}"
     ;;
-  apply)
-    call_ipc themeswitcher apply "${2:-}"
+  apply|switch|set)
+    if ! call_ipc themeswitcher apply "${2:-}"; then
+      if command -v qdeck-theme-switch >/dev/null 2>&1; then
+        qdeck-theme-switch switch "${2:-}"
+      elif [[ -x "$SCRIPT_DIR/qdeck-theme-switch" ]]; then
+        "$SCRIPT_DIR/qdeck-theme-switch" switch "${2:-}"
+      elif [[ -x "$HOME/.local/bin/qdeck-theme-switch" ]]; then
+        "$HOME/.local/bin/qdeck-theme-switch" switch "${2:-}"
+      fi
+    fi
+    ;;
+  list)
+    if command -v qdeck-theme-switch >/dev/null 2>&1; then
+      qdeck-theme-switch list
+    elif [[ -x "$SCRIPT_DIR/qdeck-theme-switch" ]]; then
+      "$SCRIPT_DIR/qdeck-theme-switch" list
+    elif [[ -x "$HOME/.local/bin/qdeck-theme-switch" ]]; then
+      "$HOME/.local/bin/qdeck-theme-switch" list
+    fi
+    ;;
+  current)
+    if command -v qdeck-theme-switch >/dev/null 2>&1; then
+      qdeck-theme-switch current
+    elif [[ -x "$SCRIPT_DIR/qdeck-theme-switch" ]]; then
+      "$SCRIPT_DIR/qdeck-theme-switch" current
+    elif [[ -x "$HOME/.local/bin/qdeck-theme-switch" ]]; then
+      "$HOME/.local/bin/qdeck-theme-switch" current
+    fi
     ;;
   state|getState|status)
     call_ipc themeswitcher getState

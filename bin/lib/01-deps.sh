@@ -26,13 +26,13 @@ CORE_PACKAGES=(
   xdg-desktop-portal-hyprland
   xdg-desktop-portal-gtk
   xdg-utils
-  grim 
+  grim
   slurp
   libnotify
   nautilus
   wl-clipboard
   imv
-  pinta 
+  pinta
   nwg-look
 
   # Terminal, shell & monitor
@@ -42,10 +42,10 @@ CORE_PACKAGES=(
   zsh-syntax-highlighting
   btop
   awww
-  eza 
+  eza
   fzf
   zoxide
-  
+
   # Icon Fonts & Material Symbols for QDeck
   ttf-material-symbols-variable
   ttf-material-icons
@@ -66,6 +66,10 @@ CORE_PACKAGES=(
   power-profiles-daemon
   networkmanager
   qrencode
+
+  #extra
+  pokemon-colorscripts-git
+  yaru-icon-theme 
 )
 
 MISSING_CORE=()
@@ -92,7 +96,7 @@ fi
 
 if [[ -z "$AUR_HELPER" ]]; then
   echo "==> [01-deps] Neither yay nor paru found. Setting up yay from AUR unattended..."
-  
+
   # Ensure base-devel and git are present
   sudo pacman -S --needed --noconfirm base-devel git
 
@@ -100,8 +104,8 @@ if [[ -z "$AUR_HELPER" ]]; then
   trap 'rm -rf "$BUILD_DIR" 2>/dev/null || true' EXIT
 
   echo "    Cloning yay-bin from AUR..."
-  if git clone --depth=1 https://aur.archlinux.org/yay-bin.git "$BUILD_DIR/yay" 2>/dev/null || \
-     git clone --depth=1 https://aur.archlinux.org/yay.git "$BUILD_DIR/yay"; then
+  if git clone --depth=1 https://aur.archlinux.org/yay-bin.git "$BUILD_DIR/yay" 2>/dev/null ||
+    git clone --depth=1 https://aur.archlinux.org/yay.git "$BUILD_DIR/yay"; then
     (
       cd "$BUILD_DIR/yay"
       makepkg -si --noconfirm --needed

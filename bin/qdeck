@@ -20,7 +20,13 @@ fi
 
 export PATH="$HOME/.local/bin:$BIN_DIR:$PATH"
 export QS_CONFIG_PATH="$QS_DIR"
-export QS_ICON_THEME="${QS_ICON_THEME:-$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'" || echo Adwaita)}"
+current_icon_theme=""
+if [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/themes/current/icons.theme" ]]; then
+  current_icon_theme="$(head -n 1 "${XDG_CONFIG_HOME:-$HOME/.config}/themes/current/icons.theme" 2>/dev/null | tr -d '\r\n' | xargs)"
+elif [[ -f "$HOME/themes/current/icons.theme" ]]; then
+  current_icon_theme="$(head -n 1 "$HOME/themes/current/icons.theme" 2>/dev/null | tr -d '\r\n' | xargs)"
+fi
+export QS_ICON_THEME="${QS_ICON_THEME:-${current_icon_theme:-$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'" || echo Adwaita)}}"
 
 usage() {
   cat <<'EOF'

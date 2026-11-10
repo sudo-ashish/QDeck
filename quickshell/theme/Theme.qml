@@ -8,8 +8,24 @@ QtObject {
 
     // Central single source of truth path for colors configuration
     readonly property string colorsConfigPath: Quickshell.env("HOME") + "/.config/themes/current/colors.toml"
+    readonly property string iconsConfigPath: Quickshell.env("HOME") + "/.config/themes/current/icons.theme"
     readonly property string localColorsPath: (Quickshell.env("QS_CONFIG_PATH") || (Quickshell.env("HOME") + "/.config/quickshell")) + "/theme/colors.toml"
     readonly property string blurStatePath: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/quickshell/blur-state"
+
+    // Default icon theme loaded from active theme icons.theme
+    property string iconTheme: "Yaru-sage"
+
+    property FileView iconsFile: FileView {
+        path: root.iconsConfigPath
+        watchChanges: true
+        printErrors: false
+        onLoaded: {
+            var raw = String(text() || "").trim()
+            if (raw.length > 0) {
+                root.iconTheme = raw
+            }
+        }
+    }
 
     // Raw parsed colors dictionary
     property var _c: ({})
@@ -241,9 +257,26 @@ QtObject {
         }
     }
 
+    property Process iconReaderProc: Process {
+        id: iconReaderProc
+        command: ["cat", root.iconsConfigPath]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                var raw = String(text || "").trim()
+                if (raw.length > 0) {
+                    root.iconTheme = raw
+                }
+            }
+        }
+    }
+
     function reloadTheme() {
         if (!themeReaderProc.running) {
             themeReaderProc.running = true
+        }
+        if (!iconReaderProc.running) {
+            iconReaderProc.running = true
         }
     }
 
@@ -276,6 +309,11 @@ QtObject {
 
     Component.onCompleted: {
         root.reloadTheme()
+
+        if (iconsFile.text()) {
+            var rawIcon = String(iconsFile.text() || "").trim()
+            if (rawIcon.length > 0) root.iconTheme = rawIcon
+        }
 
         if (colorsFile.text()) {
             root.parseThemeFile(colorsFile.text())

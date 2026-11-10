@@ -75,7 +75,9 @@ fi
 
 # 5. Generate minimal .zshrc
 echo "    Generating minimal $ZSHRC..."
-cat > "$ZSHRC" <<'EOF'
+cat >"$ZSHRC" <<'EOF'
+pokemon-colorscripts -rn bulbasaur,charmander,squirtle,pikachu,mew,gengar,psyduck,lapras,giratina,darkrai --no-title
+
 # History
 HISTFILE="$HOME/.zsh_history"
 HISTSIZE=10000
