@@ -474,9 +474,9 @@ apply_icon_theme() {
         sed -i -E "s/^[[:space:]]*icon-theme=.*/icon-theme=$icon_theme/" "$nwg_gsettings" 2>/dev/null || true
     fi
 
-    # 3. Synchronize via nwg-look export if available
+    # 3. Synchronize via nwg-look export in background to avoid blocking switch
     if command -v nwg-look >/dev/null 2>&1; then
-        nwg-look -x >/dev/null 2>&1 || true
+        nwg-look -x >/dev/null 2>&1 &
     fi
 
     # 4. Explicitly update GTK 3.0 configuration
@@ -584,6 +584,35 @@ apply_wallpaper() {
     fi
 }
 
+reload_hyprland() {
+    if command -v hyprctl >/dev/null 2>&1; then
+        hyprctl reload >/dev/null 2>&1 || true
+    fi
+}
+
+reload_neovim() {
+    # 1. Send SIGUSR1 signal for instant native reload in listening Neovim instances
+    pkill -SIGUSR1 -u "$UID" -x nvim >/dev/null 2>&1 || true
+
+    # 2. Also send remote RPC command to any active Neovim server sockets
+    local -a sockets=()
+    shopt -s nullglob
+    sockets=(
+        "${XDG_RUNTIME_DIR:-/run/user/$UID}"/nvim.*
+        /tmp/nvim*/*
+        /tmp/nvim.*
+    )
+    shopt -u nullglob
+
+    if (( ${#sockets[@]} > 0 )) && command -v nvim >/dev/null 2>&1; then
+        local lua_expr='pcall(function() local p = vim.fn.expand("~/.config/themes/current/neovim.lua"); local ok, spec = pcall(dofile, p); if ok and type(spec) == "table" then for _, item in ipairs(spec) do if item.opts and item.opts.colorscheme then if item.opts.background then vim.o.background = item.opts.background end; pcall(vim.cmd.colorscheme, item.opts.colorscheme) end end end end)'
+        for sock in "${sockets[@]}"; do
+            [[ -S "$sock" ]] || continue
+            nvim --server "$sock" --remote-expr "luaeval('$lua_expr')" >/dev/null 2>&1 &
+        done
+    fi
+}
+
 reload_quickshell() {
     if command -v qs >/dev/null 2>&1; then
         qs ipc call theme reload >/dev/null 2>&1 || true
@@ -603,11 +632,13 @@ if (( theme_changed == 1 )); then
     apply_wallpaper
     reload_waybar
     reload_swaync
+    reload_hyprland
+    reload_neovim
     reload_quickshell
 fi
 
 if (( theme_changed == 1 )); then
-    printf 'Theme switched to `%s`. Restart btop/Neovim sessions to pick it up.\n' "$theme_name"
+    printf 'Theme switched to `%s`. Neovim/LazyVim reloaded live.\n' "$theme_name"
 else
     printf 'Theme `%s` remains active; repaired managed configuration.\n' "$theme_name"
 fi

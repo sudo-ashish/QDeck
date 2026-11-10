@@ -29,6 +29,27 @@ get_active_wallpaper() {
     fi
 }
 
+CACHE_THUMB_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/qdeck/wallpaper-thumbnails"
+
+get_thumbnail() {
+    local img="$1"
+    local base="${img##*/}"
+    local hash
+    hash="$(echo -n "$img" | md5sum | cut -d' ' -f1)"
+    local thumb="$CACHE_THUMB_DIR/${hash}_${base}.jpg"
+    if [[ -f "$thumb" ]]; then
+        echo "$thumb"
+        return 0
+    fi
+    mkdir -p "$CACHE_THUMB_DIR"
+    if command -v magick >/dev/null 2>&1; then
+        magick "$img" -thumbnail 320x196^ -gravity center -extent 320x196 -quality 82 "$thumb" 2>/dev/null &
+    elif command -v convert >/dev/null 2>&1; then
+        convert "$img" -thumbnail 320x196^ -gravity center -extent 320x196 -quality 82 "$thumb" 2>/dev/null &
+    fi
+    echo "$thumb"
+}
+
 list_wallpapers_json() {
     local bg_dir="$CURRENT_DIR/backgrounds"
     local active_target
@@ -45,11 +66,13 @@ list_wallpapers_json() {
         [[ -f "$file" ]] || continue
         case "${file,,}" in
             *.png|*.jpg|*.jpeg|*.webp|*.avif|*.bmp)
-                local filename
-                filename="$(basename "$file")"
-                # Human readable title: remove extension, leading digits/dashes
+                local filename="${file##*/}"
+                local stem="${filename%.*}"
+                local raw_name="${stem#[0-9]*-}"
+                raw_name="${raw_name#[0-9]*_}"
+                raw_name="${raw_name//[-_]/ }"
                 local clean_name
-                clean_name="$(echo "${filename%.*}" | sed -E 's/^[0-9]+[-_]?//; s/[-_]+/ /g; s/\b([a-z])/\U\1/g')"
+                clean_name="$(echo "$raw_name" | sed -E 's/\b([a-z])/\U\1/g')"
 
                 local canon_file
                 canon_file="$(readlink -f "$file" 2>/dev/null || echo "$file")"
@@ -59,12 +82,16 @@ list_wallpapers_json() {
                     is_active=true
                 fi
 
+                local thumb
+                thumb="$(get_thumbnail "$file")"
+
                 items+=( "$(jq -n \
                     --arg path "$file" \
+                    --arg thumb "$thumb" \
                     --arg name "$clean_name" \
                     --arg filename "$filename" \
                     --argjson isActive "$is_active" \
-                    '{path: $path, name: $name, filename: $filename, isActive: $isActive}')" )
+                    '{path: $path, thumb: $thumb, name: $name, filename: $filename, isActive: $isActive}')" )
                 ;;
         esac
     done

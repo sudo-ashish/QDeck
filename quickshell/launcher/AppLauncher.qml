@@ -1961,11 +1961,14 @@ PanelWindow {
                         Image {
                             id: previewImg
                             anchors.fill: parent
-                            source: wallCardItem.modelData.path ? ("file://" + wallCardItem.modelData.path) : ""
+                            source: (wallCardItem.modelData.thumb && wallCardItem.modelData.thumb !== "")
+                                ? ("file://" + wallCardItem.modelData.thumb)
+                                : (wallCardItem.modelData.path ? ("file://" + wallCardItem.modelData.path) : "")
                             fillMode: Image.PreserveAspectCrop
+                            cache: true
                             asynchronous: true
                             smooth: true
-                            mipmap: true
+                            mipmap: false
                             sourceSize: Qt.size(320, 196)
 
                             layer.enabled: true

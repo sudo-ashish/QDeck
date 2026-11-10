@@ -21,13 +21,31 @@ QtObject {
         }
     }
 
+    property Process switchProc: Process {
+        id: switchProc
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                root.isSwitching = false
+                root.switchingTo = ""
+                root.refresh()
+            }
+        }
+        onExited: function(exitCode, exitStatus) {
+            root.isSwitching = false
+            root.switchingTo = ""
+            root.refresh()
+        }
+    }
+
     function switchTheme(themeId) {
         if (!themeId) return
         root.isSwitching = true
         root.switchingTo = themeId
 
         // Execute theme switch script (theme-switch will also reload quickshell)
-        Quickshell.execDetached([root.listScriptPath, "switch", themeId])
+        switchProc.command = [root.listScriptPath, "switch", themeId]
+        switchProc.running = true
 
         switchResetTimer.restart()
     }
@@ -37,7 +55,7 @@ QtObject {
     }
 
     property Timer switchResetTimer: Timer {
-        interval: 3500
+        interval: 1200
         repeat: false
         onTriggered: {
             root.isSwitching = false

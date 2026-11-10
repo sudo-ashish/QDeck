@@ -21,13 +21,31 @@ QtObject {
         }
     }
 
+    property Process switchProc: Process {
+        id: switchProc
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                root.isSwitching = false
+                root.switchingTo = ""
+                root.refresh()
+            }
+        }
+        onExited: function(exitCode, exitStatus) {
+            root.isSwitching = false
+            root.switchingTo = ""
+            root.refresh()
+        }
+    }
+
     function switchWallpaper(wallpaperPath) {
         if (!wallpaperPath) return
         root.isSwitching = true
         root.switchingTo = wallpaperPath
 
         // Execute wallpaper-switch script via helper
-        Quickshell.execDetached([root.listScriptPath, "switch", wallpaperPath])
+        switchProc.command = [root.listScriptPath, "switch", wallpaperPath]
+        switchProc.running = true
 
         switchResetTimer.restart()
     }
@@ -56,7 +74,7 @@ QtObject {
     }
 
     property Timer switchResetTimer: Timer {
-        interval: 1500
+        interval: 1000
         repeat: false
         onTriggered: {
             root.isSwitching = false

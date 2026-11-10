@@ -159,9 +159,9 @@ apply_icon_theme() {
         sed -i -E "s/^[[:space:]]*icon-theme=.*/icon-theme=$icon_theme/" "$nwg_gsettings" 2>/dev/null || true
     fi
 
-    # 3. Synchronize via nwg-look export if available
+    # 3. Synchronize via nwg-look export in background to avoid blocking switch
     if command -v nwg-look >/dev/null 2>&1; then
-        nwg-look -x >/dev/null 2>&1 || true
+        nwg-look -x >/dev/null 2>&1 &
     fi
 
     # 4. Explicitly update GTK 3.0 configuration
@@ -259,47 +259,37 @@ switch_theme() {
         theme-switch "$theme" 2>/dev/null || true
     elif [[ -x "$SWITCH_BIN" ]]; then
         "$SWITCH_BIN" "$theme" 2>/dev/null || true
-    fi
-
-    # 2b. Apply icon theme from icons.theme
-    apply_icon_theme "$target_dir"
-
-    # 3. Synchronize active wallpaper if theme contains one
-    local wp=""
-    if [[ -d "$target_dir/backgrounds" ]]; then
-        for img in "$target_dir/backgrounds"/*; do
-            [[ -f "$img" ]] || continue
-            case "${img,,}" in
-                *.png|*.jpg|*.jpeg|*.webp|*.avif|*.bmp)
-                    wp="$img"
-                    break
-                    ;;
-            esac
-        done
-    fi
-    if [[ -z "$wp" && -f "$target_dir/default.png" ]]; then
-        wp="$target_dir/default.png"
-    fi
-
-    if [[ -n "$wp" ]]; then
-        if command -v qdeck-wallpaper >/dev/null 2>&1; then
-            qdeck-wallpaper apply "$wp" >/dev/null 2>&1 &
-        elif command -v awww >/dev/null 2>&1 && (pgrep -x awww-daemon >/dev/null 2>&1 || true); then
-            awww load "$wp" 2>/dev/null || true
+    else
+        # Fallback when theme-switch is not installed
+        apply_icon_theme "$target_dir"
+        local wp=""
+        if [[ -d "$target_dir/backgrounds" ]]; then
+            for img in "$target_dir/backgrounds"/*; do
+                [[ -f "$img" ]] || continue
+                case "${img,,}" in
+                    *.png|*.jpg|*.jpeg|*.webp|*.avif|*.bmp)
+                        wp="$img"
+                        break
+                        ;;
+                esac
+            done
         fi
-    fi
-
-    # 4. Reload Hyprland if running so color.conf changes take effect
-    if command -v hyprctl >/dev/null 2>&1; then
-        hyprctl reload >/dev/null 2>&1 || true
-    fi
-
-    # 4b. Notify Quickshell to immediately re-read ~/.config/themes/current/colors.toml
-    if command -v qs >/dev/null 2>&1; then
-        qs ipc call theme reload >/dev/null 2>&1 || true
-    fi
-    if command -v quickshell >/dev/null 2>&1; then
-        quickshell ipc call theme reload >/dev/null 2>&1 || true
+        if [[ -z "$wp" && -f "$target_dir/default.png" ]]; then
+            wp="$target_dir/default.png"
+        fi
+        if [[ -n "$wp" ]]; then
+            if command -v qdeck-wallpaper >/dev/null 2>&1; then
+                qdeck-wallpaper apply "$wp" >/dev/null 2>&1 &
+            elif command -v awww >/dev/null 2>&1 && (pgrep -x awww-daemon >/dev/null 2>&1 || true); then
+                awww img "$wp" >/dev/null 2>&1 &
+            fi
+        fi
+        if command -v hyprctl >/dev/null 2>&1; then
+            hyprctl reload >/dev/null 2>&1 || true
+        fi
+        if command -v qs >/dev/null 2>&1; then
+            qs ipc call theme reload >/dev/null 2>&1 || true
+        fi
     fi
 
     echo "Switched to theme: $theme"
