@@ -56,8 +56,7 @@ if command -v awww >/dev/null 2>&1; then
         awww-daemon &
         sleep 0.2
     fi
-    if awww img --transition-type wipe --transition-angle 30 "$canon_path" >/dev/null 2>&1 || \
-       awww img "$canon_path" >/dev/null 2>&1; then
+    if awww img "$canon_path" >/dev/null 2>&1; then
         applied=1
     fi
 fi
@@ -68,8 +67,7 @@ if (( applied == 0 )) && command -v swww >/dev/null 2>&1; then
         swww init >/dev/null 2>&1 || true
         sleep 0.2
     fi
-    if swww img "$canon_path" --transition-type wipe --transition-angle 30 >/dev/null 2>&1 || \
-       swww img "$canon_path" >/dev/null 2>&1; then
+    if swww img "$canon_path" >/dev/null 2>&1; then
         applied=1
     fi
 fi

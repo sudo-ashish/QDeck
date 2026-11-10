@@ -118,8 +118,7 @@ switch_wallpaper() {
             awww-daemon &
             sleep 0.2
         fi
-        if awww img "$img" >/dev/null 2>&1 || \
-           awww img "$img" >/dev/null 2>&1; then
+        if awww img "$img" >/dev/null 2>&1; then
             echo "Wallpaper changed to: $(basename "$img")"
             return 0
         fi
@@ -131,8 +130,7 @@ switch_wallpaper() {
             swww init >/dev/null 2>&1 || true
             sleep 0.2
         fi
-        if swww img "$img" --transition-type wipe --transition-angle 30 >/dev/null 2>&1 || \
-           swww img "$img" >/dev/null 2>&1; then
+        if swww img "$img" >/dev/null 2>&1; then
             echo "Wallpaper changed to: $(basename "$img")"
             return 0
         fi
