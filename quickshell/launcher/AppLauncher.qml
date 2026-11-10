@@ -113,14 +113,14 @@ PanelWindow {
             var clipCount = clipboardView ? clipboardView.filteredCount : (root.clipboardService ? root.clipboardService.items.count : 0)
             var isClipSearching = clipboardView && clipboardView.isSearching
             if (clipCount <= 0) {
-                return isClipSearching ? 160 : 230
+                return isClipSearching ? 210 : 230
             }
             // Dynamic height based on number of items:
-            // Fixed vertical chrome: 142px (header 38px + margins ~20px + search box 56px + outer margins 28px)
-            // Each item: 58px height + 4px spacing = 62px
-            var clipContentH = (clipCount * 58) + (Math.max(0, clipCount - 1) * 4)
-            var totalClipH = 142 + clipContentH
-            return Math.min(Appearance.launcherHeight, Math.max(200, totalClipH))
+            // Fixed vertical chrome: 136px (top margin 14 + header 32 + topMargin 10 + bottomMargin 10 + search box 56 + outer bottom 14)
+            // Each item: 56px height + 4px spacing
+            var clipContentH = (clipCount * 56) + (Math.max(0, clipCount - 1) * 4)
+            var totalClipH = 136 + clipContentH
+            return Math.min(Appearance.launcherHeight, totalClipH)
         }
         if (root.currentView === "shelf") return Appearance.launcherHeight
         if (root.currentView === "power") return 130
@@ -2055,10 +2055,7 @@ PanelWindow {
         // ─────────────────────────────────────────────────────────────────────
         ClipboardView {
             id: clipboardView
-            anchors {
-                fill: parent
-                margins: 12
-            }
+            anchors.fill: parent
             visible: root.currentView === "clipboard"
             clipboardService: root.clipboardService
             onRequestClose: root.close()

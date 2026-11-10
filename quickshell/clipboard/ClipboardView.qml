@@ -118,26 +118,26 @@ Item {
             top: parent.top
             left: parent.left
             right: parent.right
-            topMargin: 2
-            leftMargin: 4
-            rightMargin: 4
+            topMargin: 14
+            leftMargin: 14
+            rightMargin: 14
         }
-        height: 38
+        height: 32
         spacing: 10
 
-        // Left Icon Squircle (38x38)
+        // Left Icon Squircle (32x32)
         Rectangle {
-            Layout.preferredWidth: 36
-            Layout.preferredHeight: 36
+            Layout.preferredWidth: 32
+            Layout.preferredHeight: 32
             Layout.alignment: Qt.AlignVCenter
-            radius: 11
+            radius: 9
             color: Theme.withAlpha(Theme.accent, 0.18)
 
             Text {
                 anchors.centerIn: parent
                 text: Icons.clipboard || "󰅍"
                 font.family: Icons.effectiveFont(text)
-                font.pixelSize: 18
+                font.pixelSize: 16
                 color: Theme.accent
             }
         }
@@ -147,7 +147,7 @@ Item {
             Layout.alignment: Qt.AlignVCenter
             text: "Clipboard"
             font.family: root.fontFamily
-            font.pixelSize: 15
+            font.pixelSize: 14
             font.weight: Fonts.weightBold
             color: Theme.foreground
         }
@@ -215,10 +215,10 @@ Item {
             bottom: searchContainer.top
             left: parent.left
             right: parent.right
-            topMargin: 8
-            bottomMargin: 8
-            leftMargin: 2
-            rightMargin: 2
+            topMargin: 10
+            bottomMargin: 10
+            leftMargin: 14
+            rightMargin: 14
         }
 
         // Empty Placeholder
@@ -290,7 +290,7 @@ Item {
                 readonly property bool isCopiedFlash: root.copiedFlashIndex === itemDelegate.index
 
                 width: clipboardListView.width
-                height: 58
+                height: 56
                 radius: Appearance.launcherItemRadius
 
                 // Modern tonal background without harsh wireframe lines
@@ -330,8 +330,8 @@ Item {
 
                     // Left Category Glyph / Color Swatch Container
                     Item {
-                        Layout.preferredWidth: 34
-                        Layout.preferredHeight: 34
+                        Layout.preferredWidth: 32
+                        Layout.preferredHeight: 32
                         Layout.alignment: Qt.AlignVCenter
 
                         // Color swatch preview if item is hex color
@@ -350,7 +350,7 @@ Item {
                         Rectangle {
                             visible: itemDelegate.category !== "color"
                             anchors.fill: parent
-                            radius: 9
+                            radius: 8
                             color: itemDelegate.isSelected
                                 ? Theme.withAlpha(Theme.accent, 0.28)
                                 : Theme.withAlpha(Theme.lighter_background, 0.28)
@@ -455,7 +455,7 @@ Item {
             width: 4
             radius: 2
             color: Theme.withAlpha(Theme.foreground, 0.22)
-            visible: clipboardListView.visibleArea.heightRatio < 1.0
+            visible: clipboardListView.visibleArea.heightRatio < 0.999 && clipboardListView.count > 0
             y: clipboardListView.visibleArea.yPosition * clipboardListView.height
             height: Math.max(20, clipboardListView.visibleArea.heightRatio * clipboardListView.height)
         }
