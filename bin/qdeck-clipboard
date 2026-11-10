@@ -11,14 +11,13 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 STATE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/quickshell/clipboard-history.json"
 FALLBACK_STATE_FILE="$HOME/.local/state/quickshell/clipboard-history.json"
 
-# Choose CLI binary
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 invoke_clipboard() {

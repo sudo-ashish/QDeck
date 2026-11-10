@@ -43,7 +43,7 @@ QtObject {
         root.isSwitching = true
         root.switchingTo = themeId
 
-        // Execute theme switch script (theme-switch will also reload quickshell)
+        // Execute theme switch script (qdeck-theme-switch will also reload quickshell)
         switchProc.command = [root.listScriptPath, "switch", themeId]
         switchProc.running = true
 

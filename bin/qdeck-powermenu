@@ -6,14 +6,13 @@ CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Choose CLI binary
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 case "$CMD" in

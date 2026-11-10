@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
+# ==============================================================================
 # QDeck: Wallpaper discovery, listing, and switching helper (qdeck-wallpaper / qdeck wallpaper)
+# ==============================================================================
 set -euo pipefail
 
 CURRENT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/themes/current"
 if [[ ! -d "$CURRENT_DIR" && -d "$HOME/themes/current" ]]; then
     CURRENT_DIR="$HOME/themes/current"
 fi
-
-SWITCH_BIN="$HOME/.local/bin/wallpaper-switch"
 
 get_active_wallpaper() {
     # 1. First check awww if running
@@ -125,49 +125,43 @@ switch_wallpaper() {
         exit 1
     fi
 
+    local canon_path
+    canon_path="$(readlink -f "$img" 2>/dev/null || echo "$img")"
+
     # 1. Update active theme default.png symlink
     if [[ -d "$CURRENT_DIR" ]]; then
-        ln -sfn "$img" "$CURRENT_DIR/default.png"
+        ln -sfn "$canon_path" "$CURRENT_DIR/default.png"
     fi
 
-    # 2. Prefer wallpaper-switch if available
-    if command -v wallpaper-switch >/dev/null 2>&1; then
-        wallpaper-switch "$img"
-        return 0
-    elif [[ -x "$SWITCH_BIN" ]]; then
-        "$SWITCH_BIN" "$img"
-        return 0
-    fi
-
-    # 3. Direct awww support
+    # 2. Primary backend: awww
     if command -v awww >/dev/null 2>&1; then
         if ! pgrep -x awww-daemon >/dev/null 2>&1; then
             awww-daemon &
             sleep 0.2
         fi
-        if awww img "$img" >/dev/null 2>&1; then
-            echo "Wallpaper changed to: $(basename "$img")"
+        if awww img "$canon_path" >/dev/null 2>&1; then
+            echo "Wallpaper changed to: $(basename "$canon_path")"
             return 0
         fi
     fi
 
-    # 4. Direct swww support
+    # 3. Secondary backend: swww
     if command -v swww >/dev/null 2>&1; then
         if ! pgrep -x swww-daemon >/dev/null 2>&1; then
             swww init >/dev/null 2>&1 || true
             sleep 0.2
         fi
-        if swww img "$img" >/dev/null 2>&1; then
-            echo "Wallpaper changed to: $(basename "$img")"
+        if swww img "$canon_path" >/dev/null 2>&1; then
+            echo "Wallpaper changed to: $(basename "$canon_path")"
             return 0
         fi
     fi
 
-    # 5. Direct hyprpaper support
+    # 4. Tertiary backend: hyprpaper
     if command -v hyprpaper >/dev/null 2>&1 && command -v hyprctl >/dev/null 2>&1; then
-        hyprctl hyprpaper preload "$img" >/dev/null 2>&1 || true
-        hyprctl hyprpaper wallpaper ",$img" >/dev/null 2>&1 || true
-        echo "Wallpaper changed to: $(basename "$img")"
+        hyprctl hyprpaper preload "$canon_path" >/dev/null 2>&1 || true
+        hyprctl hyprpaper wallpaper ",$canon_path" >/dev/null 2>&1 || true
+        echo "Wallpaper changed to: $(basename "$canon_path")"
         return 0
     fi
 

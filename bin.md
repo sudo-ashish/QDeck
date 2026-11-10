@@ -1,10 +1,10 @@
-# QDeck `bin/` Directory Structure and Source Code
+# QDeck `bin/` Executables and Setup Scripts
 
-This document contains the complete file structure, metadata, and full contents of all files in the `bin/` folder of QDeck.
+This document catalogs all executable CLI tools, helper scripts, and modular installation routines located in [`bin/`](file:///home/pear/QDeck/bin).
 
 ## Table of Contents
 
-### Folder: `bin/` (Root)
+### Core & CLI Utilities (`bin/`)
 
 - [`bin/default-browser`](#bindefault-browser)
 - [`bin/install.sh`](#bininstallsh)
@@ -34,40 +34,33 @@ This document contains the complete file structure, metadata, and full contents 
 - [`bin/qdeck-qshelf`](#binqdeck-qshelf)
 - [`bin/qdeck-refresh-rate`](#binqdeck-refresh-rate)
 - [`bin/qdeck-screenshot`](#binqdeck-screenshot)
+- [`bin/qdeck-shelf`](#binqdeck-shelf)
 - [`bin/qdeck-theme-switch`](#binqdeck-theme-switch)
 - [`bin/qdeck-themeswitcher`](#binqdeck-themeswitcher)
 - [`bin/qdeck-trackpad`](#binqdeck-trackpad)
 - [`bin/qdeck-volume`](#binqdeck-volume)
 - [`bin/qdeck-wallpaper`](#binqdeck-wallpaper)
 - [`bin/qdeck-wallpaperswitcher`](#binqdeck-wallpaperswitcher)
-- [`bin/theme-switch`](#bintheme-switch)
-- [`bin/theme-switch-setup`](#bintheme-switch-setup)
 - [`bin/tui-launch`](#bintui-launch)
-- [`bin/wallpaper-switch`](#binwallpaper-switch)
 - [`bin/webapp-create`](#binwebapp-create)
-- [`bin/wpctl`](#binwpctl)
 
-### Folder: `bin/lib/` (Installation & Setup Modules)
+### Setup & Installation Modules (`bin/lib/`)
 
-- [`bin/lib/00-backup.sh`](#binlib00-backupsh)
-- [`bin/lib/01-deps.sh`](#binlib01-depssh)
-- [`bin/lib/02-fonts.sh`](#binlib02-fontssh)
-- [`bin/lib/03-quickshell.sh`](#binlib03-quickshellsh)
-- [`bin/lib/04-dotfiles.sh`](#binlib04-dotfilessh)
-- [`bin/lib/05-nvim.sh`](#binlib05-nvimsh)
-- [`bin/lib/06-assets.sh`](#binlib06-assetssh)
-- [`bin/lib/07-scripts.sh`](#binlib07-scriptssh)
-- [`bin/lib/08-zsh.sh`](#binlib08-zshsh)
+- [`bin/lib/00-backup.sh`](#binlib00backupsh)
+- [`bin/lib/01-deps.sh`](#binlib01depssh)
+- [`bin/lib/02-fonts.sh`](#binlib02fontssh)
+- [`bin/lib/03-quickshell.sh`](#binlib03quickshellsh)
+- [`bin/lib/04-dotfiles.sh`](#binlib04dotfilessh)
+- [`bin/lib/05-nvim.sh`](#binlib05nvimsh)
+- [`bin/lib/06-assets.sh`](#binlib06assetssh)
+- [`bin/lib/07-scripts.sh`](#binlib07scriptssh)
+- [`bin/lib/08-zsh.sh`](#binlib08zshsh)
+- [`bin/lib/qdeck-ipc.sh`](#binlibqdeckipcsh)
 
 ---
 
-## Folder: `bin/`
-
 ### bin/default-browser
-
 - **Path:** `bin/default-browser`
-- **Type:** Executable script
-- **Size:** 268 bytes
 
 ```bash
 #!/bin/sh
@@ -82,11 +75,10 @@ cmd="$(grep -m1 '^Exec=' "$file" | cut -d= -f2- | sed 's/%[uUfFdDnNickvm]//g')"
 exec sh -c "$cmd"
 ```
 
-### bin/install.sh
+---
 
+### bin/install.sh
 - **Path:** `bin/install.sh`
-- **Type:** Shell script
-- **Size:** 247 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -99,11 +91,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 exec "$REPO_ROOT/install.sh" "$@"
 ```
 
-### bin/qdeck
+---
 
+### bin/qdeck
 - **Path:** `bin/qdeck`
-- **Type:** Executable script
-- **Size:** 9252 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -404,11 +395,10 @@ fi
 qs ipc call osd ping >/dev/null 2>&1 || true
 ```
 
-### bin/qdeck-backlight-monitor
+---
 
+### bin/qdeck-backlight-monitor
 - **Path:** `bin/qdeck-backlight-monitor`
-- **Type:** Executable script
-- **Size:** 908 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -446,11 +436,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 ```
 
-### bin/qdeck-bar
+---
 
+### bin/qdeck-bar
 - **Path:** `bin/qdeck-bar`
-- **Type:** Executable script
-- **Size:** 5168 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -495,12 +484,12 @@ is_bar_visible() {
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 call_bar_ipc() {
@@ -654,11 +643,10 @@ case "$cmd" in
 esac
 ```
 
-### bin/qdeck-battery-info
+---
 
+### bin/qdeck-battery-info
 - **Path:** `bin/qdeck-battery-info`
-- **Type:** Executable script
-- **Size:** 2776 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -767,11 +755,10 @@ cat << JSON
 JSON
 ```
 
-### bin/qdeck-bluetooth
+---
 
+### bin/qdeck-bluetooth
 - **Path:** `bin/qdeck-bluetooth`
-- **Type:** Executable script
-- **Size:** 3523 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -910,11 +897,10 @@ case "$cmd" in
 esac
 ```
 
-### bin/qdeck-blur
+---
 
+### bin/qdeck-blur
 - **Path:** `bin/qdeck-blur`
-- **Type:** Executable script
-- **Size:** 924 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -923,15 +909,14 @@ set -euo pipefail
 
 CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 case "$CMD" in
@@ -958,11 +943,10 @@ case "$CMD" in
 esac
 ```
 
-### bin/qdeck-brightness
+---
 
+### bin/qdeck-brightness
 - **Path:** `bin/qdeck-brightness`
-- **Type:** Executable script
-- **Size:** 1889 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1047,11 +1031,10 @@ fi
 echo "$res"
 ```
 
-### bin/qdeck-clipboard
+---
 
+### bin/qdeck-clipboard
 - **Path:** `bin/qdeck-clipboard`
-- **Type:** Executable script
-- **Size:** 3991 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1067,14 +1050,13 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 STATE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/quickshell/clipboard-history.json"
 FALLBACK_STATE_FILE="$HOME/.local/state/quickshell/clipboard-history.json"
 
-# Choose CLI binary
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 invoke_clipboard() {
@@ -1199,11 +1181,10 @@ EOF
 esac
 ```
 
-### bin/qdeck-clipboard-monitor
+---
 
+### bin/qdeck-clipboard-monitor
 - **Path:** `bin/qdeck-clipboard-monitor`
-- **Type:** Executable script
-- **Size:** 699 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1229,13 +1210,12 @@ export PYTHONUNBUFFERED=1
 exec wl-paste -t text --watch python3 "$PYTHON_RECORD"
 ```
 
+---
+
 ### bin/qdeck-clipboard-record.py
-
 - **Path:** `bin/qdeck-clipboard-record.py`
-- **Type:** Python script
-- **Size:** 2271 bytes
 
-```python
+```bash
 #!/usr/bin/env python3
 """
 QDeck Clipboard Recorder
@@ -1321,11 +1301,10 @@ if __name__ == "__main__":
     main()
 ```
 
-### bin/qdeck-display-text-size
+---
 
+### bin/qdeck-display-text-size
 - **Path:** `bin/qdeck-display-text-size`
-- **Type:** Executable script
-- **Size:** 2551 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1413,11 +1392,10 @@ set_terminal_size "$term_pt"
 echo "text size: ${size} px"
 ```
 
-### bin/qdeck-dns
+---
 
+### bin/qdeck-dns
 - **Path:** `bin/qdeck-dns`
-- **Type:** Executable script
-- **Size:** 9018 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1649,11 +1627,10 @@ else
 fi
 ```
 
-### bin/qdeck-ipc
+---
 
+### bin/qdeck-ipc
 - **Path:** `bin/qdeck-ipc`
-- **Type:** Executable script
-- **Size:** 1911 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1662,59 +1639,13 @@ fi
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)"
 
-# Resolve Quickshell executable (qs preferred over quickshell)
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
-elif command -v quickshell >/dev/null 2>&1; then
-  QS_BIN="quickshell"
-else
-  QS_BIN="qs"
+# Source shared IPC caller
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 fi
-
-call_ipc() {
-  local target="${1:-}"
-  local method="${2:-}"
-  if [[ -z "$target" || -z "$method" ]]; then
-    echo "error: call_ipc requires <target> and <method>" >&2
-    return 1
-  fi
-  shift 2
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 # If executed directly as a standalone binary
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -1726,11 +1657,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 ```
 
-### bin/qdeck-launch-terminal
+---
 
+### bin/qdeck-launch-terminal
 - **Path:** `bin/qdeck-launch-terminal`
-- **Type:** Executable script
-- **Size:** 815 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1771,11 +1701,10 @@ case "$TERM_BIN" in
 esac
 ```
 
-### bin/qdeck-launcher
+---
 
+### bin/qdeck-launcher
 - **Path:** `bin/qdeck-launcher`
-- **Type:** Executable script
-- **Size:** 842 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1787,12 +1716,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 case "$CMD" in
@@ -1819,113 +1748,44 @@ case "$CMD" in
 esac
 ```
 
+---
+
 ### bin/qdeck-lockstate-monitor
-
 - **Path:** `bin/qdeck-lockstate-monitor`
-- **Type:** ELF 64-bit LSB executable (Compiled binary)
-- **Source File:** `src/qdeck-lockstate-monitor.c`
 
-Compiled binary from `src/qdeck-lockstate-monitor.c`. Below is the complete source code:
-
-```c
-/*
- * QDeck: Lightweight Wayland/evdev lockstate monitor for keyboard LEDs
- */
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <poll.h>
-#include <glob.h>
-#include <string.h>
-
-static int open_led(const char *pattern) {
-    glob_t g;
-    int fd = -1;
-    if (glob(pattern, 0, NULL, &g) == 0 && g.gl_pathc > 0) {
-        fd = open(g.gl_pathv[0], O_RDONLY);
-    }
-    globfree(&g);
-    return fd;
-}
-
-static int read_led_val(int fd) {
-    char buf[16];
-    if (fd < 0) return -1;
-    if (lseek(fd, 0, SEEK_SET) == (off_t)-1) return -1;
-    int n = read(fd, buf, sizeof(buf) - 1);
-    if (n > 0) {
-        if (buf[0] == '1') return 1;
-        if (buf[0] == '0') return 0;
-    }
-    return -1;
-}
-
-int main(void) {
-    int num_fd = open_led("/sys/class/leds/*numlock*/brightness");
-    int caps_fd = open_led("/sys/class/leds/*capslock*/brightness");
-
-    int last_num = read_led_val(num_fd);
-    int last_caps = read_led_val(caps_fd);
-
-    struct pollfd pfds[2];
-
-    while (1) {
-        int nfds = 0;
-        if (num_fd >= 0) {
-            pfds[nfds].fd = num_fd;
-            pfds[nfds].events = POLLPRI | POLLERR;
-            pfds[nfds].revents = 0;
-            nfds++;
-        } else {
-            num_fd = open_led("/sys/class/leds/*numlock*/brightness");
-            last_num = read_led_val(num_fd);
-        }
-
-        if (caps_fd >= 0) {
-            pfds[nfds].fd = caps_fd;
-            pfds[nfds].events = POLLPRI | POLLERR;
-            pfds[nfds].revents = 0;
-            nfds++;
-        } else {
-            caps_fd = open_led("/sys/class/leds/*capslock*/brightness");
-            last_caps = read_led_val(caps_fd);
-        }
-
-        // Poll with 60ms timeout: wakes up immediately on kernel sysfs_notify,
-        // and falls through every 60ms with zero CPU overhead.
-        poll(pfds, nfds, 60);
-
-        if (num_fd >= 0) {
-            int cur_num = read_led_val(num_fd);
-            if (cur_num >= 0 && cur_num != last_num) {
-                last_num = cur_num;
-                printf("NUMLOCK:%s\n", cur_num ? "ON" : "OFF");
-                fflush(stdout);
-            }
-        }
-
-        if (caps_fd >= 0) {
-            int cur_caps = read_led_val(caps_fd);
-            if (cur_caps >= 0 && cur_caps != last_caps) {
-                last_caps = cur_caps;
-                printf("CAPSLOCK:%s\n", cur_caps ? "ON" : "OFF");
-                fflush(stdout);
-            }
-        }
-    }
-
-    if (num_fd >= 0) close(num_fd);
-    if (caps_fd >= 0) close(caps_fd);
-    return 0;
-}
+```bash
+ELF          >    P      @       �8          @ 8  @         @       @       @       H      H                   �      �      �                                                         x      x                                        U      U                                           h      h                   �-      �=      �=      �      �                   �-      �=      �=      �      �                   �      �      �      $       $                    "      "      "      @       @                    H"      H"      H"                             S�td   "      "      "      @       @              P�td   x       x       x       4       4              T�td   �!      �!      �!      �       �              Q�td                                                  R�td   �-      �=      �=      0      0                      GNU zN�Y�Gu���B��Nz�Z
+/lib64/ld-linux-x86-64.so.2                          )�                                                  8                      �                       
+                      ^                      e                      '                      �                                             "                      3                      J                      �                       O   "                   ,     X@              globfree __stack_chk_fail fflush poll read stdout open __libc_start_main glob __cxa_finalize printf lseek libc.so.6 GLIBC_2.27 GLIBC_2.4 GLIBC_2.34 GLIBC_2.2.5 _ITM_deregisterTMCloneTable __gmon_start__ _ITM_registerTMCloneTable                         k          ���   u      ii
+   �      ���   �      ui	   �       �=             @      �=             �      P@             P@      �?                    �?                    �?                    �?         
+           �?                    X@                     @                    @                    @                    @                     @                    (@         	           0@         
+           8@                    @@                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ��H��H��/  H��t��H���     �5�/  �%�/  @ �%�/  h    ������%�/  h   ������%�/  h   ������%�/  h   �����%�/  h   �����%�/  h   �����%�/  h   �����%�/  h   �p����%�/  h   �`���AWAVAUATUSH��HdH�<%(   H�|$8H�=E  �h  H�=a  ���Z  �����  �߉D$�  A�ą�x9A�
+   �l$ D�t$$����  H��  L�|$ H�D$H��  H�D$�   H��  A�
+   L�|$ H�D$H��  H�D$ H�=�  ��  �ǉ��;  �D$���"  �<   �   L���\$ D�t$$�������yl���	  ���t4D9�t/��H�5=  A��H�|$H�+  HE�1��l���H�=m.  �������x����l$ D�t$$�<   �   L���\$(D�t$,�t������  A�Ń��t�;D$�{���E��H��
+  H�|$H�5�
+  HE�1������H�=�-  ��������   H�=�
+  �l$ D�t$$��  �ǉ��8  �<   �   L��A����������  ���t�D9�t�A���E1��,�     �������H�=Y
+  E1��y  �ǉ���  �D$H�=e
+  �`  �ǉ���  D��<   L��A��������x�D�l$�H��  A�   L�|$ H�D$H��  H�D$�D�l$�j���f.�     ��1�I��^H��H���PTE1�1�H�=Q����K,  �f.�     H�=�,  H��,  H9�tH�.,  H��t	���    ��    H�=�,  H�5�,  H)�H��H��?H��H�H��tH��+  H��t��fD  ��    ���=e,   u3UH�=�+   H��t
+H�=>,  ��+  �c����<,  ]�f.�     �@ ff.�     ���g����    S1�1�H��PdH�%(   H�L$HH���A�����u=H�<$ t6H�D$1�H�81�������H������H�D$HdH+%(   uH��P��[� �����������@ H��8dH�%(   H�D$(1���xP1�1��|$�{���H���t=�|$H�t$�   �r����������~&�T$�   ��1t1���0�����fD  �����H�T$(dH+%(   uH��8������ ��H��H���                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             ON OFF NUMLOCK:%s
+ CAPSLOCK:%s
+     /sys/class/leds/*numlock*/brightness    /sys/class/leds/*capslock*/brightness   ;4      ����h   H����   ����P   �����   H����              zR x�        ����&    D    $   4   8����    FJw� ?;*3$"        \   @���l    A�H`P
+CD    �   �����    D@}
+A 0   �   p����   B�B�B �B(�A0�A8�D�     �� �               0   ��������   
+   ���������      ��������&                                     0      GNU � �           �           �                   GNU                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @      �             k                     
+       H             �=                           �=                    ���o    �             p             �      
+       �                                           �?             �                            �             �             �       	              ���o           ���o    x      ���o           ���o    V      ���o                                                                                                                                   �=                      6      F      V      f      v      �      �      �      �              P@      GCC: (GNU) 16.2.1 20260810                                  ��                	     H"                  ��                -     P      l       6     �      �       C    ��                O     �              Q     �              d     �              z     `@             �     �=              �     @              �     �=              �    ��                �     |!                   ��                �     �=              �      x                   �?              "                     7                     T                      p    X@             �     H@              �    X@              �  
+ H              �                     �                     �                     �                     �    H@              �                      �   P@              
+                                        ,    h@              �    P      &       1    X@              =    �      �      B                     S                     d                     t   X@              �                      �  "                   �  
+                 Scrt1.o __abi_tag qdeck-lockstate-monitor.c open_led read_led_val crtbeginS.o deregister_tm_clones __do_global_dtors_aux completed.0 __do_global_dtors_aux_fini_array_entry frame_dummy __frame_dummy_init_array_entry crtendS.o __FRAME_END__ _DYNAMIC __GNU_EH_FRAME_HDR _GLOBAL_OFFSET_TABLE_ globfree@GLIBC_2.2.5 __libc_start_main@GLIBC_2.34 _ITM_deregisterTMCloneTable stdout@GLIBC_2.2.5 _edata _fini __stack_chk_fail@GLIBC_2.4 printf@GLIBC_2.2.5 lseek@GLIBC_2.2.5 read@GLIBC_2.2.5 __data_start __gmon_start__ __dso_handle _IO_stdin_used fflush@GLIBC_2.2.5 _end __bss_start main poll@GLIBC_2.2.5 open@GLIBC_2.2.5 glob@GLIBC_2.27 __TMC_END__ _ITM_registerTMCloneTable __cxa_finalize@GLIBC_2.2.5 _init  .symtab .strtab .shstrtab .note.gnu.build-id .interp .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rela.dyn .rela.plt .init .text .fini .rodata .eh_frame_hdr .eh_frame .sframe .note.gnu.property .note.ABI-tag .init_array .fini_array .dynamic .got .got.plt .data .bss .comment                                                                                     �      �      $                              .             �      �                                    6   ���o       �      �      $                             @             �      �      �                          H             p      p      �                              P   ���o       V      V                                   ]   ���o       x      x      P                            l             �      �      �                            v      B       �      �      �                           �                                                         {                           �                             �             �      �      �                             �             H      H      
+                              �                             v                              �             x       x       4                              �             �       �       �                              �   ���o       �!      �!      l                              �             "      "      @                              �             H"      H"                                     �             �=      �-                                   �             �=      �-                                   �             �=      �-      �                           �             �?      �/      (                                         �?      �/      `                             
+            H@      H0                                                X@      X0                                         0               X0                                                         x0      h                          	                      �4      �                                                   �7                                   
 ```
 
-### bin/qdeck-monitor-scaling
+---
 
+### bin/qdeck-monitor-scaling
 - **Path:** `bin/qdeck-monitor-scaling`
-- **Type:** Executable script
-- **Size:** 2313 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1994,11 +1854,10 @@ fi
 echo "$scale"
 ```
 
-### bin/qdeck-monitor-state
+---
 
+### bin/qdeck-monitor-state
 - **Path:** `bin/qdeck-monitor-state`
-- **Type:** Executable script
-- **Size:** 1758 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2052,11 +1911,10 @@ echo "$scale"
 echo "$monitors_json" | jq -c '[.[] | {name, enabled:(.disabled != true), focused:(.focused == true), width, height}]' 2>/dev/null || echo "[]"
 ```
 
-### bin/qdeck-network-qr
+---
 
+### bin/qdeck-network-qr
 - **Path:** `bin/qdeck-network-qr`
-- **Type:** Executable script
-- **Size:** 2418 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2150,11 +2008,10 @@ while IFS= read -r line; do
 done <<<"$ascii"
 ```
 
-### bin/qdeck-network-status
+---
 
+### bin/qdeck-network-status
 - **Path:** `bin/qdeck-network-status`
-- **Type:** Executable script
-- **Size:** 3419 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2244,11 +2101,10 @@ printf "internet_ping_ms\t%s\n" "${internet_ping_ms:-0}"
 printf "wifi_radio\t%s\n" "${wifi_radio:-enabled}"
 ```
 
-### bin/qdeck-notifications
+---
 
+### bin/qdeck-notifications
 - **Path:** `bin/qdeck-notifications`
-- **Type:** Executable script
-- **Size:** 2701 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2261,14 +2117,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 QS_DIR="${QUICKSHELL_DIR:-$HOME/quickshell}"
 
-# Choose CLI binary
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 case "$CMD" in
@@ -2361,11 +2216,10 @@ EOF
 esac
 ```
 
-### bin/qdeck-osd
+---
 
+### bin/qdeck-osd
 - **Path:** `bin/qdeck-osd`
-- **Type:** Executable script
-- **Size:** 1973 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2379,13 +2233,15 @@ progress_text=""
 max="100"
 duration=""
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 json_escape() {
@@ -2466,11 +2322,10 @@ call_ipc osd display "$payload" 2>/dev/null || \
 call_ipc osd trigger "$icon" "$message" 2>/dev/null || true
 ```
 
-### bin/qdeck-powermenu
+---
 
+### bin/qdeck-powermenu
 - **Path:** `bin/qdeck-powermenu`
-- **Type:** Executable script
-- **Size:** 892 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2481,14 +2336,13 @@ CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Choose CLI binary
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 case "$CMD" in
@@ -2519,11 +2373,10 @@ case "$CMD" in
 esac
 ```
 
-### bin/qdeck-qshelf
+---
 
+### bin/qdeck-qshelf
 - **Path:** `bin/qdeck-qshelf`
-- **Type:** Executable script
-- **Size:** 2090 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2534,14 +2387,13 @@ CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Choose CLI binary
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 # Wrapper that tries 'qshelf' first and falls back to 'shelf'
@@ -2620,11 +2472,10 @@ if uri not in data:
 esac
 ```
 
-### bin/qdeck-refresh-rate
+---
 
+### bin/qdeck-refresh-rate
 - **Path:** `bin/qdeck-refresh-rate`
-- **Type:** Executable script
-- **Size:** 2064 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2702,11 +2553,10 @@ qs ipc call osd refreshRate "$msg" >/dev/null 2>&1 || true
 echo "$msg"
 ```
 
-### bin/qdeck-screenshot
+---
 
+### bin/qdeck-screenshot
 - **Path:** `bin/qdeck-screenshot`
-- **Type:** Executable script
-- **Size:** 16805 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -3218,40 +3068,125 @@ else
 fi
 ```
 
-### bin/qdeck-theme-switch
+---
 
-- **Path:** `bin/qdeck-theme-switch`
-- **Type:** Executable script
-- **Size:** 6610 bytes
+### bin/qdeck-shelf
+- **Path:** `bin/qdeck-shelf`
+- **Type:** Symbolic Link -> `qdeck-qshelf`
 
 ```bash
 #!/usr/bin/env bash
-# QDeck: Theme discovery, listing, and switching helper (qdeck-theme-switch / qdeck theme)
+# QDeck: Drag-and-Drop Staging QShelf controller (qdeck-qshelf / qdeck qshelf / qdeck shelf)
+set -euo pipefail
+
+CMD="${1:-toggle}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
+fi
+
+# Wrapper that tries 'qshelf' first and falls back to 'shelf'
+invoke_qshelf() {
+  local method="$1"; shift
+  call_ipc qshelf "$method" "$@" 2>/dev/null || call_ipc shelf "$method" "$@"
+}
+
+case "$CMD" in
+  toggle)
+    invoke_qshelf toggle
+    ;;
+  open|show)
+    invoke_qshelf open
+    ;;
+  close|hide)
+    invoke_qshelf close
+    ;;
+  clear)
+    invoke_qshelf clear
+    ;;
+  list)
+    invoke_qshelf list
+    ;;
+  count)
+    invoke_qshelf count
+    ;;
+  add)
+    shift
+    for file in "$@"; do
+      if ! invoke_qshelf add "$file" 2>/dev/null; then
+        # QuickShell not reachable; write directly to state file so it loads on start
+        python3 -c "
+import json, os, sys
+p = os.path.expanduser('~/.local/state/quickshell/qshelf-items.json')
+os.makedirs(os.path.dirname(p), exist_ok=True)
+raw = sys.argv[1]
+abs_p = os.path.abspath(raw)
+uri = 'file://' + abs_p
+try:
+    data = json.load(open(p)) if os.path.exists(p) else []
+except Exception:
+    data = []
+if uri not in data:
+    data.insert(0, uri)
+    with open(p, 'w') as f:
+        json.dump(data, f, indent=2)
+" "$file" 2>/dev/null || true
+        echo "added (persisted)"
+      fi
+    done
+    ;;
+  remove|delete)
+    shift
+    invoke_qshelf remove "$1"
+    ;;
+  select-all)
+    invoke_qshelf selectAll
+    ;;
+  toggle-item|toggle-select)
+    shift
+    invoke_qshelf toggleItem "$1"
+    ;;
+  deselect|clear-selection)
+    invoke_qshelf clearSelection
+    ;;
+  remove-selected)
+    invoke_qshelf removeSelected
+    ;;
+  selected-count)
+    invoke_qshelf selectedCount
+    ;;
+  *)
+    invoke_qshelf "$CMD" "${@:2}"
+    ;;
+esac
+```
+
+---
+
+### bin/qdeck-theme-switch
+- **Path:** `bin/qdeck-theme-switch`
+
+```bash
+#!/usr/bin/env bash
+# ==============================================================================
+# QDeck: Unified Theme Discovery, Listing, Setup & Switching Engine
+# Self-contained CLI: qdeck-theme-switch / qdeck theme
+# ==============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/themes"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+THEMES_DIR="$CONFIG_HOME/themes"
 CURRENT_LINK="$THEMES_DIR/current"
 
-SWITCH_BIN=""
-if [[ -x "$SCRIPT_DIR/theme-switch" ]]; then
-    SWITCH_BIN="$SCRIPT_DIR/theme-switch"
-elif command -v theme-switch >/dev/null 2>&1; then
-    SWITCH_BIN="$(command -v theme-switch)"
-elif [[ -x "$HOME/.local/bin/theme-switch" ]]; then
-    SWITCH_BIN="$HOME/.local/bin/theme-switch"
-fi
-
-SETUP_BIN=""
-if [[ -x "$SCRIPT_DIR/theme-switch-setup" ]]; then
-    SETUP_BIN="$SCRIPT_DIR/theme-switch-setup"
-elif command -v theme-switch-setup >/dev/null 2>&1; then
-    SETUP_BIN="$(command -v theme-switch-setup)"
-elif [[ -x "$HOME/.local/bin/theme-switch-setup" ]]; then
-    SETUP_BIN="$HOME/.local/bin/theme-switch-setup"
-fi
-
-# Ensure binaries in PATH if available
+# Ensure local bin is in PATH
 if [[ -d "$HOME/.local/bin" ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
@@ -3376,6 +3311,211 @@ list_themes_json() {
     fi
 }
 
+apply_icon_theme() {
+    local target_dir="${1:-$CURRENT_LINK}"
+    local icon_file=""
+
+    if [[ -f "$target_dir/icons.theme" ]]; then
+        icon_file="$target_dir/icons.theme"
+    elif [[ -f "$CURRENT_LINK/icons.theme" ]]; then
+        icon_file="$CURRENT_LINK/icons.theme"
+    fi
+
+    [[ -n "$icon_file" ]] || return 0
+
+    local icon_theme
+    icon_theme="$(head -n 1 "$icon_file" 2>/dev/null | tr -d '\r\n' | xargs)"
+    [[ -n "$icon_theme" ]] || return 0
+
+    # 1. Update GSettings (GNOME / XDG desktop portal interface)
+    if command -v gsettings >/dev/null 2>&1; then
+        gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" 2>/dev/null || true
+    fi
+
+    # 2. Update nwg-look persistent state if present
+    local nwg_gsettings="$HOME/.local/share/nwg-look/gsettings"
+    if [[ -f "$nwg_gsettings" ]]; then
+        sed -i -E "s/^[[:space:]]*icon-theme=.*/icon-theme=$icon_theme/" "$nwg_gsettings" 2>/dev/null || true
+    fi
+
+    # 3. Synchronize via nwg-look export in background
+    if command -v nwg-look >/dev/null 2>&1; then
+        nwg-look -x >/dev/null 2>&1 &
+    fi
+
+    # 4. Explicitly update GTK 3.0 configuration
+    local gtk3_dir="$CONFIG_HOME/gtk-3.0"
+    local gtk3_file="$gtk3_dir/settings.ini"
+    mkdir -p "$gtk3_dir" 2>/dev/null || true
+    if [[ -f "$gtk3_file" ]]; then
+        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk3_file"; then
+            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=$icon_theme|" "$gtk3_file" 2>/dev/null || true
+        else
+            if grep -q "^\[Settings\]" "$gtk3_file"; then
+                sed -i "/^\[Settings\]/a gtk-icon-theme-name=$icon_theme" "$gtk3_file" 2>/dev/null || true
+            else
+                printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" >> "$gtk3_file"
+            fi
+        fi
+    else
+        printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" > "$gtk3_file"
+    fi
+
+    # 5. Explicitly update GTK 4.0 configuration
+    local gtk4_dir="$CONFIG_HOME/gtk-4.0"
+    local gtk4_file="$gtk4_dir/settings.ini"
+    mkdir -p "$gtk4_dir" 2>/dev/null || true
+    if [[ -f "$gtk4_file" ]]; then
+        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk4_file"; then
+            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=$icon_theme|" "$gtk4_file" 2>/dev/null || true
+        else
+            if grep -q "^\[Settings\]" "$gtk4_file"; then
+                sed -i "/^\[Settings\]/a gtk-icon-theme-name=$icon_theme" "$gtk4_file" 2>/dev/null || true
+            else
+                printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" >> "$gtk4_file"
+            fi
+        fi
+    else
+        printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" > "$gtk4_file"
+    fi
+
+    # 6. Explicitly update GTK 2.0 configuration
+    local gtk2_file="$HOME/.gtkrc-2.0"
+    if [[ -f "$gtk2_file" ]]; then
+        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk2_file"; then
+            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=\"$icon_theme\"|" "$gtk2_file" 2>/dev/null || true
+        fi
+    fi
+
+    # 7. Update xsettingsd configuration and notify daemon
+    local xsettings_dir="$CONFIG_HOME/xsettingsd"
+    local xsettings_file="$xsettings_dir/xsettingsd.conf"
+    if [[ -f "$xsettings_file" ]]; then
+        if grep -q "^[[:space:]]*Net/IconThemeName" "$xsettings_file"; then
+            sed -i -E "s|^[[:space:]]*Net/IconThemeName.*|Net/IconThemeName \"$icon_theme\"|" "$xsettings_file" 2>/dev/null || true
+        else
+            echo "Net/IconThemeName \"$icon_theme\"" >> "$xsettings_file"
+        fi
+    fi
+    if pgrep -u "$UID" -x xsettingsd >/dev/null 2>&1; then
+        pkill -HUP -u "$UID" -x xsettingsd 2>/dev/null || true
+    fi
+
+    # 8. Update xfconf if present
+    if command -v xfconf-query >/dev/null 2>&1; then
+        xfconf-query -c xsettings -p /Net/IconThemeName -s "$icon_theme" >/dev/null 2>&1 || true
+    fi
+
+    # 9. Update Quickshell icon pragma in shell.qml
+    local qmldir="$CONFIG_HOME/quickshell"
+    local repo_root
+    repo_root="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)"
+    for shell_qml in "$qmldir/shell.qml" "$repo_root/quickshell/shell.qml"; do
+        if [[ -f "$shell_qml" ]]; then
+            sed -i -E "1s|^//@ pragma IconTheme .*|//@ pragma IconTheme $icon_theme|" "$shell_qml" 2>/dev/null || true
+        fi
+    done
+}
+
+apply_wallpaper() {
+    local backgrounds_dir="$CURRENT_LINK/backgrounds"
+    local first_wallpaper=""
+
+    if [[ -d "$backgrounds_dir" ]]; then
+        shopt -s nullglob
+        for cand in "$backgrounds_dir"/*; do
+            [[ -f "$cand" ]] || continue
+            case "${cand,,}" in
+                *.png|*.jpg|*.jpeg|*.webp|*.gif|*.bmp|*.avif)
+                    first_wallpaper="$cand"
+                    break
+                    ;;
+            esac
+        done
+        shopt -u nullglob
+    fi
+
+    if [[ -z "$first_wallpaper" && -f "$CURRENT_LINK/default.png" ]]; then
+        first_wallpaper="$CURRENT_LINK/default.png"
+    fi
+
+    if [[ -n "$first_wallpaper" ]]; then
+        if [[ -x "$SCRIPT_DIR/qdeck-wallpaper" ]]; then
+            "$SCRIPT_DIR/qdeck-wallpaper" switch "$first_wallpaper" >/dev/null 2>&1 || true
+        elif command -v qdeck-wallpaper >/dev/null 2>&1; then
+            qdeck-wallpaper switch "$first_wallpaper" >/dev/null 2>&1 || true
+        elif command -v awww >/dev/null 2>&1; then
+            awww img "$first_wallpaper" >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+reload_kitty() {
+    if pgrep -u "$UID" -x kitty >/dev/null 2>&1; then
+        pkill -SIGUSR1 -u "$UID" -x kitty 2>/dev/null || true
+    fi
+}
+
+reload_neovim() {
+    # 1. Send SIGUSR1 signal for native reload in listening Neovim instances
+    pkill -SIGUSR1 -u "$UID" -x nvim 2>/dev/null || true
+
+    # 2. Remote RPC command to active Neovim server sockets
+    local -a sockets=()
+    shopt -s nullglob
+    sockets=(
+        "${XDG_RUNTIME_DIR:-/run/user/$UID}"/nvim.*
+        /tmp/nvim*/*
+        /tmp/nvim.*
+    )
+    shopt -u nullglob
+
+    if (( ${#sockets[@]} > 0 )) && command -v nvim >/dev/null 2>&1; then
+        local remote_cmd='<Cmd>lua pcall(function() local p = vim.fn.expand("~/.config/themes/current/neovim.lua"); local ok, spec = pcall(dofile, p); if ok and type(spec) == "table" then for _, item in ipairs(spec) do if type(item) == "table" and item[1] and item[1] ~= "LazyVim/LazyVim" then local name = item.name or item[1]:match("/([^/]+)$") or item[1]; pcall(function() if package.loaded["lazy"] then require("lazy").load({ plugins = { name } }) end end) end; if item.opts and item.opts.colorscheme then if item.opts.background then if item.opts.background == "dark" or item.opts.background == "light" then pcall(function() vim.o.background = item.opts.background end) else pcall(function() vim.g.everforest_background = item.opts.background end) pcall(function() vim.g.gruvbox_material_background = item.opts.background end) end end; pcall(vim.cmd.colorscheme, item.opts.colorscheme) end end; pcall(vim.cmd, "redraw!") end end)<CR>'
+        for sock in "${sockets[@]}"; do
+            [[ -S "$sock" ]] || continue
+            nvim --server "$sock" --remote-send "$remote_cmd" >/dev/null 2>&1 &
+        done
+    fi
+}
+
+reload_quickshell() {
+    local qs_bin="qs"
+    command -v qs >/dev/null 2>&1 || qs_bin="quickshell"
+    if command -v "$qs_bin" >/dev/null 2>&1; then
+        "$qs_bin" ipc call theme reload >/dev/null 2>&1 || true
+    fi
+}
+
+reload_hyprland() {
+    if command -v hyprctl >/dev/null 2>&1; then
+        hyprctl reload >/dev/null 2>&1 || true
+    fi
+}
+
+update_editor_themes() {
+    local theme_dir="$1"
+    [[ -f "$theme_dir/vscode.json" ]] || return 0
+
+    local vscode_metadata
+    vscode_metadata="$(jq -er 'if ((.name | type) == "string" and (.name | length) > 0) then .name else error("invalid name") end' "$theme_dir/vscode.json" 2>/dev/null || echo "")"
+    [[ -n "$vscode_metadata" ]] || return 0
+
+    local editor_settings=(
+        "$CONFIG_HOME/VSCodium/User/settings.json"
+        "$CONFIG_HOME/Code/User/settings.json"
+        "$CONFIG_HOME/Code - OSS/User/settings.json"
+        "$CONFIG_HOME/Antigravity IDE/User/settings.json"
+    )
+
+    for sp in "${editor_settings[@]}"; do
+        if [[ -f "$sp" ]] && jq empty "$sp" >/dev/null 2>&1; then
+            local tmp_s="${sp}.tmp.$$"
+            jq --arg t "$vscode_metadata" '."workbench.colorTheme" = $t | del(."workbench.colorCustomizations", ."editor.tokenColorCustomizations")' "$sp" > "$tmp_s" 2>/dev/null && mv -f "$tmp_s" "$sp"
+        fi
+    done
+}
+
 switch_theme() {
     local theme="${1:-}"
     if [[ -z "$theme" ]]; then
@@ -3391,25 +3531,146 @@ switch_theme() {
 
     mkdir -p "$THEMES_DIR"
 
-    # Dedicated theme-switch utility handles all application, editor, icon, and daemon updates
-    if [[ -n "$SWITCH_BIN" && -x "$SWITCH_BIN" ]]; then
-        "$SWITCH_BIN" "$theme"
-    elif command -v theme-switch >/dev/null 2>&1; then
-        theme-switch "$theme"
-    else
-        echo "error: theme-switch binary not found" >&2
-        exit 1
+    # 1. Update current symlink atomically
+    local tmp_link="$THEMES_DIR/.current_tmp_$$"
+    ln -sfn "$target_dir" "$tmp_link"
+    mv -fT "$tmp_link" "$CURRENT_LINK"
+
+    # 2. Update Kitty color.conf symlink if present
+    if [[ -f "$target_dir/color.conf" ]]; then
+        mkdir -p "$CONFIG_HOME/kitty"
+        ln -sfn "$target_dir/color.conf" "$CONFIG_HOME/kitty/color.conf"
     fi
+
+    # 3. Update editor themes (VSCodium, Code, Antigravity IDE)
+    update_editor_themes "$target_dir"
+
+    # 4. Apply icon theme
+    apply_icon_theme "$target_dir"
+
+    # 5. Apply wallpaper
+    apply_wallpaper
+
+    # 6. Live reloads
+    reload_kitty
+    reload_neovim
+    reload_hyprland
+    reload_quickshell
 
     echo "Switched to theme: $theme"
 }
 
 run_setup() {
-    if command -v theme-switch-setup >/dev/null 2>&1; then
-        theme-switch-setup 2>/dev/null || true
-    elif [[ -x "$SETUP_BIN" ]]; then
-        "$SETUP_BIN" 2>/dev/null || true
+    echo "==> Configuring QDeck theme integration..."
+
+    # 1. btop theme symlink and config
+    local btop_themes_dir="$CONFIG_HOME/btop/themes"
+    mkdir -p "$btop_themes_dir"
+    ln -sfn "$CURRENT_LINK/btop.theme" "$btop_themes_dir/current.theme"
+
+    local btop_conf="$CONFIG_HOME/btop/btop.conf"
+    if [[ -f "$btop_conf" ]]; then
+        if grep -q '^[[:space:]]*color_theme[[:space:]]*=' "$btop_conf"; then
+            sed -i -E 's|^[[:space:]]*color_theme[[:space:]]*=.*|color_theme = "current"|' "$btop_conf"
+        else
+            echo 'color_theme = "current"' >> "$btop_conf"
+        fi
+    else
+        mkdir -p "$CONFIG_HOME/btop"
+        echo 'color_theme = "current"' > "$btop_conf"
     fi
+
+    # 2. Neovim LazyVim theme loader
+    local nvim_plugins_dir="$CONFIG_HOME/nvim/lua/plugins"
+    mkdir -p "$nvim_plugins_dir"
+    local nvim_loader="$nvim_plugins_dir/theme.lua"
+
+    cat <<'EOF' > "$nvim_loader"
+local function reload_current_theme()
+  local theme_path = vim.fn.expand("~/.config/themes/current/neovim.lua")
+  local ok, spec = pcall(dofile, theme_path)
+  if not ok or type(spec) ~= "table" then return end
+  for _, item in ipairs(spec) do
+    if type(item) == "table" and item[1] and item[1] ~= "LazyVim/LazyVim" then
+      local name = item.name or item[1]:match("/([^/]+)$") or item[1]
+      pcall(function()
+        if package.loaded["lazy"] then
+          require("lazy").load({ plugins = { name } })
+        end
+      end)
+    end
+    if item.opts and item.opts.colorscheme then
+      if item.opts.background then
+        if item.opts.background == "dark" or item.opts.background == "light" then
+          pcall(function() vim.o.background = item.opts.background end)
+        else
+          pcall(function() vim.g.everforest_background = item.opts.background end)
+          pcall(function() vim.g.gruvbox_material_background = item.opts.background end)
+        end
+      end
+      pcall(vim.cmd.colorscheme, item.opts.colorscheme)
+    end
+  end
+  pcall(vim.cmd, "redraw!")
+end
+
+_G.reload_qdeck_theme = reload_current_theme
+
+pcall(vim.api.nvim_create_user_command, "ReloadTheme", function()
+  reload_current_theme()
+  vim.notify("QDeck theme reloaded", vim.log.levels.INFO)
+end, { desc = "Reload QDeck active theme in LazyVim" })
+
+pcall(vim.api.nvim_create_autocmd, "FocusGained", {
+  callback = reload_current_theme,
+  desc = "Reload QDeck theme on focus gained",
+})
+
+if vim.uv and vim.uv.new_signal then
+  local sig = vim.uv.new_signal()
+  sig:start("sigusr1", function()
+    vim.schedule(reload_current_theme)
+  end)
+end
+
+local theme_path = vim.fn.expand("~/.config/themes/current/neovim.lua")
+local ok, spec = pcall(dofile, theme_path)
+
+if not ok or type(spec) ~= "table" then
+  return {}
+end
+
+return spec
+EOF
+
+    # Ensure nvim config imports plugins
+    local nvim_lazy_config="$CONFIG_HOME/nvim/lua/config/lazy.lua"
+    if [[ ! -f "$nvim_lazy_config" ]]; then
+        mkdir -p "$CONFIG_HOME/nvim/lua/config"
+        local repo_lazy="$SCRIPT_DIR/../nvim/lua/config/lazy.lua"
+        if [[ -f "$repo_lazy" ]]; then
+            cp -f "$repo_lazy" "$nvim_lazy_config"
+        else
+            cat <<'EOF' > "$nvim_lazy_config"
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+  local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+  vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+end
+vim.opt.rtp:prepend(lazypath)
+
+require("lazy").setup({
+  spec = {
+    { "LazyVim/LazyVim", import = "lazyvim.plugins" },
+    { import = "plugins" },
+  },
+  defaults = { lazy = false, version = false },
+})
+EOF
+        fi
+    fi
+
+    echo "    Theme setup complete."
 }
 
 CMD="${1:-list}"
@@ -3434,29 +3695,26 @@ case "$CMD" in
 esac
 ```
 
-### bin/qdeck-themeswitcher
+---
 
+### bin/qdeck-themeswitcher
 - **Path:** `bin/qdeck-themeswitcher`
-- **Type:** Executable script
-- **Size:** 2429 bytes
 
 ```bash
 #!/usr/bin/env bash
-# QDeck: Theme Switcher launcher controller (qdeck-themeswitcher / qdeck theme)
+# QDeck: Theme Switcher IPC controller (qdeck-themeswitcher / qdeck theme)
 set -euo pipefail
 
 CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Choose CLI binary
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 case "$CMD" in
@@ -3480,47 +3738,20 @@ case "$CMD" in
     ;;
   apply|switch|set)
     if ! call_ipc themeswitcher apply "${2:-}"; then
-      if command -v qdeck-theme-switch >/dev/null 2>&1; then
-        qdeck-theme-switch switch "${2:-}"
-      elif [[ -x "$SCRIPT_DIR/qdeck-theme-switch" ]]; then
-        "$SCRIPT_DIR/qdeck-theme-switch" switch "${2:-}"
-      elif [[ -x "$HOME/.local/bin/qdeck-theme-switch" ]]; then
-        "$HOME/.local/bin/qdeck-theme-switch" switch "${2:-}"
-      fi
+      qdeck-theme-switch switch "${2:-}"
     fi
     ;;
   list)
-    if command -v qdeck-theme-switch >/dev/null 2>&1; then
-      qdeck-theme-switch list
-    elif [[ -x "$SCRIPT_DIR/qdeck-theme-switch" ]]; then
-      "$SCRIPT_DIR/qdeck-theme-switch" list
-    elif [[ -x "$HOME/.local/bin/qdeck-theme-switch" ]]; then
-      "$HOME/.local/bin/qdeck-theme-switch" list
-    fi
+    qdeck-theme-switch list
     ;;
   current)
-    if command -v qdeck-theme-switch >/dev/null 2>&1; then
-      qdeck-theme-switch current
-    elif [[ -x "$SCRIPT_DIR/qdeck-theme-switch" ]]; then
-      "$SCRIPT_DIR/qdeck-theme-switch" current
-    elif [[ -x "$HOME/.local/bin/qdeck-theme-switch" ]]; then
-      "$HOME/.local/bin/qdeck-theme-switch" current
-    fi
+    qdeck-theme-switch current
     ;;
   state|getState|status)
     call_ipc themeswitcher getState
     ;;
   setup)
-    if command -v qdeck-theme-switch >/dev/null 2>&1; then
-      qdeck-theme-switch setup
-    elif [[ -x "$SCRIPT_DIR/qdeck-theme-switch" ]]; then
-      "$SCRIPT_DIR/qdeck-theme-switch" setup
-    elif [[ -x "$HOME/.local/bin/qdeck-theme-switch" ]]; then
-      "$HOME/.local/bin/qdeck-theme-switch" setup
-    else
-      echo "Error: qdeck-theme-switch not found" >&2
-      exit 1
-    fi
+    qdeck-theme-switch setup
     ;;
   *)
     call_ipc themeswitcher toggle
@@ -3528,11 +3759,10 @@ case "$CMD" in
 esac
 ```
 
-### bin/qdeck-trackpad
+---
 
+### bin/qdeck-trackpad
 - **Path:** `bin/qdeck-trackpad`
-- **Type:** Executable script
-- **Size:** 1524 bytes
 
 ```bash
 #!/bin/sh
@@ -3578,29 +3808,20 @@ else
 fi
 ```
 
-### bin/qdeck-volume
+---
 
+### bin/qdeck-volume
 - **Path:** `bin/qdeck-volume`
-- **Type:** Executable script
-- **Size:** 1607 bytes
 
 ```bash
 #!/usr/bin/env bash
 # QDeck: Audio volume & mute control (qdeck-volume / qdeck volume)
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PATH="$SCRIPT_DIR:$HOME/.local/bin:$PATH"
-
-REAL_WPCTL="/usr/bin/wpctl"
-if [[ ! -x "$REAL_WPCTL" ]]; then
-  REAL_WPCTL=$(type -P wpctl || true)
-fi
-
 get_vol() {
   local target="${1:-@DEFAULT_AUDIO_SINK@}"
   local out
-  out=$("$REAL_WPCTL" get-volume "$target" 2>/dev/null || echo "Volume: 0.00")
+  out=$(wpctl get-volume "$target" 2>/dev/null || echo "Volume: 0.00")
   local val
   val=$(awk '{print $2}' <<< "$out")
   local pct
@@ -3611,7 +3832,7 @@ get_vol() {
 get_muted() {
   local target="${1:-@DEFAULT_AUDIO_SINK@}"
   local out
-  out=$("$REAL_WPCTL" get-volume "$target" 2>/dev/null || echo "")
+  out=$(wpctl get-volume "$target" 2>/dev/null || echo "")
   if [[ "$out" == *"[MUTED]"* ]]; then
     echo "1"
   else
@@ -3656,23 +3877,22 @@ case "$cmd" in
 esac
 ```
 
-### bin/qdeck-wallpaper
+---
 
+### bin/qdeck-wallpaper
 - **Path:** `bin/qdeck-wallpaper`
-- **Type:** Executable script
-- **Size:** 5810 bytes
 
 ```bash
 #!/usr/bin/env bash
+# ==============================================================================
 # QDeck: Wallpaper discovery, listing, and switching helper (qdeck-wallpaper / qdeck wallpaper)
+# ==============================================================================
 set -euo pipefail
 
 CURRENT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/themes/current"
 if [[ ! -d "$CURRENT_DIR" && -d "$HOME/themes/current" ]]; then
     CURRENT_DIR="$HOME/themes/current"
 fi
-
-SWITCH_BIN="$HOME/.local/bin/wallpaper-switch"
 
 get_active_wallpaper() {
     # 1. First check awww if running
@@ -3790,49 +4010,43 @@ switch_wallpaper() {
         exit 1
     fi
 
+    local canon_path
+    canon_path="$(readlink -f "$img" 2>/dev/null || echo "$img")"
+
     # 1. Update active theme default.png symlink
     if [[ -d "$CURRENT_DIR" ]]; then
-        ln -sfn "$img" "$CURRENT_DIR/default.png"
+        ln -sfn "$canon_path" "$CURRENT_DIR/default.png"
     fi
 
-    # 2. Prefer wallpaper-switch if available
-    if command -v wallpaper-switch >/dev/null 2>&1; then
-        wallpaper-switch "$img"
-        return 0
-    elif [[ -x "$SWITCH_BIN" ]]; then
-        "$SWITCH_BIN" "$img"
-        return 0
-    fi
-
-    # 3. Direct awww support
+    # 2. Primary backend: awww
     if command -v awww >/dev/null 2>&1; then
         if ! pgrep -x awww-daemon >/dev/null 2>&1; then
             awww-daemon &
             sleep 0.2
         fi
-        if awww img "$img" >/dev/null 2>&1; then
-            echo "Wallpaper changed to: $(basename "$img")"
+        if awww img "$canon_path" >/dev/null 2>&1; then
+            echo "Wallpaper changed to: $(basename "$canon_path")"
             return 0
         fi
     fi
 
-    # 4. Direct swww support
+    # 3. Secondary backend: swww
     if command -v swww >/dev/null 2>&1; then
         if ! pgrep -x swww-daemon >/dev/null 2>&1; then
             swww init >/dev/null 2>&1 || true
             sleep 0.2
         fi
-        if swww img "$img" >/dev/null 2>&1; then
-            echo "Wallpaper changed to: $(basename "$img")"
+        if swww img "$canon_path" >/dev/null 2>&1; then
+            echo "Wallpaper changed to: $(basename "$canon_path")"
             return 0
         fi
     fi
 
-    # 5. Direct hyprpaper support
+    # 4. Tertiary backend: hyprpaper
     if command -v hyprpaper >/dev/null 2>&1 && command -v hyprctl >/dev/null 2>&1; then
-        hyprctl hyprpaper preload "$img" >/dev/null 2>&1 || true
-        hyprctl hyprpaper wallpaper ",$img" >/dev/null 2>&1 || true
-        echo "Wallpaper changed to: $(basename "$img")"
+        hyprctl hyprpaper preload "$canon_path" >/dev/null 2>&1 || true
+        hyprctl hyprpaper wallpaper ",$canon_path" >/dev/null 2>&1 || true
+        echo "Wallpaper changed to: $(basename "$canon_path")"
         return 0
     fi
 
@@ -3859,11 +4073,10 @@ case "$CMD" in
 esac
 ```
 
-### bin/qdeck-wallpaperswitcher
+---
 
+### bin/qdeck-wallpaperswitcher
 - **Path:** `bin/qdeck-wallpaperswitcher`
-- **Type:** Executable script
-- **Size:** 1033 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -3872,16 +4085,14 @@ set -euo pipefail
 
 CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Choose CLI binary
 # Source shared IPC helper
-if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
-  source "$SCRIPT_DIR/qdeck-ipc"
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
 elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
-else
-  source "$HOME/.local/bin/qdeck-ipc"
 fi
 
 case "$CMD" in
@@ -3903,8 +4114,16 @@ case "$CMD" in
   select)
     call_ipc wallpaperswitcher select "${2:-0}"
     ;;
-  apply)
-    call_ipc wallpaperswitcher apply "${2:-}"
+  apply|switch|set)
+    if ! call_ipc wallpaperswitcher apply "${2:-}"; then
+      qdeck-wallpaper switch "${2:-}"
+    fi
+    ;;
+  list)
+    qdeck-wallpaper list
+    ;;
+  current)
+    qdeck-wallpaper current
     ;;
   state|getState|status)
     call_ipc wallpaperswitcher getState
@@ -3915,1107 +4134,10 @@ case "$CMD" in
 esac
 ```
 
-### bin/theme-switch
-
-- **Path:** `bin/theme-switch`
-- **Type:** Executable script
-- **Size:** 23064 bytes
-
-```bash
-#!/usr/bin/env bash
-
-set -u
-set -o pipefail
-umask 077
-
-readonly APP_TITLE="Theme Switcher"
-readonly CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-readonly THEMES_DIR="$CONFIG_HOME/themes"
-readonly CURRENT_LINK="$THEMES_DIR/current"
-readonly SETUP_SCRIPT="$HOME/.local/bin/theme-switch-setup"
-
-TMPDIR=''
-
-cleanup() {
-    if [[ -n "$TMPDIR" && -d "$TMPDIR" && "$TMPDIR" == "$THEMES_DIR"/.theme-switch.* ]]; then
-        rm -rf -- "$TMPDIR"
-    fi
-}
-trap cleanup EXIT
-
-emit_notification() {
-    local urgency="$1"
-    shift
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send --urgency="$urgency" "$APP_TITLE" "$*" >/dev/null 2>&1 || true
-    fi
-}
-
-warn() {
-    printf 'warning: %s\n' "$*" >&2
-    emit_notification normal "warning: $*"
-}
-
-error() {
-    printf 'error: %s\n' "$*" >&2
-    emit_notification critical "error: $*"
-}
-
-die() {
-    local status="$1"
-    shift
-    error "$*"
-    exit "$status"
-}
-
-if (( $# != 1 )); then
-    error "usage: theme-switch THEME"
-    exit 2
-fi
-
-theme_name="$1"
-if [[ -z "$theme_name" || "$theme_name" == .* || "$theme_name" == *"/"* ||
-      "$theme_name" == *".."* || ! "$theme_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-    die 2 "invalid theme name '$theme_name' (allowed: letters, numbers, _ and -)"
-fi
-[[ "$theme_name" != current ]] || die 2 "invalid theme name 'current' (reserved for the active-theme link)"
-
-theme_dir="$THEMES_DIR/$theme_name"
-if [[ ! -d "$theme_dir" ]]; then
-    available=""
-    if [[ -d "$THEMES_DIR" ]]; then
-        shopt -s nullglob
-        for directory in "$THEMES_DIR"/*; do
-            [[ -d "$directory" && ! -L "$directory" ]] || continue
-            available+="${directory##*/}, "
-        done
-        shopt -u nullglob
-        available="${available%, }"
-    fi
-    [[ -n "$available" ]] || available="none"
-    die 1 "unknown theme '$theme_name'; available themes: $available"
-fi
-
-required_theme_files=(btop.theme neovim.lua colors.toml color.conf)
-declare -A required_theme_file_seen=(
-    [btop.theme]=1
-    [neovim.lua]=1
-    [colors.toml]=1
-    [color.conf]=1
-)
-
-add_required_theme_file() {
-    local file="$1"
-    if [[ -z "${required_theme_file_seen[$file]+set}" ]]; then
-        required_theme_files+=("$file")
-        required_theme_file_seen["$file"]=1
-    fi
-}
-
-missing_theme_files=()
-for required_file in "${required_theme_files[@]}"; do
-    [[ -f "$theme_dir/$required_file" ]] || missing_theme_files+=("$required_file")
-done
-if (( ${#missing_theme_files[@]} > 0 )); then
-    printf -v missing_list '%s, ' "${missing_theme_files[@]}"
-    missing_list="${missing_list%, }"
-    die 1 "theme '$theme_name' is incomplete: missing $missing_list"
-fi
-
-require_command() {
-    command -v "$1" >/dev/null 2>&1 ||
-        die 1 "missing runtime dependency '$1'; run theme-switch-setup"
-}
-
-# Check dependencies before invoking the repair script. That guarantees the
-# runtime switch never reaches theme-switch-setup's package-installation path.
-require_command flock
-require_command jq
-
-setup_is_complete() {
-    local btop_link="$CONFIG_HOME/btop/themes/current.theme"
-    local btop_target="$CURRENT_LINK/btop.theme"
-    local btop_conf="$CONFIG_HOME/btop/btop.conf"
-    local nvim_loader="$CONFIG_HOME/nvim/lua/plugins/theme.lua"
-    local nvim_lazy_config="$CONFIG_HOME/nvim/lua/config/lazy.lua"
-
-    [[ -L "$btop_link" && "$(readlink "$btop_link")" == "$btop_target" ]] || return 1
-    [[ -f "$btop_conf" ]] && grep -Eq '^[[:space:]]*color_theme[[:space:]]*=[[:space:]]*"current"[[:space:]]*$' "$btop_conf" || return 1
-    [[ -f "$nvim_loader" ]] && grep -Fq '~/.config/themes/current/neovim.lua' "$nvim_loader" || return 1
-    [[ -f "$nvim_lazy_config" ]] && grep -Eq "import[[:space:]]*=[[:space:]]*['\\\"]plugins['\\\"]" "$nvim_lazy_config" || return 1
-}
-
-if ! setup_is_complete; then
-    [[ -x "$SETUP_SCRIPT" ]] ||
-        die 1 "setup is incomplete and '$SETUP_SCRIPT' is not executable"
-    printf 'Theme integration is not configured; running theme-switch-setup.\n'
-    "$SETUP_SCRIPT" || die 1 "automatic theme-switch setup failed"
-    setup_is_complete || die 1 "theme integration is still incomplete after setup"
-fi
-
-lock_directory="${XDG_RUNTIME_DIR:-/tmp}"
-if [[ ! -d "$lock_directory" || ! -w "$lock_directory" ]]; then
-    lock_directory=/tmp
-fi
-lock_file="$lock_directory/theme-switch-${UID}.lock"
-exec 9>"$lock_file" || die 1 "cannot open lock file '$lock_file'"
-flock -n 9 || die 1 "another theme-switch operation is already running"
-
-TMPDIR="$(mktemp -d "$THEMES_DIR/.theme-switch.XXXXXX")" ||
-    die 1 "could not create a staging directory in '$THEMES_DIR'"
-
-new_theme_resolved="$(readlink -f "$theme_dir")" || die 1 "cannot resolve selected theme"
-current_link_existed=0
-old_current_resolved=""
-if [[ -L "$CURRENT_LINK" ]]; then
-    current_link_existed=1
-    readlink "$CURRENT_LINK" >/dev/null || die 1 "cannot read active theme symlink"
-    old_current_resolved="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"
-elif [[ -e "$CURRENT_LINK" ]]; then
-    die 1 "'$CURRENT_LINK' exists but is not a symlink"
-fi
-
-theme_changed=1
-if (( current_link_existed == 1 )) &&
-   [[ "$old_current_resolved" == "$new_theme_resolved" ]]; then
-    theme_changed=0
-fi
-
-declare -a settings_destinations=()
-declare -a settings_temps=()
-declare -a editor_bins=()
-declare -a editor_settings_paths=()
-vscode_theme_name=''
-vscode_extension=''
-
-extension_is_installed() {
-    local editor_bin="$1"
-    local extension_registry="" extensions
-
-    case "$editor_bin" in
-        codium) extension_registry="$HOME/.vscode-oss/extensions/extensions.json" ;;
-        code) extension_registry="$HOME/.vscode/extensions/extensions.json" ;;
-        *antigravity*) extension_registry="$HOME/.antigravity-ide/extensions/extensions.json" ;;
-    esac
-
-    # The on-disk registry is effectively instant. Keep the official CLI as a
-    # fallback for custom extension directories, profiles, or malformed state.
-    if [[ -f "$extension_registry" ]] &&
-       jq -e --arg id "$vscode_extension" \
-          'type == "array" and any(.[];
-             ((.identifier.id? // "") | ascii_downcase)
-             == ($id | ascii_downcase))' \
-          "$extension_registry" >/dev/null 2>&1; then
-        return 0
-    fi
-
-    extensions="$("$editor_bin" --list-extensions 2>/dev/null)" || return 1
-    grep -Fxiq "$vscode_extension" <<< "$extensions"
-}
-
-prepare_editor_settings() {
-    local editor_bin="$1"
-    local settings_path="$2"
-    local source_json="$settings_path"
-    local settings_tmp="$TMPDIR/settings-${#settings_temps[@]}.json"
-
-    if [[ -e "$settings_path" ]]; then
-        if [[ ! -f "$settings_path" ]] || ! jq empty "$settings_path" >/dev/null 2>&1; then
-            warn "$editor_bin settings are not strict JSON; skipping '$settings_path'"
-            return 0
-        fi
-
-        # A same-theme invocation is a no-op when this editor is already clean.
-        # Avoid starting Electron just to list extensions in that common case.
-        if (( theme_changed == 0 )) &&
-           jq -e --arg theme "$vscode_theme_name" \
-               '."workbench.colorTheme" == $theme
-                and (has("workbench.colorCustomizations") | not)
-                and (has("editor.tokenColorCustomizations") | not)' \
-               "$settings_path" >/dev/null 2>&1; then
-            return 0
-        fi
-    else
-        source_json="$TMPDIR/empty-settings-${#settings_temps[@]}.json"
-        printf '{}\n' > "$source_json" || die 1 "failed to prepare settings for $editor_bin"
-    fi
-
-    if ! extension_is_installed "$editor_bin"; then
-        warn "extension '$vscode_extension' is not installed for $editor_bin; run theme-switch-setup"
-        return 0
-    fi
-
-    jq --arg theme "$vscode_theme_name" \
-        '."workbench.colorTheme" = $theme
-         | del(."workbench.colorCustomizations", ."editor.tokenColorCustomizations")' \
-        "$source_json" > "$settings_tmp" || die 1 "failed to generate settings for $editor_bin"
-    jq empty "$settings_tmp" >/dev/null 2>&1 || die 1 "generated settings for $editor_bin failed validation"
-    if [[ -f "$settings_path" ]] && cmp -s -- "$settings_tmp" "$settings_path"; then
-        return 0
-    fi
-    settings_destinations+=("$settings_path")
-    settings_temps+=("$settings_tmp")
-}
-
-if command -v codium >/dev/null 2>&1; then
-    editor_bins+=(codium)
-    editor_settings_paths+=("$CONFIG_HOME/VSCodium/User/settings.json")
-fi
-if command -v code >/dev/null 2>&1; then
-    code_settings="$CONFIG_HOME/Code/User/settings.json"
-    if [[ ! -e "$code_settings" ]]; then
-        code_settings="$CONFIG_HOME/Code - OSS/User/settings.json"
-    fi
-    editor_bins+=(code)
-    editor_settings_paths+=("$code_settings")
-fi
-if command -v antigravity-ide >/dev/null 2>&1; then
-    editor_bins+=(antigravity-ide)
-    editor_settings_paths+=("$CONFIG_HOME/Antigravity IDE/User/settings.json")
-elif [[ -x "/opt/antigravity-ide/antigravity-ide" ]]; then
-    editor_bins+=(/opt/antigravity-ide/antigravity-ide)
-    editor_settings_paths+=("$CONFIG_HOME/Antigravity IDE/User/settings.json")
-elif [[ -d "$CONFIG_HOME/Antigravity IDE" ]]; then
-    editor_bins+=(antigravity-ide)
-    editor_settings_paths+=("$CONFIG_HOME/Antigravity IDE/User/settings.json")
-fi
-
-if (( ${#editor_bins[@]} > 0 )); then
-    if [[ -f "$theme_dir/vscode.json" ]]; then
-        vscode_metadata="$(
-            jq -er '
-                if ((.name | type) == "string" and (.name | length) > 0)
-                   and ((.extension | type) == "string" and (.extension | length) > 0)
-                then [.name, .extension] | @tsv
-                else error("invalid VS Code theme metadata")
-                end
-            ' "$theme_dir/vscode.json"
-        )" || die 1 "vscode.json has an invalid or missing name/extension"
-        IFS=$'\t' read -r vscode_theme_name vscode_extension <<< "$vscode_metadata"
-        for index in "${!editor_bins[@]}"; do
-            prepare_editor_settings "${editor_bins[$index]}" "${editor_settings_paths[$index]}"
-        done
-    elif (( theme_changed == 1 )); then
-        warn "theme '$theme_name' has no optional vscode.json; editor theme update skipped"
-    fi
-elif (( theme_changed == 1 )); then
-    warn "neither codium, code, nor antigravity-ide is installed; editor theme update skipped"
-fi
-
-# A manual per-theme kitty color file is optional. When present, stage a symlink
-# so replacing ~/.config/kitty/color.conf is atomic and can be rolled back.
-kitty_theme_file="$theme_dir/color.conf"
-kitty_link_tmp=""
-if [[ -f "$kitty_theme_file" ]]; then
-    if [[ ! -L "$CONFIG_HOME/kitty/color.conf" ]] ||
-       [[ "$(readlink "$CONFIG_HOME/kitty/color.conf")" != "$kitty_theme_file" ]]; then
-        kitty_link_tmp="$TMPDIR/kitty-color.conf"
-        ln -s -- "$kitty_theme_file" "$kitty_link_tmp" ||
-            die 1 "failed to stage kitty color symlink"
-    fi
-else
-    if [[ -f "$CONFIG_HOME/kitty/kitty.conf" ]] &&
-       grep -Eq '^[[:space:]]*include[[:space:]]+.*color\.conf' "$CONFIG_HOME/kitty/kitty.conf"; then
-        warn "theme '$theme_name' has no optional color.conf; kitty colors unchanged"
-    fi
-fi
-
-# Editor JSON is committed first, then the optional kitty symlink, and finally
-# the active-theme symlink. Static application configs are never rewritten.
-declare -a commit_destinations=("${settings_destinations[@]}")
-declare -a commit_temps=("${settings_temps[@]}")
-if [[ -n "$kitty_link_tmp" ]]; then
-    commit_destinations+=("$CONFIG_HOME/kitty/color.conf")
-    commit_temps+=("$kitty_link_tmp")
-fi
-
-if (( theme_changed == 0 && ${#commit_destinations[@]} == 0 )); then
-    printf 'Theme `%s` is already active; nothing to do.\n' "$theme_name"
-    exit 0
-fi
-
-current_link_tmp=''
-if (( theme_changed == 1 )); then
-    current_link_tmp="$TMPDIR/current"
-    ln -s -- "$theme_dir" "$current_link_tmp" ||
-        die 1 "failed to stage the active-theme symlink"
-fi
-
-declare -a commit_existed=()
-declare -a commit_backups=()
-for index in "${!commit_destinations[@]}"; do
-    destination="${commit_destinations[$index]}"
-    backup="$TMPDIR/rollback-$index"
-    if [[ -e "$destination" || -L "$destination" ]]; then
-        cp -aT -- "$destination" "$backup" || die 1 "could not stage rollback data for '$destination'"
-        commit_existed+=(1)
-    else
-        commit_existed+=(0)
-    fi
-    commit_backups+=("$backup")
-done
-
-committed_count=0
-rollback_commit() {
-    local rollback_index rollback_failed=0
-    for ((rollback_index = committed_count - 1; rollback_index >= 0; rollback_index--)); do
-        if [[ "${commit_existed[$rollback_index]}" -eq 1 ]]; then
-            if ! cp -afT -- "${commit_backups[$rollback_index]}" "${commit_destinations[$rollback_index]}"; then
-                error "could not restore '${commit_destinations[$rollback_index]}'"
-                rollback_failed=1
-            fi
-        else
-            if ! rm -f -- "${commit_destinations[$rollback_index]}"; then
-                error "could not remove newly created '${commit_destinations[$rollback_index]}'"
-                rollback_failed=1
-            fi
-        fi
-    done
-    (( rollback_failed == 0 ))
-}
-
-for index in "${!commit_destinations[@]}"; do
-    destination="${commit_destinations[$index]}"
-    if ! mkdir -p -- "${destination%/*}" ||
-       ! mv -fT -- "${commit_temps[$index]}" "$destination"; then
-        if rollback_commit; then
-            die 1 "commit failed at '$destination'; previous files were restored"
-        fi
-        die 1 "commit failed at '$destination' and rollback was incomplete"
-    fi
-    ((committed_count += 1))
-done
-
-if (( theme_changed == 1 )) && ! mv -fT -- "$current_link_tmp" "$CURRENT_LINK"; then
-    if rollback_commit; then
-        die 1 "could not repoint active theme; previous files were restored"
-    fi
-    die 1 "could not repoint active theme and rollback was incomplete"
-fi
-
-reload_kitty() {
-    if ! command -v kitty >/dev/null 2>&1; then
-        warn "kitty is not installed; reload skipped"
-        return
-    fi
-    if pgrep -u "$UID" -x kitty >/dev/null 2>&1; then
-        if ! pkill -USR1 -u "$UID" -x kitty; then
-            warn "kitty is running but could not be signalled with SIGUSR1"
-        fi
-    elif [[ "${KITTY_PID:-}" =~ ^[0-9]+$ ]] && kill -0 "$KITTY_PID" 2>/dev/null; then
-        if ! kill -USR1 "$KITTY_PID"; then
-            warn "kitty is running but could not be signalled with SIGUSR1"
-        fi
-    else
-        warn "kitty is not running; reload skipped"
-    fi
-}
-
-apply_icon_theme() {
-    local target_dir="${1:-$CURRENT_LINK}"
-    local icon_file=""
-
-    if [[ -f "$target_dir/icons.theme" ]]; then
-        icon_file="$target_dir/icons.theme"
-    elif [[ -f "$CURRENT_LINK/icons.theme" ]]; then
-        icon_file="$CURRENT_LINK/icons.theme"
-    fi
-
-    [[ -n "$icon_file" ]] || return 0
-
-    local icon_theme
-    icon_theme="$(head -n 1 "$icon_file" 2>/dev/null | tr -d '\r\n' | xargs)"
-    [[ -n "$icon_theme" ]] || return 0
-
-    # 1. Update GSettings (GNOME / XDG desktop portal interface)
-    if command -v gsettings >/dev/null 2>&1; then
-        gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" 2>/dev/null || true
-    fi
-
-    # 2. Update nwg-look persistent state if present
-    local nwg_gsettings="$HOME/.local/share/nwg-look/gsettings"
-    if [[ -f "$nwg_gsettings" ]]; then
-        sed -i -E "s/^[[:space:]]*icon-theme=.*/icon-theme=$icon_theme/" "$nwg_gsettings" 2>/dev/null || true
-    fi
-
-    # 3. Synchronize via nwg-look export in background to avoid blocking switch
-    if command -v nwg-look >/dev/null 2>&1; then
-        nwg-look -x >/dev/null 2>&1 &
-    fi
-
-    # 4. Explicitly update GTK 3.0 configuration
-    local gtk3_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0"
-    local gtk3_file="$gtk3_dir/settings.ini"
-    mkdir -p "$gtk3_dir" 2>/dev/null || true
-    if [[ -f "$gtk3_file" ]]; then
-        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk3_file"; then
-            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=$icon_theme|" "$gtk3_file" 2>/dev/null || true
-        else
-            if grep -q "^\[Settings\]" "$gtk3_file"; then
-                sed -i "/^\[Settings\]/a gtk-icon-theme-name=$icon_theme" "$gtk3_file" 2>/dev/null || true
-            else
-                printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" >> "$gtk3_file"
-            fi
-        fi
-    else
-        printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" > "$gtk3_file"
-    fi
-
-    # 5. Explicitly update GTK 4.0 configuration
-    local gtk4_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-4.0"
-    local gtk4_file="$gtk4_dir/settings.ini"
-    mkdir -p "$gtk4_dir" 2>/dev/null || true
-    if [[ -f "$gtk4_file" ]]; then
-        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk4_file"; then
-            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=$icon_theme|" "$gtk4_file" 2>/dev/null || true
-        else
-            if grep -q "^\[Settings\]" "$gtk4_file"; then
-                sed -i "/^\[Settings\]/a gtk-icon-theme-name=$icon_theme" "$gtk4_file" 2>/dev/null || true
-            else
-                printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" >> "$gtk4_file"
-            fi
-        fi
-    else
-        printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" > "$gtk4_file"
-    fi
-
-    # 6. Explicitly update GTK 2.0 configuration
-    local gtk2_file="$HOME/.gtkrc-2.0"
-    if [[ -f "$gtk2_file" ]]; then
-        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk2_file"; then
-            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=\"$icon_theme\"|" "$gtk2_file" 2>/dev/null || true
-        fi
-    fi
-
-    # 7. Update xsettingsd configuration and notify daemon
-    local xsettings_dir="${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd"
-    local xsettings_file="$xsettings_dir/xsettingsd.conf"
-    if [[ -f "$xsettings_file" ]]; then
-        if grep -q "^[[:space:]]*Net/IconThemeName" "$xsettings_file"; then
-            sed -i -E "s|^[[:space:]]*Net/IconThemeName.*|Net/IconThemeName \"$icon_theme\"|" "$xsettings_file" 2>/dev/null || true
-        else
-            echo "Net/IconThemeName \"$icon_theme\"" >> "$xsettings_file"
-        fi
-    fi
-    if pgrep -u "$UID" -x xsettingsd >/dev/null 2>&1; then
-        pkill -HUP -u "$UID" -x xsettingsd 2>/dev/null || true
-    fi
-
-    # 8. Update xfconf if present
-    if command -v xfconf-query >/dev/null 2>&1; then
-        xfconf-query -c xsettings -p /Net/IconThemeName -s "$icon_theme" >/dev/null 2>&1 || true
-    fi
-
-    # 9. Update Quickshell icon pragma in shell.qml files
-    local qmldir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
-    local repo_root
-    repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)"
-    for shell_qml in "$qmldir/shell.qml" "$repo_root/quickshell/shell.qml" "$HOME/QDeck/quickshell/shell.qml" "$HOME/qdeck/quickshell/shell.qml"; do
-        if [[ -f "$shell_qml" ]]; then
-            sed -i -E "1s|^//@ pragma IconTheme .*|//@ pragma IconTheme $icon_theme|" "$shell_qml" 2>/dev/null || true
-        fi
-    done
-}
-
-apply_wallpaper() {
-    local backgrounds_dir="$CURRENT_LINK/backgrounds"
-    local first_wallpaper='' wallpaper_candidate
-
-    if [[ -d "$backgrounds_dir" ]]; then
-        shopt -s nullglob
-        for wallpaper_candidate in "$backgrounds_dir"/*; do
-            [[ -f "$wallpaper_candidate" ]] || continue
-            case "${wallpaper_candidate,,}" in
-                *.png|*.jpg|*.jpeg|*.webp|*.gif|*.bmp|*.avif)
-                    first_wallpaper="$wallpaper_candidate"
-                    break
-                    ;;
-            esac
-        done
-        shopt -u nullglob
-    fi
-
-    if [[ -z "$first_wallpaper" ]]; then
-        warn "theme '$theme_name' has no wallpaper in backgrounds; wallpaper unchanged"
-    elif command -v wallpaper-switch >/dev/null 2>&1; then
-        wallpaper-switch "$first_wallpaper" || warn "wallpaper-switch failed to apply '${first_wallpaper##*/}'"
-    elif [[ -x "$HOME/.local/bin/wallpaper-switch" ]]; then
-        "$HOME/.local/bin/wallpaper-switch" "$first_wallpaper" || warn "wallpaper-switch failed to apply '${first_wallpaper##*/}'"
-    elif command -v qdeck-wallpaper >/dev/null 2>&1; then
-        qdeck-wallpaper switch "$first_wallpaper" || warn "qdeck-wallpaper failed to apply '${first_wallpaper##*/}'"
-    elif command -v awww >/dev/null 2>&1; then
-        awww img "$first_wallpaper" || warn "awww failed to apply '${first_wallpaper##*/}'"
-    else
-        warn "no wallpaper tool installed; wallpaper unchanged"
-    fi
-}
-
-reload_hyprland() {
-    if command -v hyprctl >/dev/null 2>&1; then
-        hyprctl reload >/dev/null 2>&1 || true
-    fi
-}
-
-reload_neovim() {
-    # 1. Send SIGUSR1 signal for instant native reload in listening Neovim instances
-    pkill -SIGUSR1 -u "$UID" -x nvim >/dev/null 2>&1 || true
-
-    # 2. Also send remote RPC command to any active Neovim server sockets
-    local -a sockets=()
-    shopt -s nullglob
-    sockets=(
-        "${XDG_RUNTIME_DIR:-/run/user/$UID}"/nvim.*
-        /tmp/nvim*/*
-        /tmp/nvim.*
-    )
-    shopt -u nullglob
-
-    if (( ${#sockets[@]} > 0 )) && command -v nvim >/dev/null 2>&1; then
-        local remote_cmd='<Cmd>lua pcall(function() local p = vim.fn.expand("~/.config/themes/current/neovim.lua"); local ok, spec = pcall(dofile, p); if ok and type(spec) == "table" then for _, item in ipairs(spec) do if type(item) == "table" and item[1] and item[1] ~= "LazyVim/LazyVim" then local name = item.name or item[1]:match("/([^/]+)$") or item[1]; pcall(function() if package.loaded["lazy"] then require("lazy").load({ plugins = { name } }) end end) end; if item.opts and item.opts.colorscheme then if item.opts.background then if item.opts.background == "dark" or item.opts.background == "light" then pcall(function() vim.o.background = item.opts.background end) else pcall(function() vim.g.everforest_background = item.opts.background end) pcall(function() vim.g.gruvbox_material_background = item.opts.background end) end end; pcall(vim.cmd.colorscheme, item.opts.colorscheme) end end; pcall(vim.cmd, "redraw!") end end)<CR>'
-        for sock in "${sockets[@]}"; do
-            [[ -S "$sock" ]] || continue
-            nvim --server "$sock" --remote-send "$remote_cmd" >/dev/null 2>&1 &
-        done
-    fi
-}
-
-reload_quickshell() {
-    if command -v qs >/dev/null 2>&1; then
-        qs ipc call theme reload >/dev/null 2>&1 || true
-    fi
-    if command -v quickshell >/dev/null 2>&1; then
-        quickshell ipc call theme reload >/dev/null 2>&1 || true
-    fi
-}
-
-if [[ -n "$kitty_link_tmp" ]]; then
-    # Replacing an included symlink is not reliably noticed by kitty's config
-    # watcher. SIGUSR1 reloads kitty.conf without terminating any windows.
-    reload_kitty
-fi
-apply_icon_theme "$theme_dir"
-reload_neovim
-if (( theme_changed == 1 )); then
-    apply_wallpaper
-    reload_hyprland
-    reload_quickshell
-fi
-
-if (( theme_changed == 1 )); then
-    printf 'Theme switched to `%s`. Neovim/LazyVim reloaded live.\n' "$theme_name"
-else
-    printf 'Theme `%s` remains active; repaired managed configuration.\n' "$theme_name"
-fi
-```
-
-### bin/theme-switch-setup
-
-- **Path:** `bin/theme-switch-setup`
-- **Type:** Executable script
-- **Size:** 16961 bytes
-
-```bash
-#!/usr/bin/env bash
-
-set -u
-set -o pipefail
-umask 077
-
-readonly APP_TITLE="Theme Switcher Setup"
-readonly CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-readonly THEMES_DIR="$CONFIG_HOME/themes"
-readonly CURRENT_LINK="$THEMES_DIR/current"
-readonly SWITCH_SCRIPT="$HOME/.local/bin/theme-switch"
-readonly SETUP_SCRIPT="$HOME/.local/bin/theme-switch-setup"
-
-TMPDIR=''
-
-cleanup() {
-    if [[ -n "$TMPDIR" && -d "$TMPDIR" && "$TMPDIR" == "$CONFIG_HOME"/.theme-switch-setup.* ]]; then
-        rm -rf -- "$TMPDIR"
-    fi
-}
-trap cleanup EXIT
-
-emit_notification() {
-    local urgency="$1"
-    shift
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send --urgency="$urgency" "$APP_TITLE" "$*" >/dev/null 2>&1 || true
-    fi
-}
-
-warn() {
-    printf 'warning: %s\n' "$*" >&2
-    emit_notification normal "warning: $*"
-}
-
-error() {
-    printf 'error: %s\n' "$*" >&2
-    emit_notification critical "error: $*"
-}
-
-die() {
-    local status="$1"
-    shift
-    error "$*"
-    exit "$status"
-}
-
-if (( $# != 0 )); then
-    error "usage: theme-switch-setup"
-    exit 2
-fi
-
-mkdir -p -- "$CONFIG_HOME" || die 1 "could not create '$CONFIG_HOME'"
-TMPDIR="$(mktemp -d "$CONFIG_HOME/.theme-switch-setup.XXXXXX")" ||
-    die 1 "could not create a temporary directory"
-
-install_dependency() {
-    local command_name="$1"
-    local package_name="$2"
-
-    command -v "$command_name" >/dev/null 2>&1 && return 0
-    if ! command -v sudo >/dev/null 2>&1 || ! command -v pacman >/dev/null 2>&1; then
-        die 1 "missing dependency '$command_name' and sudo/pacman is unavailable"
-    fi
-    sudo pacman -S --needed --noconfirm "$package_name" >/dev/null ||
-        die 1 "failed to install dependency '$package_name'"
-    command -v "$command_name" >/dev/null 2>&1 ||
-        die 1 "dependency '$command_name' is still unavailable after installing '$package_name'"
-}
-
-install_dependency flock util-linux
-install_dependency jq jq
-lock_directory="${XDG_RUNTIME_DIR:-/tmp}"
-if [[ ! -d "$lock_directory" || ! -w "$lock_directory" ]]; then
-    lock_directory=/tmp
-fi
-lock_file="$lock_directory/theme-switch-${UID}.lock"
-exec 9>"$lock_file" || die 1 "cannot open lock file '$lock_file'"
-flock -n 9 || die 1 "another theme-switch operation is already running"
-
-snapshot_symlink() {
-    local path="$1"
-    if [[ -L "$path" ]]; then
-        printf 'symlink:%s' "$(readlink "$path")"
-    elif [[ -e "$path" ]]; then
-        printf 'not-a-symlink'
-    else
-        printf 'missing'
-    fi
-}
-
-snapshot_file() {
-    local path="$1"
-    local checksum ignored
-    if [[ -f "$path" ]]; then
-        read -r checksum ignored < <(sha256sum -- "$path") || return 1
-        printf 'file:%s' "$checksum"
-    elif [[ -e "$path" || -L "$path" ]]; then
-        printf 'not-a-regular-file'
-    else
-        printf 'missing'
-    fi
-}
-
-active_theme_before="$(snapshot_symlink "$CURRENT_LINK")"
-editor_paths=(
-    "$CONFIG_HOME/VSCodium/User/settings.json"
-    "$CONFIG_HOME/Code/User/settings.json"
-    "$CONFIG_HOME/Code - OSS/User/settings.json"
-    "$CONFIG_HOME/Antigravity IDE/User/settings.json"
-)
-declare -a editor_before=()
-for editor_path in "${editor_paths[@]}"; do
-    editor_before+=("$(snapshot_file "$editor_path")")
-done
-
-declare -a created_files=()
-declare -a modified_files=()
-declare -a backup_files=()
-declare -a unchanged_components=()
-
-latest_backup() {
-    local file="$1"
-    local LC_ALL=C
-    local -a candidates=()
-    shopt -s nullglob
-    candidates=("$file".bak.*)
-    shopt -u nullglob
-    if (( ${#candidates[@]} > 0 )); then
-        printf '%s' "${candidates[${#candidates[@]} - 1]}"
-    fi
-}
-
-same_backup_content() {
-    local file="$1"
-    local backup="$2"
-    if [[ -L "$file" || -L "$backup" ]]; then
-        [[ -L "$file" && -L "$backup" && "$(readlink "$file")" == "$(readlink "$backup")" ]]
-    else
-        cmp -s -- "$file" "$backup"
-    fi
-}
-
-backup_if_needed() {
-    local file="$1"
-    local latest backup timestamp
-    [[ -e "$file" || -L "$file" ]] || return 0
-
-    latest="$(latest_backup "$file")"
-    if [[ -n "$latest" ]] && same_backup_content "$file" "$latest"; then
-        return 0
-    fi
-
-    timestamp="$(date +%Y%m%d-%H%M%S-%N)"
-    backup="$file.bak.$timestamp"
-    cp -aT -- "$file" "$backup" || die 1 "failed to back up '$file'"
-    backup_files+=("$backup")
-}
-
-write_atomic() {
-    local source="$1"
-    local destination="$2"
-    mkdir -p "${destination%/*}" || die 1 "failed to create '${destination%/*}'"
-    mv -fT -- "$source" "$destination" || die 1 "failed to update '$destination'"
-}
-
-btop_theme_link="$CONFIG_HOME/btop/themes/current.theme"
-btop_theme_target="$CURRENT_LINK/btop.theme"
-if [[ -L "$btop_theme_link" && "$(readlink "$btop_theme_link")" == "$btop_theme_target" ]]; then
-    unchanged_components+=("btop theme link: already configured")
-else
-    mkdir -p "${btop_theme_link%/*}" || die 1 "failed to create btop themes directory"
-    if [[ -e "$btop_theme_link" || -L "$btop_theme_link" ]]; then
-        backup_if_needed "$btop_theme_link"
-        modified_files+=("$btop_theme_link")
-    else
-        created_files+=("$btop_theme_link")
-    fi
-    btop_link_tmp="$TMPDIR/current.theme"
-    ln -s -- "$btop_theme_target" "$btop_link_tmp" || die 1 "failed to stage btop theme link"
-    write_atomic "$btop_link_tmp" "$btop_theme_link"
-fi
-
-btop_conf="$CONFIG_HOME/btop/btop.conf"
-if [[ -f "$btop_conf" ]] &&
-   [[ "$(grep -Ec '^[[:space:]]*color_theme[[:space:]]*=[[:space:]]*"current"[[:space:]]*$' "$btop_conf")" -eq 1 ]]; then
-    unchanged_components+=("btop config: already configured")
-else
-    btop_tmp="$TMPDIR/btop.conf"
-    if [[ -f "$btop_conf" ]]; then
-        awk '
-            BEGIN { replaced = 0 }
-            /^[[:space:]]*color_theme[[:space:]]*=/ {
-                if (!replaced) {
-                    print "color_theme = \"current\""
-                    replaced = 1
-                }
-                next
-            }
-            { print }
-            END {
-                if (!replaced) print "color_theme = \"current\""
-            }
-        ' "$btop_conf" > "$btop_tmp" || die 1 "failed to stage btop config"
-        backup_if_needed "$btop_conf"
-        modified_files+=("$btop_conf")
-    else
-        printf 'color_theme = "current"\n' > "$btop_tmp" || die 1 "failed to stage btop config"
-        created_files+=("$btop_conf")
-    fi
-    write_atomic "$btop_tmp" "$btop_conf"
-fi
-
-nvim_loader="$CONFIG_HOME/nvim/lua/plugins/theme.lua"
-nvim_loader_tmp="$TMPDIR/theme.lua"
-nvim_loader_lines=(
-    'local function reload_current_theme()'
-    '  local theme_path = vim.fn.expand("~/.config/themes/current/neovim.lua")'
-    '  local ok, spec = pcall(dofile, theme_path)'
-    '  if not ok or type(spec) ~= "table" then return end'
-    '  for _, item in ipairs(spec) do'
-    '    if type(item) == "table" and item[1] and item[1] ~= "LazyVim/LazyVim" then'
-    '      local name = item.name or item[1]:match("/([^/]+)$") or item[1]'
-    '      pcall(function()'
-    '        if package.loaded["lazy"] then'
-    '          require("lazy").load({ plugins = { name } })'
-    '        end'
-    '      end)'
-    '    end'
-    '    if item.opts and item.opts.colorscheme then'
-    '      if item.opts.background then'
-    '        if item.opts.background == "dark" or item.opts.background == "light" then'
-    '          pcall(function() vim.o.background = item.opts.background end)'
-    '        else'
-    '          pcall(function() vim.g.everforest_background = item.opts.background end)'
-    '          pcall(function() vim.g.gruvbox_material_background = item.opts.background end)'
-    '        end'
-    '      end'
-    '      pcall(vim.cmd.colorscheme, item.opts.colorscheme)'
-    '    end'
-    '  end'
-    '  pcall(vim.cmd, "redraw!")'
-    'end'
-    ''
-    '_G.reload_qdeck_theme = reload_current_theme'
-    ''
-    'pcall(vim.api.nvim_create_user_command, "ReloadTheme", function()'
-    '  reload_current_theme()'
-    '  vim.notify("QDeck theme reloaded", vim.log.levels.INFO)'
-    'end, { desc = "Reload QDeck active theme in LazyVim" })'
-    ''
-    'pcall(vim.api.nvim_create_autocmd, "FocusGained", {'
-    '  callback = reload_current_theme,'
-    '  desc = "Reload QDeck theme on focus gained",'
-    '})'
-    ''
-    'if vim.uv and vim.uv.new_signal then'
-    '  local sig = vim.uv.new_signal()'
-    '  sig:start("sigusr1", function()'
-    '    vim.schedule(reload_current_theme)'
-    '  end)'
-    'end'
-    ''
-    'local theme_path = vim.fn.expand("~/.config/themes/current/neovim.lua")'
-    'local ok, spec = pcall(dofile, theme_path)'
-    ''
-    'if not ok then'
-    '  return {}'
-    'end'
-    ''
-    'if type(spec) ~= "table" then'
-    '  return {}'
-    'end'
-    ''
-    'return spec'
-)
-printf '%s\n' "${nvim_loader_lines[@]}" > "$nvim_loader_tmp" ||
-    die 1 "failed to stage Neovim plugin loader"
-
-if [[ -f "$nvim_loader" ]] && cmp -s -- "$nvim_loader_tmp" "$nvim_loader"; then
-    unchanged_components+=("Neovim plugin loader: already configured")
-else
-    if [[ -e "$nvim_loader" || -L "$nvim_loader" ]]; then
-        backup_if_needed "$nvim_loader"
-        modified_files+=("$nvim_loader")
-    else
-        created_files+=("$nvim_loader")
-    fi
-    write_atomic "$nvim_loader_tmp" "$nvim_loader"
-fi
-
-# Migrate the obsolete post-Lazy loader hook. The new lua/plugins/theme.lua file
-# is discovered automatically by the existing { import = "plugins" } spec.
-nvim_init="$CONFIG_HOME/nvim/init.lua"
-if [[ -f "$nvim_init" ]] && grep -Fxq 'require("theme-loader")' "$nvim_init"; then
-    nvim_init_tmp="$TMPDIR/init.lua"
-    grep -Fvx 'require("theme-loader")' "$nvim_init" > "$nvim_init_tmp" || true
-    backup_if_needed "$nvim_init"
-    modified_files+=("$nvim_init")
-    write_atomic "$nvim_init_tmp" "$nvim_init"
-else
-    unchanged_components+=("Neovim legacy init hook: already absent")
-fi
-
-nvim_lazy_config="$CONFIG_HOME/nvim/lua/config/lazy.lua"
-if [[ ! -f "$nvim_lazy_config" ]]; then
-    mkdir -p "$CONFIG_HOME/nvim/lua/config"
-    repo_lazy="$(dirname "${BASH_SOURCE[0]}")/../nvim/lua/config/lazy.lua"
-    if [[ -f "$repo_lazy" ]]; then
-        cp -f "$repo_lazy" "$nvim_lazy_config"
-    else
-        cat <<'EOF' > "$nvim_lazy_config"
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not (vim.uv or vim.loop).fs_stat(lazypath) then
-  local lazyrepo = "https://github.com/folke/lazy.nvim.git"
-  vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
-end
-vim.opt.rtp:prepend(lazypath)
-
-require("lazy").setup({
-  spec = {
-    { "LazyVim/LazyVim", import = "lazyvim.plugins" },
-    { import = "plugins" },
-  },
-  defaults = { lazy = false, version = false },
-})
-EOF
-    fi
-    created_files+=("$nvim_lazy_config")
-fi
-
-if ! grep -Eq "import[[:space:]]*=[[:space:]]*['\\\"]plugins['\\\"]" "$nvim_lazy_config"; then
-    die 1 "Neovim Lazy config does not import the plugins directory"
-fi
-
-declare -a editor_extension_changes=()
-
-install_editor_theme_extensions() {
-    local editor_bin="$1" metadata_file extension normalized installed_extensions
-    local installed_any=0 had_error=0
-    local -a metadata_files=()
-    local -A seen_extensions=()
-
-    shopt -s nullglob
-    metadata_files=("$THEMES_DIR"/*/vscode.json)
-    shopt -u nullglob
-    (( ${#metadata_files[@]} > 0 )) || return 0
-
-    if ! installed_extensions="$("$editor_bin" --list-extensions 2>/dev/null)"; then
-        warn "could not list extensions for $editor_bin; editor theme extension setup skipped"
-        return 0
-    fi
-
-    for metadata_file in "${metadata_files[@]}"; do
-        extension="$(
-            jq -er '
-                if ((.name | type) == "string" and (.name | length) > 0)
-                   and ((.extension | type) == "string" and (.extension | length) > 0)
-                then .extension
-                else error("invalid VS Code theme metadata")
-                end
-            ' "$metadata_file"
-        )" || {
-            warn "invalid editor metadata in '$metadata_file'; extension setup skipped for that theme"
-            had_error=1
-            continue
-        }
-        normalized=${extension,,}
-        [[ -z "${seen_extensions[$normalized]+set}" ]] || continue
-        seen_extensions["$normalized"]=1
-
-        if grep -Fxiq -- "$extension" <<< "$installed_extensions"; then
-            continue
-        fi
-        if "$editor_bin" --install-extension "$extension" >/dev/null 2>&1; then
-            editor_extension_changes+=("$editor_bin: installed $extension")
-            installed_extensions+=$'\n'"$extension"
-            installed_any=1
-        else
-            warn "could not install editor extension '$extension' for $editor_bin"
-            had_error=1
-        fi
-    done
-
-    if (( installed_any == 0 && had_error == 0 )); then
-        unchanged_components+=("$editor_bin theme extensions: already available")
-    fi
-}
-
-if command -v codium >/dev/null 2>&1; then
-    install_editor_theme_extensions codium
-fi
-if command -v code >/dev/null 2>&1; then
-    install_editor_theme_extensions code
-fi
-if command -v antigravity-ide >/dev/null 2>&1; then
-    install_editor_theme_extensions antigravity-ide
-elif [[ -x "/opt/antigravity-ide/antigravity-ide" ]]; then
-    install_editor_theme_extensions "/opt/antigravity-ide/antigravity-ide"
-fi
-
-# Sync all installed VSCodium extensions to Antigravity IDE if present
-if [[ -d "$HOME/.vscode-oss/extensions" && -d "$CONFIG_HOME/Antigravity IDE" ]]; then
-    mkdir -p "$HOME/.antigravity-ide/extensions"
-    cp -rn "$HOME/.vscode-oss/extensions"/* "$HOME/.antigravity-ide/extensions/" 2>/dev/null || true
-    if [[ -f "$HOME/.vscode-oss/extensions/extensions.json" ]]; then
-        sed 's|/\.vscode-oss/extensions|/\.antigravity-ide/extensions|g' \
-            "$HOME/.vscode-oss/extensions/extensions.json" > "$HOME/.antigravity-ide/extensions/extensions.json" 2>/dev/null || true
-    fi
-fi
-
-declare -a verification_lines=()
-if bash -n "$SWITCH_SCRIPT"; then
-    verification_lines+=("PASS bash -n theme-switch (exit 0)")
-else
-    die 1 "bash -n failed for '$SWITCH_SCRIPT'"
-fi
-if bash -n "$SETUP_SCRIPT"; then
-    verification_lines+=("PASS bash -n theme-switch-setup (exit 0)")
-else
-    die 1 "bash -n failed for '$SETUP_SCRIPT'"
-fi
-
-verification_lines+=("PASS runtime dependencies available (flock, jq)")
-
-declare -a active_required_files=(btop.theme neovim.lua colors.toml color.conf)
-
-if [[ -f "$CURRENT_LINK/colors.toml" ]]; then
-    verification_lines+=("PASS Quickshell active theme contains colors.toml")
-else
-    verification_lines+=("WARN Quickshell active theme is missing colors.toml")
-fi
-
-if command -v nvim >/dev/null 2>&1; then
-    if nvim --headless -u NONE -c "luafile $nvim_loader" -c 'quit' >/dev/null 2>&1; then
-        verification_lines+=("PASS nvim Lazy plugin loader check (exit 0)")
-    else
-        die 1 "Neovim loader validation failed"
-    fi
-else
-    die 1 "nvim is required to validate the Neovim loader"
-fi
-
-if [[ -L "$CURRENT_LINK" ]]; then
-    active_chain_valid=1
-    if [[ ! -e "$btop_theme_link" ]]; then
-        warn "btop active-theme symlink does not currently resolve; the next valid theme switch can repair it"
-        active_chain_valid=0
-    fi
-    for required_file in "${active_required_files[@]}"; do
-        if [[ ! -f "$CURRENT_LINK/$required_file" ]]; then
-            warn "active theme is missing '$required_file'; the next valid theme switch can repair it"
-            active_chain_valid=0
-        fi
-    done
-    if (( active_chain_valid == 1 )); then
-        verification_lines+=("PASS active-theme symlink chain resolves")
-    else
-        verification_lines+=("WARN active-theme symlink chain is incomplete")
-    fi
-else
-    verification_lines+=("PASS symlink resolution check skipped (no active theme)")
-fi
-
-active_theme_after="$(snapshot_symlink "$CURRENT_LINK")"
-[[ "$active_theme_before" == "$active_theme_after" ]] ||
-    die 1 "self-check failed: active theme changed during setup"
-for index in "${!editor_paths[@]}"; do
-    editor_after="$(snapshot_file "${editor_paths[$index]}")"
-    [[ "${editor_before[$index]}" == "$editor_after" ]] ||
-        die 1 "self-check failed: editor settings changed at '${editor_paths[$index]}'"
-done
-
-printf 'confirmed: active theme and editor settings untouched\n'
-printf '\nSetup report:\n'
-if (( ${#created_files[@]} == 0 )); then
-    printf '  created: none\n'
-else
-    for item in "${created_files[@]}"; do printf '  created: %s\n' "$item"; done
-fi
-if (( ${#modified_files[@]} == 0 )); then
-    printf '  modified: none\n'
-else
-    for item in "${modified_files[@]}"; do printf '  modified: %s\n' "$item"; done
-fi
-if (( ${#backup_files[@]} == 0 )); then
-    printf '  backed up: none\n'
-else
-    for item in "${backup_files[@]}"; do printf '  backed up: %s\n' "$item"; done
-fi
-for item in "${editor_extension_changes[@]}"; do printf '  editor extension: %s\n' "$item"; done
-for item in "${unchanged_components[@]}"; do printf '  already configured: %s\n' "$item"; done
-printf '\nVerification:\n'
-for item in "${verification_lines[@]}"; do printf '  %s\n' "$item"; done
-```
+---
 
 ### bin/tui-launch
-
 - **Path:** `bin/tui-launch`
-- **Type:** Executable script
-- **Size:** 428 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -5046,108 +4168,10 @@ else
 fi
 ```
 
-### bin/wallpaper-switch
-
-- **Path:** `bin/wallpaper-switch`
-- **Type:** Executable script
-- **Size:** 2470 bytes
-
-```bash
-#!/usr/bin/env bash
-# QDeck: wallpaper-switch: updates ~/.config/themes/current/default.png and applies wallpaper via awww/swww/hyprpaper
-set -euo pipefail
-umask 077
-
-readonly APP_TITLE="Wallpaper Switcher"
-readonly CURRENT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/themes/current"
-
-emit_notification() {
-    local urgency="$1"
-    shift
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send --urgency="$urgency" "$APP_TITLE" "$*" >/dev/null 2>&1 || true
-    fi
-}
-
-error() {
-    printf 'error: %s\n' "$*" >&2
-    emit_notification critical "error: $*"
-}
-
-die() {
-    local status="$1"
-    shift
-    error "$*"
-    exit "$status"
-}
-
-if (( $# != 1 )); then
-    die 2 "usage: wallpaper-switch /absolute/path/to/image"
-fi
-
-image_path="$1"
-if [[ "$image_path" != /* ]]; then
-    if [[ -f "$CURRENT_DIR/backgrounds/$image_path" ]]; then
-        image_path="$CURRENT_DIR/backgrounds/$image_path"
-    elif [[ -f "$PWD/$image_path" ]]; then
-        image_path="$PWD/$image_path"
-    fi
-fi
-
-[[ -d "$CURRENT_DIR" ]] || die 1 "'$CURRENT_DIR' does not resolve to a valid theme directory"
-[[ -f "$image_path" ]] || die 1 "image is not a regular file or does not exist: '$image_path'"
-
-# Resolve symlinks so we have the canonical path
-canon_path="$(readlink -f "$image_path" 2>/dev/null || echo "$image_path")"
-
-readonly LINK_PATH="$CURRENT_DIR/default.png"
-ln -sfn "$canon_path" "$LINK_PATH"
-
-applied=0
-
-# 1. Primary backend: awww
-if command -v awww >/dev/null 2>&1; then
-    if ! pgrep -x awww-daemon >/dev/null 2>&1; then
-        awww-daemon &
-        sleep 0.2
-    fi
-    if awww img "$canon_path" >/dev/null 2>&1; then
-        applied=1
-    fi
-fi
-
-# 2. Secondary backend: swww
-if (( applied == 0 )) && command -v swww >/dev/null 2>&1; then
-    if ! pgrep -x swww-daemon >/dev/null 2>&1; then
-        swww init >/dev/null 2>&1 || true
-        sleep 0.2
-    fi
-    if swww img "$canon_path" >/dev/null 2>&1; then
-        applied=1
-    fi
-fi
-
-# 3. Tertiary backend: hyprpaper
-if (( applied == 0 )) && command -v hyprpaper >/dev/null 2>&1 && command -v hyprctl >/dev/null 2>&1; then
-    hyprctl hyprpaper preload "$canon_path" >/dev/null 2>&1 || true
-    hyprctl hyprpaper wallpaper ",$canon_path" >/dev/null 2>&1 || true
-    applied=1
-fi
-
-if (( applied == 1 )); then
-    local_name="$(basename "$canon_path")"
-    printf 'Wallpaper changed to `%s`.\n' "$local_name"
-    exit 0
-fi
-
-die 1 "no supported wallpaper daemon found or failed to apply (awww, swww, hyprpaper)"
-```
+---
 
 ### bin/webapp-create
-
 - **Path:** `bin/webapp-create`
-- **Type:** Executable script
-- **Size:** 6976 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -5547,118 +4571,10 @@ main() {
 main "$@"
 ```
 
-### bin/wpctl
-
-- **Path:** `bin/wpctl`
-- **Type:** Executable script
-- **Size:** 2224 bytes
-
-```bash
-#!/usr/bin/env bash
-# QDeck: PipeWire wpctl wrapper: triggers QDeck OSD even when volume is already 100% or 0%
-
-REAL_WPCTL="/usr/bin/wpctl"
-if [[ ! -x "$REAL_WPCTL" ]]; then
-  REAL_WPCTL=$(type -P wpctl || true)
-fi
-
-no_osd=0
-args=()
-for arg in "$@"; do
-  if [[ "$arg" == "--no-osd" ]]; then
-    no_osd=1
-  else
-    args+=("$arg")
-  fi
-done
-
-"$REAL_WPCTL" "${args[@]}"
-ret=$?
-
-if [[ $ret -ne 0 || $no_osd -eq 1 ]]; then
-  exit $ret
-fi
-
-is_sink_vol=0
-is_sink_mute=0
-is_source_mute=0
-is_source_vol=0
-
-target_source=0
-target_sink=0
-
-for arg in "${args[@]}"; do
-  case "$arg" in
-    @DEFAULT_AUDIO_SOURCE@|@DEFAULT_SOURCE@)
-      target_source=1
-      ;;
-    @DEFAULT_AUDIO_SINK@|@DEFAULT_SINK@)
-      target_sink=1
-      ;;
-    set-volume)
-      is_sink_vol=1
-      ;;
-    set-mute)
-      is_sink_mute=1
-      ;;
-  esac
-done
-
-if [[ $target_source -eq 1 ]]; then
-  if [[ $is_sink_vol -eq 1 ]]; then
-    is_sink_vol=0
-    is_source_vol=1
-  fi
-  if [[ $is_sink_mute -eq 1 ]]; then
-    is_sink_mute=0
-    is_source_mute=1
-  fi
-fi
-
-if [[ $is_sink_vol -eq 1 || $is_sink_mute -eq 1 ]]; then
-  out=$("$REAL_WPCTL" get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || echo "")
-  if [[ -n "$out" ]]; then
-    is_muted=0
-    if [[ "$out" == *"[MUTED]"* ]]; then
-      is_muted=1
-    fi
-    val=$(awk '{print $2}' <<< "$out")
-    pct=$(awk -v v="$val" 'BEGIN { printf "%d", (v * 100) + 0.5 }')
-    
-    if [[ $is_muted -eq 1 ]]; then
-      qdeck-osd -i "volume-muted" -m "Muted" -p "$pct" >/dev/null 2>&1 || true
-    else
-      qdeck-osd -i "volume" -p "$pct" >/dev/null 2>&1 || true
-    fi
-  fi
-elif [[ $is_source_mute -eq 1 ]]; then
-  out=$("$REAL_WPCTL" get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null || echo "")
-  if [[ "$out" == *"[MUTED]"* ]]; then
-    qdeck-osd -i "microphone-muted" -m "Mic Muted" >/dev/null 2>&1 || true
-  else
-    qdeck-osd -i "microphone" -m "Mic Active" >/dev/null 2>&1 || true
-  fi
-elif [[ $is_source_vol -eq 1 ]]; then
-  out=$("$REAL_WPCTL" get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null || echo "")
-  if [[ -n "$out" ]]; then
-    val=$(awk '{print $2}' <<< "$out")
-    pct=$(awk -v v="$val" 'BEGIN { printf "%d", (v * 100) + 0.5 }')
-    qdeck-osd -i "microphone" -p "$pct" >/dev/null 2>&1 || true
-  fi
-fi
-
-exit $ret
-```
-
 ---
 
-## Folder: `bin/lib/`
-
 ### bin/lib/00-backup.sh
-
 - **Path:** `bin/lib/00-backup.sh`
-- **Type:** Shell script library
-- **Size:** 1721 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -5720,11 +4636,10 @@ fi
 exit 0
 ```
 
-### bin/lib/01-deps.sh
+---
 
+### bin/lib/01-deps.sh
 - **Path:** `bin/lib/01-deps.sh`
-- **Type:** Shell script library
-- **Size:** 3772 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -5882,11 +4797,10 @@ echo "==> [QDeck:01-deps] Dependencies and system services configured successful
 exit 0
 ```
 
-### bin/lib/02-fonts.sh
+---
 
+### bin/lib/02-fonts.sh
 - **Path:** `bin/lib/02-fonts.sh`
-- **Type:** Shell script library
-- **Size:** 3995 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -6003,11 +4917,10 @@ echo "==> [QDeck:02-fonts] Font installation completed for QDeck."
 exit 0
 ```
 
-### bin/lib/03-quickshell.sh
+---
 
+### bin/lib/03-quickshell.sh
 - **Path:** `bin/lib/03-quickshell.sh`
-- **Type:** Shell script library
-- **Size:** 2527 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -6093,11 +5006,10 @@ echo "==> [QDeck:03-quickshell] QDeck Quickshell environment prepared successful
 exit 0
 ```
 
-### bin/lib/04-dotfiles.sh
+---
 
+### bin/lib/04-dotfiles.sh
 - **Path:** `bin/lib/04-dotfiles.sh`
-- **Type:** Shell script library
-- **Size:** 3922 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -6194,11 +5106,10 @@ echo "==> [QDeck:04-dotfiles] Configurations deployed successfully for QDeck."
 exit 0
 ```
 
-### bin/lib/05-nvim.sh
+---
 
+### bin/lib/05-nvim.sh
 - **Path:** `bin/lib/05-nvim.sh`
-- **Type:** Shell script library
-- **Size:** 2015 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -6267,11 +5178,10 @@ echo "==> [QDeck:05-nvim] Neovim setup completed for QDeck."
 exit 0
 ```
 
-### bin/lib/06-assets.sh
+---
 
+### bin/lib/06-assets.sh
 - **Path:** `bin/lib/06-assets.sh`
-- **Type:** Shell script library
-- **Size:** 2955 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -6363,11 +5273,10 @@ echo "==> [QDeck:06-assets] Visual assets deployed successfully for QDeck."
 exit 0
 ```
 
-### bin/lib/07-scripts.sh
+---
 
+### bin/lib/07-scripts.sh
 - **Path:** `bin/lib/07-scripts.sh`
-- **Type:** Shell script library
-- **Size:** 4184 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -6389,11 +5298,23 @@ for script in "$REPO_ROOT/bin"/*; do
   [[ "$base" == "install.sh" ]] && continue
   
   rm -f "$TARGET_BIN_DIR/$base"
-  cp -f "$script" "$TARGET_BIN_DIR/$base"
-  chmod +x "$TARGET_BIN_DIR/$base"
+  if [[ -L "$script" ]]; then
+    cp -P "$script" "$TARGET_BIN_DIR/$base"
+  else
+    cp -f "$script" "$TARGET_BIN_DIR/$base"
+    chmod +x "$TARGET_BIN_DIR/$base"
+  fi
   echo "    Installed: $base"
   ((installed_count++)) || true
 done
+
+# Deploy internal script libraries
+mkdir -p "$TARGET_BIN_DIR/lib"
+if [[ -d "$REPO_ROOT/bin/lib" ]]; then
+  cp -rf "$REPO_ROOT/bin/lib/." "$TARGET_BIN_DIR/lib/"
+  chmod +x "$TARGET_BIN_DIR/lib"/*.sh 2>/dev/null || true
+  echo "    Deployed libraries to $TARGET_BIN_DIR/lib"
+fi
 
 echo "    Successfully deployed $installed_count QDeck scripts to $TARGET_BIN_DIR."
 
@@ -6487,11 +5408,10 @@ echo "==> [QDeck:07-scripts] Scripts deployment and PATH verification complete f
 exit 0
 ```
 
-### bin/lib/08-zsh.sh
+---
 
+### bin/lib/08-zsh.sh
 - **Path:** `bin/lib/08-zsh.sh`
-- **Type:** Shell script library
-- **Size:** 3962 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -6637,3 +5557,41 @@ echo ""
 echo "Apply now with: exec zsh"
 exit 0
 ```
+
+---
+
+### bin/lib/qdeck-ipc.sh
+- **Path:** `bin/lib/qdeck-ipc.sh`
+
+```bash
+#!/usr/bin/env bash
+# QDeck: Shared IPC caller for QDeck CLI scripts
+
+call_ipc() {
+  local target="$1"; shift
+  local method="$1"; shift
+  local out=""
+  local qs_bin="qs"
+  command -v qs >/dev/null 2>&1 || qs_bin="quickshell"
+
+  # 1. Direct IPC call
+  if out=$("$qs_bin" ipc call "$target" "$method" "$@" 2>&1); then
+    printf '%s\n' "$out"
+    return 0
+  fi
+
+  # 2. Config path fallback
+  local cfg_dir="${QUICKSHELL_DIR:-$HOME/.config/quickshell}"
+  if [[ -d "$cfg_dir" ]]; then
+    if out=$("$qs_bin" -p "$cfg_dir" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+```
+
+---
+

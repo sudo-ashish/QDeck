@@ -43,7 +43,7 @@ QtObject {
         root.isSwitching = true
         root.switchingTo = wallpaperPath
 
-        // Execute wallpaper-switch script via helper
+        // Execute qdeck-wallpaper script via helper
         switchProc.command = [root.listScriptPath, "switch", wallpaperPath]
         switchProc.running = true
 

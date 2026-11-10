@@ -17,11 +17,23 @@ for script in "$REPO_ROOT/bin"/*; do
   [[ "$base" == "install.sh" ]] && continue
   
   rm -f "$TARGET_BIN_DIR/$base"
-  cp -f "$script" "$TARGET_BIN_DIR/$base"
-  chmod +x "$TARGET_BIN_DIR/$base"
+  if [[ -L "$script" ]]; then
+    cp -P "$script" "$TARGET_BIN_DIR/$base"
+  else
+    cp -f "$script" "$TARGET_BIN_DIR/$base"
+    chmod +x "$TARGET_BIN_DIR/$base"
+  fi
   echo "    Installed: $base"
   ((installed_count++)) || true
 done
+
+# Deploy internal script libraries
+mkdir -p "$TARGET_BIN_DIR/lib"
+if [[ -d "$REPO_ROOT/bin/lib" ]]; then
+  cp -rf "$REPO_ROOT/bin/lib/." "$TARGET_BIN_DIR/lib/"
+  chmod +x "$TARGET_BIN_DIR/lib"/*.sh 2>/dev/null || true
+  echo "    Deployed libraries to $TARGET_BIN_DIR/lib"
+fi
 
 echo "    Successfully deployed $installed_count QDeck scripts to $TARGET_BIN_DIR."
 
