@@ -5,8 +5,8 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Io
-import "../theme"
-import "../services"
+import "../../../theme"
+import "../../../services"
 
 PanelWindow {
     id: root

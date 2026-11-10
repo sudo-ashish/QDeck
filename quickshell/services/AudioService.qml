@@ -28,9 +28,6 @@ QtObject {
     }
 
     readonly property var sink: Pipewire.defaultAudioSink
-    onSinkChanged: {
-        if (!sinkAvailabilityProc.running) sinkAvailabilityProc.running = true
-    }
     readonly property var source: Pipewire.defaultAudioSource
     readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
 
@@ -84,6 +81,7 @@ QtObject {
     property string lastSinkName: ""
     property int lastSinkId: -1
     onSinkChanged: {
+        if (!sinkAvailabilityProc.running) sinkAvailabilityProc.running = true
         root.sinkSwitching = true
         sinkSwitchTimer.restart()
         var currentName = sink && sink.name ? String(sink.name) : ""

@@ -60,7 +60,7 @@ else
 fi
 
 # 3. Compile native lockstate monitor C binary
-LOCKSTATE_SRC="$REPO_ROOT/quickshell/src/qdeck-lockstate-monitor.c"
+LOCKSTATE_SRC="$REPO_ROOT/src/qdeck-lockstate-monitor.c"
 LOCKSTATE_BIN="$REPO_ROOT/bin/qdeck-lockstate-monitor"
 
 if [[ -f "$LOCKSTATE_SRC" ]]; then

@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
-import "../theme"
-import "../components"
-import "../services"
-import "../services/ClockModel.js" as Model
+import "../../../theme"
+import "../../../components"
+import "../../../services"
+import "../../../services/ClockModel.js" as Model
 
 Item {
     id: root

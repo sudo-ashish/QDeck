@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
-import "../theme"
+import "../../theme"
 import "NotificationLogic.js" as NotificationLogic
 
 Item {

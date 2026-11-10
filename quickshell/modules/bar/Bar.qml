@@ -2,10 +2,10 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
-import "../theme"
-import "../services"
-import "../widgets"
-import "../components"
+import "../../theme"
+import "../../services"
+import "widgets"
+import "../../components"
 
 PanelWindow {
     id: root

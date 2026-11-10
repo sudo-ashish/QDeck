@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
 import Quickshell
-import "../theme"
-import "../services"
+import "../../theme"
+import "../../services"
 
 Item {
     id: root

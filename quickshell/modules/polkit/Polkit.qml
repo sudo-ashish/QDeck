@@ -5,7 +5,7 @@ import Quickshell.Io
 import Quickshell.Services.Polkit
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import "../theme"
+import "../../theme"
 import "PolkitModel.js" as PolkitModel
 
 Item {

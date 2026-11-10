@@ -20,6 +20,7 @@ This document contains the complete file structure, metadata, and full contents 
 - [`bin/qdeck-clipboard-record.py`](#binqdeck-clipboard-recordpy)
 - [`bin/qdeck-display-text-size`](#binqdeck-display-text-size)
 - [`bin/qdeck-dns`](#binqdeck-dns)
+- [`bin/qdeck-ipc`](#binqdeck-ipc)
 - [`bin/qdeck-launch-terminal`](#binqdeck-launch-terminal)
 - [`bin/qdeck-launcher`](#binqdeck-launcher)
 - [`bin/qdeck-lockstate-monitor`](#binqdeck-lockstate-monitor)
@@ -449,7 +450,7 @@ fi
 
 - **Path:** `bin/qdeck-bar`
 - **Type:** Executable script
-- **Size:** 5117 bytes
+- **Size:** 5168 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -492,15 +493,18 @@ is_bar_visible() {
   echo "visible"
 }
 
-call_bar_ipc() {
-  local target="$1"
-  local method="$2"
-  shift 2
-  local qs_bin="qs"
-  command -v qs >/dev/null 2>&1 || qs_bin="quickshell"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
+else
+  source "$HOME/.local/bin/qdeck-ipc"
+fi
 
-  "$qs_bin" ipc call "$target" "$method" "$@" >/dev/null 2>&1 || \
-  "$qs_bin" -p "$CONFIG_DIR" ipc call "$target" "$method" "$@" >/dev/null 2>&1 || true
+call_bar_ipc() {
+  call_ipc "$@" >/dev/null 2>&1 || true
 }
 
 set_bar_visibility() {
@@ -910,7 +914,7 @@ esac
 
 - **Path:** `bin/qdeck-blur`
 - **Type:** Executable script
-- **Size:** 1812 bytes
+- **Size:** 924 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -921,49 +925,14 @@ CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try repository quickshell path
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 case "$CMD" in
   toggle)
@@ -1082,7 +1051,7 @@ echo "$res"
 
 - **Path:** `bin/qdeck-clipboard`
 - **Type:** Executable script
-- **Size:** 4890 bytes
+- **Size:** 3991 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1099,49 +1068,14 @@ STATE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/quickshell/clipboard-history.
 FALLBACK_STATE_FILE="$HOME/.local/state/quickshell/clipboard-history.json"
 
 # Choose CLI binary
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 invoke_clipboard() {
   local method="$1"; shift
@@ -1715,6 +1649,83 @@ else
 fi
 ```
 
+### bin/qdeck-ipc
+
+- **Path:** `bin/qdeck-ipc`
+- **Type:** Executable script
+- **Size:** 1911 bytes
+
+```bash
+#!/usr/bin/env bash
+# QDeck: Centralized QuickShell IPC Dispatcher & Shared Library (qdeck-ipc)
+# Provides fallback socket resolution and uniform IPC dispatching across CLI tools.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)"
+
+# Resolve Quickshell executable (qs preferred over quickshell)
+if command -v qs >/dev/null 2>&1; then
+  QS_BIN="qs"
+elif command -v quickshell >/dev/null 2>&1; then
+  QS_BIN="quickshell"
+else
+  QS_BIN="qs"
+fi
+
+call_ipc() {
+  local target="${1:-}"
+  local method="${2:-}"
+  if [[ -z "$target" || -z "$method" ]]; then
+    echo "error: call_ipc requires <target> and <method>" >&2
+    return 1
+  fi
+  shift 2
+  local out=""
+
+  # 1. Try generic IPC call first (directly connects to active running QuickShell)
+  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
+    printf '%s\n' "$out"
+    return 0
+  fi
+
+  # 2. Try explicit QUICKSHELL_DIR if set
+  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
+    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 3. Try standard user configuration ~/.config/quickshell
+  if [[ -d "$HOME/.config/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 4. Try workspace configuration in repository
+  if [[ -d "$REPO_DIR/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+# If executed directly as a standalone binary
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  if [[ $# -lt 2 ]]; then
+    echo "Usage: qdeck-ipc <target> <method> [args...]" >&2
+    exit 1
+  fi
+  call_ipc "$@"
+fi
+```
+
 ### bin/qdeck-launch-terminal
 
 - **Path:** `bin/qdeck-launch-terminal`
@@ -1764,7 +1775,7 @@ esac
 
 - **Path:** `bin/qdeck-launcher`
 - **Type:** Executable script
-- **Size:** 1761 bytes
+- **Size:** 842 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -1775,50 +1786,14 @@ CMD="${1:-toggle}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Choose CLI binary
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 case "$CMD" in
   toggle)
@@ -1848,9 +1823,9 @@ esac
 
 - **Path:** `bin/qdeck-lockstate-monitor`
 - **Type:** ELF 64-bit LSB executable (Compiled binary)
-- **Source File:** `quickshell/src/qdeck-lockstate-monitor.c`
+- **Source File:** `src/qdeck-lockstate-monitor.c`
 
-Compiled binary from `quickshell/src/qdeck-lockstate-monitor.c`. Below is the complete source code:
+Compiled binary from `src/qdeck-lockstate-monitor.c`. Below is the complete source code:
 
 ```c
 /*
@@ -2273,7 +2248,7 @@ printf "wifi_radio\t%s\n" "${wifi_radio:-enabled}"
 
 - **Path:** `bin/qdeck-notifications`
 - **Type:** Executable script
-- **Size:** 3600 bytes
+- **Size:** 2701 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2287,49 +2262,14 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 QS_DIR="${QUICKSHELL_DIR:-$HOME/quickshell}"
 
 # Choose CLI binary
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 case "$CMD" in
   toggle-dnd|toggle-silence|dnd)
@@ -2425,7 +2365,7 @@ esac
 
 - **Path:** `bin/qdeck-osd`
 - **Type:** Executable script
-- **Size:** 2973 bytes
+- **Size:** 1973 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2439,52 +2379,14 @@ progress_text=""
 max="100"
 duration=""
 
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 json_escape() {
   local s="${1:-}"
@@ -2568,7 +2470,7 @@ call_ipc osd trigger "$icon" "$message" 2>/dev/null || true
 
 - **Path:** `bin/qdeck-powermenu`
 - **Type:** Executable script
-- **Size:** 1791 bytes
+- **Size:** 892 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2580,49 +2482,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Choose CLI binary
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 case "$CMD" in
   toggle)
@@ -2656,7 +2523,7 @@ esac
 
 - **Path:** `bin/qdeck-qshelf`
 - **Type:** Executable script
-- **Size:** 2989 bytes
+- **Size:** 2090 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -2668,49 +2535,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Choose CLI binary
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 # Wrapper that tries 'qshelf' first and falls back to 'shelf'
 invoke_qshelf() {
@@ -3606,7 +3438,7 @@ esac
 
 - **Path:** `bin/qdeck-themeswitcher`
 - **Type:** Executable script
-- **Size:** 3328 bytes
+- **Size:** 2429 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -3618,49 +3450,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Choose CLI binary
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 case "$CMD" in
   toggle)
@@ -4066,7 +3863,7 @@ esac
 
 - **Path:** `bin/qdeck-wallpaperswitcher`
 - **Type:** Executable script
-- **Size:** 1932 bytes
+- **Size:** 1033 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -4078,49 +3875,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Choose CLI binary
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 case "$CMD" in
   toggle)
@@ -6245,7 +6007,7 @@ exit 0
 
 - **Path:** `bin/lib/03-quickshell.sh`
 - **Type:** Shell script library
-- **Size:** 2538 bytes
+- **Size:** 2527 bytes
 
 ```bash
 #!/usr/bin/env bash
@@ -6310,7 +6072,7 @@ else
 fi
 
 # 3. Compile native lockstate monitor C binary
-LOCKSTATE_SRC="$REPO_ROOT/quickshell/src/qdeck-lockstate-monitor.c"
+LOCKSTATE_SRC="$REPO_ROOT/src/qdeck-lockstate-monitor.c"
 LOCKSTATE_BIN="$REPO_ROOT/bin/qdeck-lockstate-monitor"
 
 if [[ -f "$LOCKSTATE_SRC" ]]; then

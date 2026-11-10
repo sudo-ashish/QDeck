@@ -2,17 +2,14 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "services"
-import "bar"
-import "launcher"
-import "osd"
-import "notifications"
-import "components"
-import "polkit"
-import "powermenu"
-import "shelf"
-import "clipboard"
 import "theme"
+import "components"
+import "services"
+import "modules/bar"
+import "modules/launcher"
+import "modules/osd"
+import "modules/notifications"
+import "modules/polkit"
 
 ShellRoot {
     id: root

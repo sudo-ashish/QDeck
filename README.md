@@ -151,11 +151,11 @@ Available flags:
 If you prefer to configure your system manually:
 
 #### 1. Compile the Hardware Lockstate Monitor
-QDeck includes a low-overhead C helper (`quickshell/src/qdeck-lockstate-monitor.c`) that reads `/sys/class/leds/*` with zero CPU overhead to signal CapsLock and NumLock changes to the OSD:
+QDeck includes a low-overhead C helper (`src/qdeck-lockstate-monitor.c`) that reads `/sys/class/leds/*` with zero CPU overhead to signal CapsLock and NumLock changes to the OSD:
 
 ```bash
 mkdir -p ~/.local/bin
-gcc -O2 ~/qdeck/quickshell/src/qdeck-lockstate-monitor.c -o ~/.local/bin/qdeck-lockstate-monitor
+gcc -O2 ~/qdeck/src/qdeck-lockstate-monitor.c -o ~/.local/bin/qdeck-lockstate-monitor
 chmod +x ~/.local/bin/qdeck-lockstate-monitor
 ```
 
@@ -304,20 +304,19 @@ Hardware & System Controls:
 ```
 quickshell/
 ├── shell.qml                # Root ShellRoot entrypoint & service instantiations
-├── bar/                     # Modular status bar & screen variant attachments
-├── launcher/                # Application launcher, fuzzy filtering & desktop entries
-├── osd/                     # On-screen display overlays (audio, brightness, lockstate)
-├── notifications/           # org.freedesktop.Notifications daemon & toast stack
-├── polkit/                  # Native PolicyKit authentication agent dialog
-├── powermenu/               # Integrated bottom power, theme & wallpaper drawer
-├── components/              # Reusable primitives (sliders, cards, buttons, dialogs)
-├── services/                # Hardware & IPC services (Audio, Network, Bluetooth, etc.)
-├── theme/                   # Theme singletons, color tokens & font scalers
-└── widgets/                 # Bar widgets (Workspaces, Audio, Network, Battery, etc.)
+├── theme/                   # Layer 1: Design system singletons, color tokens & font scalers
+├── components/              # Layer 2: Reusable UI primitives (sliders, cards, buttons, dialogs)
+├── services/                # Layer 3: Hardware & IPC services (Audio, Network, Bluetooth, OSD, etc.)
+└── modules/                 # Layer 4: Self-contained UI surfaces
+    ├── bar/                 # Modular status bar & widgets (Workspaces, Audio, Battery, etc.)
+    ├── launcher/            # Unified application launcher, Drawer views, clipboard & shelf
+    ├── osd/                 # On-screen display overlays (audio, brightness, lockstate)
+    ├── notifications/       # org.freedesktop.Notifications daemon & toast stack
+    └── polkit/              # Native PolicyKit authentication agent dialog
 ```
 
 ### 1. Status Bar
-Located at `quickshell/bar/Bar.qml`. Automatically mounts onto every connected monitor using Quickshell's `Variants` model bound to `Quickshell.screens`.
+Located at `quickshell/modules/bar/Bar.qml`. Automatically mounts onto every connected monitor using Quickshell's `Variants` model bound to `Quickshell.screens`.
 
 - **Left Section**: Hyprland dynamic workspace indicator (`WorkspacesWidget.qml`) and active media pill (`NowBarPill.qml`) with playback controls.
 - **Center Section**: Date & time display (`ClockWidget.qml`) with a calendar popup card.
@@ -329,34 +328,34 @@ Located at `quickshell/bar/Bar.qml`. Automatically mounts onto every connected m
   - **Battery Widget**: Charge percentage, AC power status, and power-profiles-daemon mode selector (Performance, Balanced, Power Saver).
 
 ### 2. Application Launcher
-Located at `quickshell/launcher/AppLauncher.qml`.
+Located at `quickshell/modules/launcher/AppLauncher.qml`.
 - Scans and indexes standard system and user XDG desktop files (`/usr/share/applications`, `~/.local/share/applications`) via Quickshell's native `DesktopEntries` engine.
 - Instant fuzzy query matching powered by `LauncherModel.js`.
 - Clean keyboard navigation with `Up`/`Down`, `Enter` to launch, and `Escape` to close.
 - Automatically launches terminal-based applications in `kitty`.
 
 ### 3. On-Screen Display (OSD)
-Located at `quickshell/osd/Osd.qml` and `quickshell/osd/OsdService.qml`.
+Located at `quickshell/modules/osd/Osd.qml` and `quickshell/services/OsdService.qml`.
 - Provides an animated floating HUD replacing `swayosd`.
 - Reacts to volume changes (with over-amplification indicator >100% and mute icon), microphone input mute, and monitor brightness adjustments.
 - Includes toasts for display refresh rate changes (e.g. `144Hz`), touchpad states, and Bluetooth device attachments.
 - Integrates with the kernel `/sys/class/leds/` monitor to show instant CapsLock and NumLock toggle cards.
 
 ### 4. Desktop Notification Daemon
-Located at `quickshell/notifications/Notifications.qml`.
+Located at `quickshell/modules/notifications/Notifications.qml`.
 - Full standalone implementation of the Freedesktop Notification specification (`org.freedesktop.Notifications`).
 - Supports urgency levels (Low, Normal, and persistent Critical alerts).
 - Interactive action buttons and custom timeout management.
 - Built-in Do Not Disturb (DND) toggle accessible via the status bar and CLI (`qdeck notify dnd-toggle`).
 
 ### 5. Native Polkit Authentication Agent
-Located at `quickshell/polkit/Polkit.qml`.
+Located at `quickshell/modules/polkit/Polkit.qml`.
 - Built directly on `Quickshell.Services.Polkit` to eliminate external agents like `polkit-gnome` or `hyprpolkitagent`.
 - Centered modal dialog with password input masking, user identification, and permission details.
 - Features smooth error-shake animations and automatic focus grabbing on invocation.
 
 ### 6. Unified Power & Session Control Center
-Located at `quickshell/powermenu/PowerMenu.qml`.
+Located at `quickshell/modules/launcher/powermenu/PowerMenu.qml`.
 - Bottom slide-up drawer with three unified modes:
   1. **Power View**: Lock, Suspend, Restart, Shutdown, and Logout actions with confirmation modal (`PowerConfirmDialog.qml`).
   2. **Theme View**: Interactive carousel for instant desktop color palette switching.

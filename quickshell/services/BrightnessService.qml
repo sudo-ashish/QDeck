@@ -17,7 +17,6 @@ QtObject {
     property string focusedMonitor: "eDP-1"
     property string selectedMonitorName: ""
     property string deviceName: "eDP-1"
-    property bool menuOpen: false
 
     onMenuOpenChanged: {
         if (menuOpen) root.refresh()

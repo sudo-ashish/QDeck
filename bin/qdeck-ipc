@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# QDeck: Centralized QuickShell IPC Dispatcher & Shared Library (qdeck-ipc)
+# Provides fallback socket resolution and uniform IPC dispatching across CLI tools.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)"
+
+# Resolve Quickshell executable (qs preferred over quickshell)
+if command -v qs >/dev/null 2>&1; then
+  QS_BIN="qs"
+elif command -v quickshell >/dev/null 2>&1; then
+  QS_BIN="quickshell"
+else
+  QS_BIN="qs"
+fi
+
+call_ipc() {
+  local target="${1:-}"
+  local method="${2:-}"
+  if [[ -z "$target" || -z "$method" ]]; then
+    echo "error: call_ipc requires <target> and <method>" >&2
+    return 1
+  fi
+  shift 2
+  local out=""
+
+  # 1. Try generic IPC call first (directly connects to active running QuickShell)
+  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
+    printf '%s\n' "$out"
+    return 0
+  fi
+
+  # 2. Try explicit QUICKSHELL_DIR if set
+  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
+    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 3. Try standard user configuration ~/.config/quickshell
+  if [[ -d "$HOME/.config/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  # 4. Try workspace configuration in repository
+  if [[ -d "$REPO_DIR/quickshell" ]]; then
+    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+# If executed directly as a standalone binary
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  if [[ $# -lt 2 ]]; then
+    echo "Usage: qdeck-ipc <target> <method> [args...]" >&2
+    exit 1
+  fi
+  call_ipc "$@"
+fi

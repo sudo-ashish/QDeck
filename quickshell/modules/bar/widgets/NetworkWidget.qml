@@ -2,9 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell.Wayland
-import "../theme"
-import "../components"
-import "../services"
+import "../../../theme"
+import "../../../components"
+import "../../../services"
 
 Item {
     id: root

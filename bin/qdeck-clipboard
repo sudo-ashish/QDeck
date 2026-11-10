@@ -12,49 +12,14 @@ STATE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/quickshell/clipboard-history.
 FALLBACK_STATE_FILE="$HOME/.local/state/quickshell/clipboard-history.json"
 
 # Choose CLI binary
-if command -v qs >/dev/null 2>&1; then
-  QS_BIN="qs"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/qdeck-ipc" ]]; then
+  source "$SCRIPT_DIR/qdeck-ipc"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 else
-  QS_BIN="quickshell"
+  source "$HOME/.local/bin/qdeck-ipc"
 fi
-
-call_ipc() {
-  local target="$1"; shift
-  local method="$1"; shift
-  local out=""
-
-  # 1. Try generic IPC call first (directly connects to active running QuickShell)
-  if out=$("$QS_BIN" ipc call "$target" "$method" "$@" 2>&1); then
-    printf '%s\n' "$out"
-    return 0
-  fi
-
-  # 2. Try explicit QUICKSHELL_DIR if set
-  if [[ -n "${QUICKSHELL_DIR:-}" && -d "$QUICKSHELL_DIR" ]]; then
-    if out=$("$QS_BIN" -p "$QUICKSHELL_DIR" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 3. Try standard user configuration ~/.config/quickshell
-  if [[ -d "$HOME/.config/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$HOME/.config/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  # 4. Try workspace configuration in repository
-  if [[ -d "$REPO_DIR/quickshell" ]]; then
-    if out=$("$QS_BIN" -p "$REPO_DIR/quickshell" ipc call "$target" "$method" "$@" 2>&1); then
-      printf '%s\n' "$out"
-      return 0
-    fi
-  fi
-
-  return 1
-}
 
 invoke_clipboard() {
   local method="$1"; shift

@@ -1,0 +1,14 @@
+module services
+AudioService 1.0 AudioService.qml
+BatteryService 1.0 BatteryService.qml
+BluetoothService 1.0 BluetoothService.qml
+BrightnessService 1.0 BrightnessService.qml
+ClipboardService 1.0 ClipboardService.qml
+MediaController 1.0 MediaController.qml
+NetworkService 1.0 NetworkService.qml
+OsdService 1.0 OsdService.qml
+PowerService 1.0 PowerService.qml
+ShelfService 1.0 ShelfService.qml
+ThemeSwitcherService 1.0 ThemeSwitcherService.qml
+WallpaperSwitcherService 1.0 WallpaperSwitcherService.qml
+WorkspacesService 1.0 WorkspacesService.qml

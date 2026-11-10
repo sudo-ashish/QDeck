@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import "../theme"
+import "../../theme"
 import "NotificationLogic.js" as NotificationLogic
 
 Rectangle {

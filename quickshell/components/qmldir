@@ -1,0 +1,6 @@
+module components
+BarButton 1.0 BarButton.qml
+PopupCard 1.0 PopupCard.qml
+PowerConfirmDialog 1.0 PowerConfirmDialog.qml
+Slider 1.0 Slider.qml
+ToggleSwitch 1.0 ToggleSwitch.qml

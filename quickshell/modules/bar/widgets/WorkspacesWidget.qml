@@ -1,6 +1,6 @@
 import QtQuick
-import "../theme"
-import "../services"
+import "../../../theme"
+import "../../../services"
 
 // Outer pill container for workspaces on the bar
 Rectangle {

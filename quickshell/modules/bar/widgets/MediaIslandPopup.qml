@@ -3,8 +3,8 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import "../theme"
-import "../services"
+import "../../../theme"
+import "../../../services"
 
 PanelWindow {
     id: root

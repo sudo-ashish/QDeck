@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import "../theme"
-import "../components"
-import "../services"
+import "../../../theme"
+import "../../../components"
+import "../../../services"
 
 Item {
     id: root

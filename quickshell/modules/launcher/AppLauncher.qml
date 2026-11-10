@@ -6,11 +6,9 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Io
-import "../theme"
-import "../components"
-import "../services"
-import "../shelf"
-import "../clipboard"
+import "../../theme"
+import "../../components"
+import "../../services"
 import "LauncherModel.js" as LauncherModel
 
 PanelWindow {

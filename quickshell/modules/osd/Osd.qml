@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import "../theme"
+import "../../theme"
 import "OsdModel.js" as OsdModel
 
 Item {

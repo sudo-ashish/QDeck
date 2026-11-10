@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Io
-import "../theme"
+import "../../theme"
 import "LauncherModel.js" as LauncherModel
 
 PanelWindow {

@@ -2,10 +2,10 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
-import "../theme"
-import "../components"
-import "../services"
-import "../services/AudioModel.js" as Model
+import "../../../theme"
+import "../../../components"
+import "../../../services"
+import "../../../services/AudioModel.js" as Model
 
 Item {
     id: root
