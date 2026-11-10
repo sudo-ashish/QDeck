@@ -1,4 +1,4 @@
-//@ pragma IconTheme Yaru-blue
+//@ pragma IconTheme Yaru-olive
 import QtQuick
 import Quickshell
 import Quickshell.Io
