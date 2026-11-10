@@ -19,7 +19,7 @@ Item {
         anchors.fill: parent
         radius: 13
         color: root.checked ? Theme.accent : Theme.surfaceContainerHigh
-        border.color: root.checked ? "transparent" : Theme.withAlpha(Theme.muted, 0.35)
+        border.color: root.checked ? "transparent" : Theme.withAlpha(Theme.muted, 0.40)
         border.width: root.checked ? 0 : 1
 
         scale: mouseArea.pressed ? 0.94 : (mouseArea.containsMouse ? 1.03 : 1.0)
@@ -38,31 +38,19 @@ Item {
 
         Rectangle {
             id: thumb
-            width: root.checked ? 20 : 14
-            height: root.checked ? 20 : 14
-            radius: root.checked ? 10 : 7
+            width: 20
+            height: 20
+            radius: 10
             anchors.verticalCenter: parent.verticalCenter
-            x: root.checked ? (track.width - width - 3) : 6
-            color: root.checked ? Theme.dark_background : Theme.muted
+            x: root.checked ? (track.width - width - 3) : 3
+            color: root.checked ? Theme.darker_background : Theme.muted
 
             Behavior on x {
                 NumberAnimation {
                     duration: 200
                     easing.type: Easing.OutBack
-                    easing.overshoot: 1.2
+                    easing.overshoot: 1.15
                 }
-            }
-
-            Behavior on width {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
-
-            Behavior on height {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-            }
-
-            Behavior on radius {
-                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
             }
 
             Behavior on color {

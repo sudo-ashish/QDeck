@@ -172,13 +172,14 @@ Item {
                             text: {
                                 if (!root.service.wifiEnabled) return "TURNED OFF"
                                 if (root.service.connectingSsid) return "CONNECTING..."
+                                if (!root.service.currentSsid) return root.service.scanning ? "SEARCHING..." : "NOT CONNECTED"
                                 return "ROUTING CRUMBS"
                             }
                             font.family: Fonts.uiFont
                             font.pixelSize: 10
                             font.bold: true
                             font.letterSpacing: 1
-                            color: root.service.connectingSsid ? Theme.accent : Theme.muted
+                            color: (root.service.connectingSsid || (root.service.scanning && !root.service.currentSsid)) ? Theme.accent : Theme.muted
                             opacity: 0.75
                         }
                     }

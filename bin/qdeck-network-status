@@ -67,6 +67,11 @@ timeout 0.35s wait 2>/dev/null || true
 [[ -f "$tmp_dir/gw_$$" ]] && router_ping_ms=$(cat "$tmp_dir/gw_$$" 2>/dev/null || true) && rm -f "$tmp_dir/gw_$$" 2>/dev/null
 [[ -f "$tmp_dir/net_$$" ]] && internet_ping_ms=$(cat "$tmp_dir/net_$$" 2>/dev/null || true) && rm -f "$tmp_dir/net_$$" 2>/dev/null
 
+wifi_radio="enabled"
+if command -v nmcli >/dev/null 2>&1; then
+  wifi_radio=$(nmcli -t -f WIFI general status 2>/dev/null || echo "enabled")
+fi
+
 printf "iface\t%s\n" "${iface:-none}"
 printf "ip\t%s\n" "${ip_addr:-}"
 printf "gateway\t%s\n" "${gateway:-}"
@@ -77,3 +82,4 @@ printf "ssid\t%s\n" "${ssid:-}"
 printf "signal_dbm\t%s\n" "${signal_dbm:--50}"
 printf "router_ping_ms\t%s\n" "${router_ping_ms:-0}"
 printf "internet_ping_ms\t%s\n" "${internet_ping_ms:-0}"
+printf "wifi_radio\t%s\n" "${wifi_radio:-enabled}"

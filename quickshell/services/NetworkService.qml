@@ -75,22 +75,60 @@ QtObject {
         return Math.round(n) + " ms"
     }
 
+    property int scanRetryCount: 0
+
     function toggleWifi() {
         var nextState = !root.wifiEnabled
         root.wifiEnabled = nextState
         Quickshell.execDetached(["nmcli", "radio", "wifi", nextState ? "on" : "off"])
-        refreshTimer.restart()
-        if (nextState && root.menuOpen) {
+        if (!nextState) {
+            root.currentSsid = ""
+            root.signalStrength = 0
+            root.connectingSsid = ""
+            root.knownNetworks = []
+            root.otherNetworks = []
+            root.networks = []
+            root.scanning = false
+            root.scanRetryCount = 0
+            wifiEnableScanTimer.stop()
+            scanRetryTimer.stop()
+        } else {
+            root.scanning = true
+            root.scanRetryCount = 0
             wifiEnableScanTimer.restart()
         }
+        refreshTimer.restart()
     }
 
     property Timer wifiEnableScanTimer: Timer {
+        id: wifiEnableScanTimer
+        interval: 1800
+        repeat: false
+        onTriggered: {
+            if (root.wifiEnabled) {
+                root.scanWifi()
+            }
+        }
+    }
+
+    property Timer scanRetryTimer: Timer {
+        id: scanRetryTimer
         interval: 1200
         repeat: false
         onTriggered: {
-            if (root.wifiEnabled && root.menuOpen) {
-                root.scanWifi()
+            if (root.wifiEnabled && root.knownNetworks.length === 0 && root.otherNetworks.length === 0) {
+                if (root.scanRetryCount < 4) {
+                    root.scanRetryCount++
+                    root.scanning = true
+                    Quickshell.execDetached(["nmcli", "dev", "wifi", "rescan"])
+                    if (!scanProc.running) {
+                        scanProc.running = true
+                    }
+                } else {
+                    root.scanning = false
+                }
+            } else {
+                root.scanning = false
             }
         }
     }
@@ -275,15 +313,32 @@ QtObject {
                     }
                 }
 
+                if (kv["wifi_radio"]) {
+                    var isRadioOn = (kv["wifi_radio"] === "enabled")
+                    if (root.wifiEnabled !== isRadioOn) {
+                        root.wifiEnabled = isRadioOn
+                        if (!isRadioOn) {
+                            root.currentSsid = ""
+                            root.signalStrength = 0
+                            root.knownNetworks = []
+                            root.otherNetworks = []
+                            root.networks = []
+                            root.scanning = false
+                        }
+                    }
+                }
+
                 if (kv["type"]) root.connectionType = kv["type"]
                 if (kv["iface"]) root.interfaceName = kv["iface"]
                 if (kv["ip"]) root.localIp = kv["ip"]
                 if (kv["gateway"]) root.gateway = kv["gateway"]
-                if (kv["ssid"]) {
+                if (root.wifiEnabled && root.connectionType === "wifi" && kv["ssid"]) {
                     root.currentSsid = kv["ssid"]
                     if (root.connectingSsid === kv["ssid"]) {
                         root.connectingSsid = ""
                     }
+                } else if (!root.wifiEnabled || root.connectionType !== "wifi") {
+                    root.currentSsid = ""
                 }
 
                 if (kv["signal_dbm"]) {
@@ -461,7 +516,7 @@ QtObject {
                     }
                 }
 
-                if (!activeFound && root.wifiEnabled && root.currentSsid === "") {
+                if (!activeFound) {
                     root.currentSsid = ""
                 }
 
@@ -479,9 +534,18 @@ QtObject {
                 root.otherNetworks = otherList
                 root.networks = knownList.concat(otherList)
 
-                // If scan returned 0 networks while Wi-Fi is on, trigger background rescan
+                // If scan returned 0 networks while Wi-Fi is on, keep scanning state and retry
                 if (root.wifiEnabled && knownList.length === 0 && otherList.length === 0) {
-                    Quickshell.execDetached(["nmcli", "dev", "wifi", "rescan"])
+                    if (root.scanRetryCount < 4) {
+                        root.scanning = true
+                        Quickshell.execDetached(["nmcli", "dev", "wifi", "rescan"])
+                        scanRetryTimer.restart()
+                    } else {
+                        root.scanning = false
+                    }
+                } else {
+                    root.scanning = false
+                    root.scanRetryCount = 0
                 }
             }
         }
