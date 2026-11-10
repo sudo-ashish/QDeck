@@ -13,12 +13,14 @@ Item {
 
     property string selectedSsid: ""
     property bool showPasswordInput: false
+    property string passwordError: ""
     property bool showQrView: false
     property int iconSize: Appearance.networkIconSize
     readonly property bool hasNetworks: (root.service.knownNetworks.length > 0 || root.service.otherNetworks.length > 0)
 
     onSelectedSsidChanged: {
         pwInput.text = ""
+        root.passwordError = ""
     }
 
     onShowPasswordInputChanged: {
@@ -26,6 +28,28 @@ Item {
             Qt.callLater(function() {
                 pwInput.forceActiveFocus()
             })
+        } else {
+            root.passwordError = ""
+        }
+    }
+
+    Connections {
+        target: root.service
+        function onPasswordRequired(ssid, message) {
+            root.selectedSsid = ssid
+            root.passwordError = message || "Password required"
+            root.showPasswordInput = true
+            Qt.callLater(function() {
+                pwInput.selectAll()
+                pwInput.forceActiveFocus()
+            })
+        }
+        function onConnectingSsidChanged() {
+            if (root.service.connectingSsid === "" && root.service.connectionErrorSsid === "" && root.selectedSsid === root.service.currentSsid) {
+                root.showPasswordInput = false
+                root.passwordError = ""
+                pwInput.text = ""
+            }
         }
     }
 
@@ -78,9 +102,11 @@ Item {
         onOpenChanged: {
             if (!open) {
                 root.showPasswordInput = false
+                root.passwordError = ""
                 pwInput.text = ""
             } else {
                 root.showPasswordInput = false
+                root.passwordError = ""
                 root.showQrView = false
                 root.service.refresh()
                 if (root.service.wifiEnabled) {
@@ -435,24 +461,42 @@ Item {
                 Rectangle {
                     visible: root.showPasswordInput
                     width: parent.width
-                    height: root.showPasswordInput ? 72 : 0
+                    height: root.showPasswordInput ? (root.passwordError ? 94 : 76) : 0
                     radius: 12
                     color: Theme.surfaceContainer
                     border.width: 0
 
+                    Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+
                     Column {
                         anchors.fill: parent
-                        anchors.margins: 8
+                        anchors.margins: 10
                         spacing: 6
 
-                        Text {
-                            text: "Connect to: " + root.selectedSsid
-                            font.family: Fonts.uiFont
-                            font.pixelSize: 11
-                            font.bold: true
-                            color: Theme.accent
-                            elide: Text.ElideRight
+                        Row {
                             width: parent.width
+                            spacing: 8
+
+                            Text {
+                                text: "Connect to: " + root.selectedSsid
+                                font.family: Fonts.uiFont
+                                font.pixelSize: 11
+                                font.bold: true
+                                color: Theme.accent
+                                elide: Text.ElideRight
+                                width: root.passwordError ? (parent.width - errorLabel.implicitWidth - 12) : parent.width
+                            }
+
+                            Text {
+                                id: errorLabel
+                                visible: root.passwordError.length > 0
+                                text: root.passwordError
+                                font.family: Fonts.uiFont
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: Theme.red
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                         }
 
                         Row {
@@ -464,7 +508,7 @@ Item {
                                 height: 28
                                 radius: 8
                                 color: Theme.surfaceContainerHigh
-                                border.color: pwInput.activeFocus ? Theme.accent : "transparent"
+                                border.color: root.passwordError ? Theme.red : (pwInput.activeFocus ? Theme.accent : "transparent")
                                 border.width: 1
 
                                 MouseArea {
@@ -493,6 +537,7 @@ Item {
                                     Keys.onPressed: function(event) {
                                         if (event.key === Qt.Key_Escape) {
                                             root.showPasswordInput = false
+                                            root.passwordError = ""
                                             pwInput.text = ""
                                             event.accepted = true
                                         }
@@ -510,9 +555,8 @@ Item {
 
                                 function join() {
                                     if (joinBtn.isJoining) return
+                                    root.passwordError = ""
                                     root.service.connectToNetwork(root.selectedSsid, pwInput.text)
-                                    root.showPasswordInput = false
-                                    pwInput.text = ""
                                 }
 
                                 Text {
@@ -554,6 +598,7 @@ Item {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         root.showPasswordInput = false
+                                        root.passwordError = ""
                                         pwInput.text = ""
                                     }
                                 }
@@ -662,7 +707,11 @@ Item {
                                             root.selectedSsid = knownRow.modelData.ssid
                                             if (knownRow.isConnected) {
                                                 root.service.disconnectNetwork(knownRow.modelData.ssid)
+                                            } else if (knownRow.hasError) {
+                                                root.passwordError = root.service.connectionErrorMessage || "Password required"
+                                                root.showPasswordInput = true
                                             } else {
+                                                root.passwordError = ""
                                                 root.service.connectToNetwork(knownRow.modelData.ssid, "")
                                             }
                                         }
@@ -743,7 +792,13 @@ Item {
                                 onClicked: {
                                     root.selectedSsid = knownRow.modelData.ssid
                                     if (!knownRow.isConnected) {
-                                        root.service.connectToNetwork(knownRow.modelData.ssid, "")
+                                        if (knownRow.hasError) {
+                                            root.passwordError = root.service.connectionErrorMessage || "Password required"
+                                            root.showPasswordInput = true
+                                        } else {
+                                            root.passwordError = ""
+                                            root.service.connectToNetwork(knownRow.modelData.ssid, "")
+                                        }
                                     }
                                 }
                             }
@@ -869,9 +924,11 @@ Item {
                                             cursorShape: otherRow.isConnecting ? Qt.ArrowCursor : Qt.PointingHandCursor
                                             onClicked: {
                                                 root.selectedSsid = otherRow.modelData.ssid
-                                                if (otherRow.modelData.isSecured) {
+                                                if (otherRow.modelData.isSecured || otherRow.hasError) {
+                                                    root.passwordError = otherRow.hasError ? (root.service.connectionErrorMessage || "Password required") : ""
                                                     root.showPasswordInput = true
                                                 } else {
+                                                    root.passwordError = ""
                                                     root.service.connectToNetwork(root.selectedSsid, "")
                                                 }
                                             }
@@ -919,9 +976,11 @@ Item {
                                     cursorShape: otherRow.isConnecting ? Qt.ArrowCursor : Qt.PointingHandCursor
                                     onClicked: {
                                         root.selectedSsid = otherRow.modelData.ssid
-                                        if (otherRow.modelData.isSecured) {
+                                        if (otherRow.modelData.isSecured || otherRow.hasError) {
+                                            root.passwordError = otherRow.hasError ? (root.service.connectionErrorMessage || "Password required") : ""
                                             root.showPasswordInput = true
                                         } else {
+                                            root.passwordError = ""
                                             root.service.connectToNetwork(root.selectedSsid, "")
                                         }
                                     }

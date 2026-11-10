@@ -114,6 +114,8 @@ QtObject {
     property string connectingSsid: ""
     property string connectionErrorSsid: ""
     property string connectionErrorMessage: ""
+    property bool lastAttemptHadPassword: false
+    signal passwordRequired(string ssid, string message)
 
     property Timer connectionErrorTimer: Timer {
         interval: 4000
@@ -148,10 +150,12 @@ QtObject {
             onStreamFinished: {
                 var err = String(text || "").trim()
                 if (err.length > 0) {
-                    if (err.indexOf("Secrets were required") !== -1 || err.indexOf("No secret provided") !== -1) {
-                        root.connectionErrorMessage = "Wrong password"
+                    if (err.indexOf("Secrets were required") !== -1 || err.indexOf("No secret provided") !== -1 || err.indexOf("Invalid key") !== -1 || err.indexOf("password") !== -1) {
+                        root.connectionErrorMessage = root.lastAttemptHadPassword ? "Incorrect password" : "Password required"
                     } else if (err.indexOf("Association took too long") !== -1 || err.indexOf("timed out") !== -1) {
                         root.connectionErrorMessage = "Timeout"
+                    } else if (err.indexOf("not found") !== -1) {
+                        root.connectionErrorMessage = "Network not found"
                     } else {
                         root.connectionErrorMessage = "Connection failed"
                     }
@@ -166,6 +170,11 @@ QtObject {
                 root.connectionErrorSsid = targetSsid
                 if (!root.connectionErrorMessage) {
                     root.connectionErrorMessage = "Connection failed"
+                }
+                if (root.connectionErrorMessage === "Wrong password" ||
+                    root.connectionErrorMessage === "Incorrect password" ||
+                    root.connectionErrorMessage === "Password required") {
+                    root.passwordRequired(targetSsid, root.connectionErrorMessage)
                 }
                 connectionErrorTimer.restart()
             } else {
@@ -182,12 +191,24 @@ QtObject {
         root.connectionErrorSsid = ""
         root.connectionErrorMessage = ""
         root.connectingSsid = ssid
+        root.lastAttemptHadPassword = (password && password.length > 0)
         connectTimeoutTimer.restart()
 
-        var args = ["nmcli", "dev", "wifi", "connect", ssid]
+        var isKnown = false
+        for (var i = 0; i < root.knownNetworks.length; i++) {
+            if (root.knownNetworks[i].ssid === ssid) {
+                isKnown = true
+                break
+            }
+        }
+
+        var args = []
         if (password && password.length > 0) {
-            args.push("password")
-            args.push(password)
+            args = ["nmcli", "dev", "wifi", "connect", ssid, "password", password]
+        } else if (isKnown) {
+            args = ["nmcli", "connection", "up", "id", ssid]
+        } else {
+            args = ["nmcli", "dev", "wifi", "connect", ssid]
         }
         connectProc.command = args
         connectProc.running = true
@@ -361,7 +382,7 @@ QtObject {
     // 4. Wi-Fi Scan & Categorization into Known and Other Networks
     property Process scanProc: Process {
         id: scanProc
-        command: ["bash", "-c", "echo '===SAVED==='; nmcli -t -f NAME,TYPE connection show 2>/dev/null; echo '===WIFI==='; nmcli -t -f active,ssid,signal,security dev wifi list --rescan yes 2>/dev/null || nmcli -t -f active,ssid,signal,security dev wifi 2>/dev/null"]
+        command: ["bash", "-c", "echo '===SAVED==='; nmcli -t -f NAME,TYPE connection show 2>/dev/null; echo '===WIFI==='; nmcli -t -f active,ssid,signal,security dev wifi list --rescan auto 2>/dev/null || nmcli -t -f active,ssid,signal,security dev wifi 2>/dev/null"]
         onExited: function(exitCode, exitStatus) {
             root.scanning = false
         }
@@ -457,6 +478,11 @@ QtObject {
                 root.knownNetworks = knownList
                 root.otherNetworks = otherList
                 root.networks = knownList.concat(otherList)
+
+                // If scan returned 0 networks while Wi-Fi is on, trigger background rescan
+                if (root.wifiEnabled && knownList.length === 0 && otherList.length === 0) {
+                    Quickshell.execDetached(["nmcli", "dev", "wifi", "rescan"])
+                }
             }
         }
     }
@@ -525,5 +551,8 @@ QtObject {
 
     Component.onCompleted: {
         root.refresh()
+        if (root.wifiEnabled) {
+            root.scanWifi()
+        }
     }
 }

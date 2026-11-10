@@ -151,9 +151,9 @@ PanelWindow {
         Behavior on height {
             enabled: root.open
             NumberAnimation {
-                duration: Motion.medium3
+                duration: Motion.medium1
                 easing.type: Easing.BezierSpline
-                easing.bezierCurve: Motion.emphasizedCurve
+                easing.bezierCurve: Motion.emphasizedDecelerateCurve
             }
         }
 
@@ -216,10 +216,10 @@ PanelWindow {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.topMargin: root.showDefaultHeader ? Appearance.paddingMedium : 14
-            anchors.bottomMargin: root.showDefaultHeader ? Appearance.paddingMedium : 16
+            anchors.bottomMargin: root.showDefaultHeader ? Appearance.paddingMedium : 14
             anchors.leftMargin: root.showDefaultHeader ? Appearance.paddingMedium : 14
             anchors.rightMargin: root.showDefaultHeader ? Appearance.paddingMedium : 14
-            clip: false
+            clip: true
         }
     }
 }
