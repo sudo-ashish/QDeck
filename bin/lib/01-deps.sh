@@ -66,10 +66,6 @@ CORE_PACKAGES=(
   power-profiles-daemon
   networkmanager
   qrencode
-
-  #extra
-  pokemon-colorscripts-git
-  yaru-icon-theme 
 )
 
 MISSING_CORE=()
@@ -128,6 +124,8 @@ if [[ -n "$AUR_HELPER" ]]; then
     bibata-cursor-theme-bin
     brave-origin-bin
     vscodium-bin
+    pokemon-colorscripts-git
+    yaru-icon-theme
   )
   for pkg in "${AUR_PACKAGES[@]}"; do
     if ! pacman -Qi "$pkg" &>/dev/null; then

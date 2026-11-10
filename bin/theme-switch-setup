@@ -308,8 +308,6 @@ if [[ ! -f "$nvim_lazy_config" ]]; then
     repo_lazy="$(dirname "${BASH_SOURCE[0]}")/../nvim/lua/config/lazy.lua"
     if [[ -f "$repo_lazy" ]]; then
         cp -f "$repo_lazy" "$nvim_lazy_config"
-    elif [[ -f "/home/pear/qdeck/nvim/lua/config/lazy.lua" ]]; then
-        cp -f "/home/pear/qdeck/nvim/lua/config/lazy.lua" "$nvim_lazy_config"
     else
         cat <<'EOF' > "$nvim_lazy_config"
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -425,52 +423,12 @@ fi
 
 verification_lines+=("PASS runtime dependencies available (flock, jq)")
 
-declare -a active_required_files=(btop.theme neovim.lua)
+declare -a active_required_files=(btop.theme neovim.lua colors.toml color.conf)
 
-verify_theme_reference() {
-    local label="$1" config_file="$2" reference="$3" theme_file="$4"
-
-    if [[ ! -f "$config_file" ]]; then
-        verification_lines+=("SKIP $label integration check (config absent)")
-    elif grep -Fq "$reference" "$config_file"; then
-        verification_lines+=("PASS $label references themes/current")
-        active_required_files+=("$theme_file")
-    else
-        warn "$label config does not reference '$reference'; theme switching will not update it"
-        verification_lines+=("WARN $label does not reference themes/current")
-    fi
-}
-
-verify_theme_reference Waybar "$CONFIG_HOME/waybar/style.css" \
-    'themes/current/waybar.css' waybar.css
-verify_theme_reference SwayNC "$CONFIG_HOME/swaync/style.css" \
-    'themes/current/colors.css' colors.css
-
-rofi_reference_found=0
-rofi_config_found=0
-rofi_color_files=(
-    "$CONFIG_HOME/rofi/launchers/type-1/shared/colors.rasi"
-    "$CONFIG_HOME/rofi/launchers/type-2/shared/colors.rasi"
-    "$CONFIG_HOME/rofi/theme-switcher/shared/colors.rasi"
-    "$CONFIG_HOME/rofi/wallpaper-launcher/type-1/shared/colors.rasi"
-    "$CONFIG_HOME/rofi/wallpaper-launcher/type-2/shared/colors.rasi"
-)
-for rofi_color_file in "${rofi_color_files[@]}"; do
-    [[ -f "$rofi_color_file" ]] || continue
-    rofi_config_found=1
-    if grep -Fq 'themes/current/color.rasi' "$rofi_color_file"; then
-        rofi_reference_found=1
-    else
-        warn "Rofi colors file '$rofi_color_file' does not reference themes/current"
-    fi
-done
-if (( rofi_config_found == 0 )); then
-    verification_lines+=("SKIP Rofi integration check (config absent)")
-elif (( rofi_reference_found == 1 )); then
-    verification_lines+=("PASS Rofi references themes/current")
-    active_required_files+=(color.rasi)
+if [[ -f "$CURRENT_LINK/colors.toml" ]]; then
+    verification_lines+=("PASS Quickshell active theme contains colors.toml")
 else
-    verification_lines+=("WARN Rofi does not reference themes/current")
+    verification_lines+=("WARN Quickshell active theme is missing colors.toml")
 fi
 
 if command -v nvim >/dev/null 2>&1; then

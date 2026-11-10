@@ -5,7 +5,6 @@ function normalizeText(text) {
 }
 
 var KNOWN_ICON_MAP = {
-    "whatsapp": "file:///home/pear/.local/share/icons/hicolor/256x256/apps/whatsapp.png",
     "antigravity": "file:///usr/share/pixmaps/antigravity.png",
     "antigravity-ide": "file:///usr/share/pixmaps/antigravity-ide.png",
     "antigravity-ide-url-handler": "file:///usr/share/pixmaps/antigravity-ide.png",
@@ -42,7 +41,7 @@ var BUILTIN_ACTIONS = [
         iconGlyph: "tune",
         category: "Audio",
         defaultMeta: "56 minutes ago",
-        cmd: "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.50 || pamixer --set-volume 50",
+        cmd: "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.50",
         keywords: ["volume", "sound", "audio", "speaker", "50", "set volume"]
     },
     {
@@ -51,8 +50,8 @@ var BUILTIN_ACTIONS = [
         type: "action",
         iconGlyph: "phone",
         category: "System",
-        defaultMeta: "S24",
-        cmd: "makoctl mode -a dnd || swaync-client -d -s || true",
+        defaultMeta: "System",
+        cmd: "qs ipc call notifications setDnd on",
         keywords: ["dnd", "do not disturb", "notifications", "silent", "quiet", "s24"]
     },
     {
@@ -62,7 +61,7 @@ var BUILTIN_ACTIONS = [
         iconGlyph: "volumeHigh",
         category: "Audio",
         defaultMeta: "1 hour ago",
-        cmd: "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1.0 || pamixer --set-volume 100",
+        cmd: "wpctl set-volume @DEFAULT_AUDIO_SINK@ 1.0",
         keywords: ["volume", "sound", "audio", "max", "100", "loud"]
     },
     {
@@ -72,7 +71,7 @@ var BUILTIN_ACTIONS = [
         iconGlyph: "bell",
         category: "System",
         defaultMeta: "2 hours ago",
-        cmd: "makoctl mode -r dnd || swaync-client -d -s || true",
+        cmd: "qs ipc call notifications setDnd off",
         keywords: ["dnd", "notifications", "sound", "resume"]
     },
     {
@@ -507,19 +506,4 @@ function parseFiles(rawLines, query) {
     }
 
     return results;
-}
-
-if (typeof module !== "undefined") {
-    module.exports = {
-        normalizeText: normalizeText,
-        resolveIcon: resolveIcon,
-        BUILTIN_ACTIONS: BUILTIN_ACTIONS,
-        getAppCategory: getAppCategory,
-        formatRelativeTime: formatRelativeTime,
-        filterAll: filterAll,
-        filterApps: filterApps,
-        parseWindows: parseWindows,
-        filterCommands: filterCommands,
-        parseFiles: parseFiles
-    };
 }

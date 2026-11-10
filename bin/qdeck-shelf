@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# QDeck: Drag-and-Drop Staging QShelf controller (legacy alias for qdeck-qshelf)
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$SCRIPT_DIR/qdeck-qshelf" "$@"

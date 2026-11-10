@@ -47,32 +47,10 @@ function styledBody(body, app, appIcon) {
   return stripImageTags(sanitizeBody(body, app, appIcon).replace(/\r\n|\r|\n/g, "<br/>"))
 }
 
-function summaryStartsWithGlyph(summary) {
-  var text = String(summary || "").replace(/^\s+/, "")
-  if (!text) return false
-
-  var offset = 1
-  var first = text.charCodeAt(0)
-  if (first >= 0xd800 && first <= 0xdbff && text.length > 1) offset = 2
-
-  var spaces = 0
-  while (offset < text.length && text.charAt(offset) === " ") {
-    spaces++
-    offset++
-  }
-
-  return spaces >= 2
-}
-
 function shouldBypassDnd(notification, criticalUrgency) {
   var appName = String((notification && notification.appName) || "")
   if (appName === "qs-action") return true
   return (appName === "notify-send" || appName === "system") && notification && notification.urgency === criticalUrgency
-}
-
-function isEphemeralApp(appName) {
-  var name = String(appName || "")
-  return name === "notify-send" || name === "qs-action"
 }
 
 function stringHint(hints, name) {

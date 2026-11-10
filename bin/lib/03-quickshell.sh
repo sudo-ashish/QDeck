@@ -15,7 +15,6 @@ QT_PACKAGES=(
   qt6-5compat
   qt6-multimedia
   qt6-shadertools
-  qt5-wayland
   gcc
 )
 

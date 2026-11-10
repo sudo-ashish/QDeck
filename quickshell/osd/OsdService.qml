@@ -259,36 +259,6 @@ Item {
         }
     }
 
-    // Auto-bridge socket instance into both XDG config and workspace hash paths
-    Process {
-        id: bridgeProc
-        running: false
-        command: [
-            "sh", "-c",
-            "uid=$(id -u); " +
-            "mkdir -p /run/user/$uid/quickshell/by-shell/3bb4e7c6d4dad9dfd3f25bf68311dcd8 /run/user/$uid/quickshell/by-shell/297537087f24e658cd0a0b2380d3bfef; " +
-            "for id in /run/user/$uid/quickshell/by-id/*; do [ -e \"$id\" ] || continue; " +
-            "b=$(basename \"$id\"); " +
-            "ln -sf \"$id\" /run/user/$uid/quickshell/by-shell/3bb4e7c6d4dad9dfd3f25bf68311dcd8/\"$b\"; " +
-            "ln -sf \"$id\" /run/user/$uid/quickshell/by-shell/297537087f24e658cd0a0b2380d3bfef/\"$b\"; " +
-            "done"
-        ]
-    }
-
-    Timer {
-        id: bridgeTimer
-        interval: 400
-        repeat: false
-        running: true
-        onTriggered: {
-            bridgeProc.exec(bridgeProc.command)
-        }
-    }
-
-    Component.onCompleted: {
-        bridgeProc.exec(bridgeProc.command)
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // Phase 2: Read & Parse Real Result via Process & StdioCollector
     // ─────────────────────────────────────────────────────────────────────────

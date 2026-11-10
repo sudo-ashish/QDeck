@@ -219,7 +219,7 @@ echo "==========================================================================
 echo "  • QDeck unified CLI & runner: $HOME/.local/bin/qdeck"
 echo "  • Start QDeck shell: qdeck"
 echo "  • Autostart in Hyprland: ~/.config/hypr/modules/autostart.lua"
-echo "  • Keybindings: ~/.config/hypr/keybinds/rofi.lua"
+echo "  • Keybindings: ~/.config/hypr/keybinds/qdeck.lua"
 echo "  • Zsh shell configuration: ~/.zshrc (custom modules: ~/.local/bin/zsh/)"
 echo "  • QDeck CLI commands: qdeck --help"
 if [[ -n "${BACKUP_DIR:-}" && -d "$BACKUP_DIR" ]]; then

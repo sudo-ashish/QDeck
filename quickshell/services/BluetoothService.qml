@@ -210,11 +210,11 @@ QtObject {
         onTriggered: root.refresh()
     }
 
-    // Auto-refresh fallback timer every 4 seconds
+    // Auto-refresh fallback timer every 4 seconds when menu is open
     property Timer autoRefreshTimer: Timer {
         interval: 4000
         repeat: true
-        running: true
+        running: root.menuOpen
         onTriggered: root.refresh()
     }
 

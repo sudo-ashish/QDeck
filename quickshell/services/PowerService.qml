@@ -116,7 +116,7 @@ QtObject {
     }
 
     property Timer pollTimer: Timer {
-        interval: 10000
+        interval: 60000
         repeat: true
         running: true
         onTriggered: root.refresh()

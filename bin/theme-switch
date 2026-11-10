@@ -72,10 +72,12 @@ if [[ ! -d "$theme_dir" ]]; then
     die 1 "unknown theme '$theme_name'; available themes: $available"
 fi
 
-required_theme_files=(btop.theme neovim.lua)
+required_theme_files=(btop.theme neovim.lua colors.toml color.conf)
 declare -A required_theme_file_seen=(
     [btop.theme]=1
     [neovim.lua]=1
+    [colors.toml]=1
+    [color.conf]=1
 )
 
 add_required_theme_file() {
@@ -85,32 +87,6 @@ add_required_theme_file() {
         required_theme_file_seen["$file"]=1
     fi
 }
-
-# These files are required only when the installed application config consumes
-# them through the active-theme link. This keeps optional integrations optional
-# without allowing a switch to break a configured application.
-if [[ -f "$CONFIG_HOME/waybar/style.css" ]] &&
-   grep -Fq 'themes/current/waybar.css' "$CONFIG_HOME/waybar/style.css"; then
-    add_required_theme_file waybar.css
-fi
-if [[ -f "$CONFIG_HOME/swaync/style.css" ]] &&
-   grep -Fq 'themes/current/colors.css' "$CONFIG_HOME/swaync/style.css"; then
-    add_required_theme_file colors.css
-fi
-rofi_color_files=(
-    "$CONFIG_HOME/rofi/launchers/type-1/shared/colors.rasi"
-    "$CONFIG_HOME/rofi/launchers/type-2/shared/colors.rasi"
-    "$CONFIG_HOME/rofi/theme-switcher/shared/colors.rasi"
-    "$CONFIG_HOME/rofi/wallpaper-launcher/type-1/shared/colors.rasi"
-    "$CONFIG_HOME/rofi/wallpaper-launcher/type-2/shared/colors.rasi"
-)
-for rofi_color_file in "${rofi_color_files[@]}"; do
-    if [[ -f "$rofi_color_file" ]] &&
-       grep -Fq 'themes/current/color.rasi' "$rofi_color_file"; then
-        add_required_theme_file color.rasi
-        break
-    fi
-done
 
 missing_theme_files=()
 for required_file in "${required_theme_files[@]}"; do
@@ -411,42 +387,6 @@ reload_kitty() {
     fi
 }
 
-reload_waybar() {
-    if ! command -v waybar >/dev/null 2>&1; then
-        warn "Waybar is not installed; reload skipped"
-        return
-    fi
-    if ! pgrep -u "$UID" -x waybar >/dev/null 2>&1; then
-        warn "Waybar is not running; reload skipped"
-        return
-    fi
-    if ! pkill -USR2 -u "$UID" -x waybar; then
-        warn "Waybar is running but could not be signalled with SIGUSR2"
-    fi
-}
-
-reload_swaync() {
-    if ! command -v swaync-client >/dev/null 2>&1; then
-        warn "SwayNC is not installed; reload skipped"
-        return
-    fi
-    if ! pgrep -u "$UID" -x swaync >/dev/null 2>&1; then
-        warn "SwayNC is not running; reload skipped"
-        return
-    fi
-
-    # swaync-client 0.12.x documents --reload-css for live CSS refreshes.
-    # Bound the call so a daemon disappearing after pgrep cannot hang a switch.
-    if command -v timeout >/dev/null 2>&1; then
-        timeout 5s swaync-client --reload-css >/dev/null 2>&1 || {
-            warn "SwayNC is running but 'swaync-client --reload-css' failed"
-            return
-        }
-    elif ! swaync-client --reload-css >/dev/null 2>&1; then
-        warn "SwayNC is running but 'swaync-client --reload-css' failed"
-    fi
-}
-
 apply_icon_theme() {
     local target_dir="${1:-$CURRENT_LINK}"
     local icon_file=""
@@ -544,7 +484,9 @@ apply_icon_theme() {
 
     # 9. Update Quickshell icon pragma in shell.qml files
     local qmldir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
-    for shell_qml in "$qmldir/shell.qml" "$HOME/QDeck/quickshell/shell.qml"; do
+    local repo_root
+    repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)"
+    for shell_qml in "$qmldir/shell.qml" "$repo_root/quickshell/shell.qml" "$HOME/QDeck/quickshell/shell.qml" "$HOME/qdeck/quickshell/shell.qml"; do
         if [[ -f "$shell_qml" ]]; then
             sed -i -E "1s|^//@ pragma IconTheme .*|//@ pragma IconTheme $icon_theme|" "$shell_qml" 2>/dev/null || true
         fi
@@ -631,8 +573,6 @@ apply_icon_theme "$theme_dir"
 reload_neovim
 if (( theme_changed == 1 )); then
     apply_wallpaper
-    reload_waybar
-    reload_swaync
     reload_hyprland
     reload_quickshell
 fi

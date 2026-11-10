@@ -17,6 +17,11 @@ QtObject {
     property string focusedMonitor: "eDP-1"
     property string selectedMonitorName: ""
     property string deviceName: "eDP-1"
+    property bool menuOpen: false
+
+    onMenuOpenChanged: {
+        if (menuOpen) root.refresh()
+    }
 
     readonly property var activeMonitorObject: {
         var list = Hyprland.monitors ? Hyprland.monitors.values : []
@@ -330,7 +335,7 @@ QtObject {
     }
 
     property Timer pollTimer: Timer {
-        interval: 2000
+        interval: root.menuOpen ? 2000 : 30000
         repeat: true
         running: true
         onTriggered: root.refresh()

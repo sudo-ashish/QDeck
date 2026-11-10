@@ -9,7 +9,7 @@ local terminal = "kitty"
 ---------------------
 
 hl.bind("SUPER + RETURN", hl.dsp.exec_cmd(terminal))
-local closeWindowBind = hl.bind("SUPER + Q", hl.dsp.window.close())
+hl.bind("SUPER + Q", hl.dsp.window.close())
 hl.bind(
 	"SUPER + M",
 	hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'")
@@ -52,8 +52,6 @@ hl.bind("SUPER + SHIFT + DOWN", hl.dsp.window.swap({ direction = "d" }))
 
 hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
 hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
-hl.bind("ALT + TAB", hl.dsp.window.bring_to_top())
-hl.bind("ALT + SHIFT + TAB", hl.dsp.window.bring_to_top())
 
 hl.bind("SUPER + code:20", hl.dsp.window.resize({ x = -100, y = 0, relative = true }))
 hl.bind("SUPER + code:21", hl.dsp.window.resize({ x = 100, y = 0, relative = true }))
@@ -89,5 +87,3 @@ hl.bind("SUPER + CTRL + RIGHT", hl.dsp.group.next())
 
 hl.bind("SUPER + ALT + mouse_down", hl.dsp.group.next())
 hl.bind("SUPER + ALT + mouse_up", hl.dsp.group.prev())
-
-hl.bind("CTRL + SHIFT + W", hl.dsp.exec_cmd("qdeck bar toggle"))

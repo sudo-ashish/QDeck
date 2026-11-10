@@ -2,13 +2,30 @@
 # QDeck: Theme discovery, listing, and switching helper (qdeck-theme-switch / qdeck theme)
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 THEMES_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/themes"
 CURRENT_LINK="$THEMES_DIR/current"
-SETUP_BIN="$HOME/.local/bin/theme-switch-setup"
-SWITCH_BIN="$HOME/.local/bin/theme-switch"
+
+SWITCH_BIN=""
+if [[ -x "$SCRIPT_DIR/theme-switch" ]]; then
+    SWITCH_BIN="$SCRIPT_DIR/theme-switch"
+elif command -v theme-switch >/dev/null 2>&1; then
+    SWITCH_BIN="$(command -v theme-switch)"
+elif [[ -x "$HOME/.local/bin/theme-switch" ]]; then
+    SWITCH_BIN="$HOME/.local/bin/theme-switch"
+fi
+
+SETUP_BIN=""
+if [[ -x "$SCRIPT_DIR/theme-switch-setup" ]]; then
+    SETUP_BIN="$SCRIPT_DIR/theme-switch-setup"
+elif command -v theme-switch-setup >/dev/null 2>&1; then
+    SETUP_BIN="$(command -v theme-switch-setup)"
+elif [[ -x "$HOME/.local/bin/theme-switch-setup" ]]; then
+    SETUP_BIN="$HOME/.local/bin/theme-switch-setup"
+fi
 
 # Ensure binaries in PATH if available
-if ! command -v theme-switch >/dev/null 2>&1 && [[ -x "$SWITCH_BIN" ]]; then
+if [[ -d "$HOME/.local/bin" ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
@@ -132,110 +149,6 @@ list_themes_json() {
     fi
 }
 
-apply_icon_theme() {
-    local target_dir="${1:-$CURRENT_LINK}"
-    local icon_file=""
-
-    if [[ -f "$target_dir/icons.theme" ]]; then
-        icon_file="$target_dir/icons.theme"
-    elif [[ -f "$CURRENT_LINK/icons.theme" ]]; then
-        icon_file="$CURRENT_LINK/icons.theme"
-    fi
-
-    [[ -n "$icon_file" ]] || return 0
-
-    local icon_theme
-    icon_theme="$(head -n 1 "$icon_file" 2>/dev/null | tr -d '\r\n' | xargs)"
-    [[ -n "$icon_theme" ]] || return 0
-
-    # 1. Update GSettings (GNOME / XDG desktop portal interface)
-    if command -v gsettings >/dev/null 2>&1; then
-        gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" 2>/dev/null || true
-    fi
-
-    # 2. Update nwg-look persistent state if present
-    local nwg_gsettings="$HOME/.local/share/nwg-look/gsettings"
-    if [[ -f "$nwg_gsettings" ]]; then
-        sed -i -E "s/^[[:space:]]*icon-theme=.*/icon-theme=$icon_theme/" "$nwg_gsettings" 2>/dev/null || true
-    fi
-
-    # 3. Synchronize via nwg-look export in background to avoid blocking switch
-    if command -v nwg-look >/dev/null 2>&1; then
-        nwg-look -x >/dev/null 2>&1 &
-    fi
-
-    # 4. Explicitly update GTK 3.0 configuration
-    local gtk3_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0"
-    local gtk3_file="$gtk3_dir/settings.ini"
-    mkdir -p "$gtk3_dir" 2>/dev/null || true
-    if [[ -f "$gtk3_file" ]]; then
-        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk3_file"; then
-            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=$icon_theme|" "$gtk3_file" 2>/dev/null || true
-        else
-            if grep -q "^\[Settings\]" "$gtk3_file"; then
-                sed -i "/^\[Settings\]/a gtk-icon-theme-name=$icon_theme" "$gtk3_file" 2>/dev/null || true
-            else
-                printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" >> "$gtk3_file"
-            fi
-        fi
-    else
-        printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" > "$gtk3_file"
-    fi
-
-    # 5. Explicitly update GTK 4.0 configuration
-    local gtk4_dir="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-4.0"
-    local gtk4_file="$gtk4_dir/settings.ini"
-    mkdir -p "$gtk4_dir" 2>/dev/null || true
-    if [[ -f "$gtk4_file" ]]; then
-        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk4_file"; then
-            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=$icon_theme|" "$gtk4_file" 2>/dev/null || true
-        else
-            if grep -q "^\[Settings\]" "$gtk4_file"; then
-                sed -i "/^\[Settings\]/a gtk-icon-theme-name=$icon_theme" "$gtk4_file" 2>/dev/null || true
-            else
-                printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" >> "$gtk4_file"
-            fi
-        fi
-    else
-        printf '[Settings]\ngtk-icon-theme-name=%s\n' "$icon_theme" > "$gtk4_file"
-    fi
-
-    # 6. Explicitly update GTK 2.0 configuration
-    local gtk2_file="$HOME/.gtkrc-2.0"
-    if [[ -f "$gtk2_file" ]]; then
-        if grep -q "^[[:space:]]*gtk-icon-theme-name" "$gtk2_file"; then
-            sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=\"$icon_theme\"|" "$gtk2_file" 2>/dev/null || true
-        fi
-    fi
-
-    # 7. Update xsettingsd configuration and notify daemon
-    local xsettings_dir="${XDG_CONFIG_HOME:-$HOME/.config}/xsettingsd"
-    local xsettings_file="$xsettings_dir/xsettingsd.conf"
-    if [[ -f "$xsettings_file" ]]; then
-        if grep -q "^[[:space:]]*Net/IconThemeName" "$xsettings_file"; then
-            sed -i -E "s|^[[:space:]]*Net/IconThemeName.*|Net/IconThemeName \"$icon_theme\"|" "$xsettings_file" 2>/dev/null || true
-        else
-            echo "Net/IconThemeName \"$icon_theme\"" >> "$xsettings_file"
-        fi
-    fi
-    if pgrep -u "$UID" -x xsettingsd >/dev/null 2>&1; then
-        pkill -HUP -u "$UID" -x xsettingsd 2>/dev/null || true
-    fi
-
-    # 8. Update xfconf if present
-    if command -v xfconf-query >/dev/null 2>&1; then
-        xfconf-query -c xsettings -p /Net/IconThemeName -s "$icon_theme" >/dev/null 2>&1 || true
-    fi
-
-    # 9. Update Quickshell icon pragma in shell.qml files
-    local qmldir="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
-    for shell_qml in "$qmldir/shell.qml" "$HOME/QDeck/quickshell/shell.qml"; do
-        if [[ -f "$shell_qml" ]]; then
-            sed -i -E "1s|^//@ pragma IconTheme .*|//@ pragma IconTheme $icon_theme|" "$shell_qml" 2>/dev/null || true
-        fi
-    done
-}
-
 switch_theme() {
     local theme="${1:-}"
     if [[ -z "$theme" ]]; then
@@ -251,43 +164,14 @@ switch_theme() {
 
     mkdir -p "$THEMES_DIR"
 
-    # 1. If dedicated theme-switch utility exists, execute it for deep editor & app integrations
-    if command -v theme-switch >/dev/null 2>&1; then
-        theme-switch "$theme" 2>/dev/null || true
-    elif [[ -x "$SWITCH_BIN" ]]; then
-        "$SWITCH_BIN" "$theme" 2>/dev/null || true
+    # Dedicated theme-switch utility handles all application, editor, icon, and daemon updates
+    if [[ -n "$SWITCH_BIN" && -x "$SWITCH_BIN" ]]; then
+        "$SWITCH_BIN" "$theme"
+    elif command -v theme-switch >/dev/null 2>&1; then
+        theme-switch "$theme"
     else
-        # Fallback when theme-switch is not installed
-        ln -sfn "$target_dir" "$CURRENT_LINK"
-        apply_icon_theme "$target_dir"
-        local wp=""
-        if [[ -d "$target_dir/backgrounds" ]]; then
-            for img in "$target_dir/backgrounds"/*; do
-                [[ -f "$img" ]] || continue
-                case "${img,,}" in
-                    *.png|*.jpg|*.jpeg|*.webp|*.avif|*.bmp)
-                        wp="$img"
-                        break
-                        ;;
-                esac
-            done
-        fi
-        if [[ -z "$wp" && -f "$target_dir/default.png" ]]; then
-            wp="$target_dir/default.png"
-        fi
-        if [[ -n "$wp" ]]; then
-            if command -v qdeck-wallpaper >/dev/null 2>&1; then
-                qdeck-wallpaper apply "$wp" >/dev/null 2>&1 &
-            elif command -v awww >/dev/null 2>&1 && (pgrep -x awww-daemon >/dev/null 2>&1 || true); then
-                awww img "$wp" >/dev/null 2>&1 &
-            fi
-        fi
-        if command -v hyprctl >/dev/null 2>&1; then
-            hyprctl reload >/dev/null 2>&1 || true
-        fi
-        if command -v qs >/dev/null 2>&1; then
-            qs ipc call theme reload >/dev/null 2>&1 || true
-        fi
+        echo "error: theme-switch binary not found" >&2
+        exit 1
     fi
 
     echo "Switched to theme: $theme"

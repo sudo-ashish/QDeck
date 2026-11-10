@@ -76,14 +76,6 @@ Item {
         return "text"
     }
 
-    function categoryGlyph(cat) {
-        if (cat === "url") return Icons.link || "󰌹"
-        if (cat === "command") return Icons.terminal || "󰆍"
-        if (cat === "code") return Icons.code || "󰅩"
-        if (cat === "multiline") return "format_align_left"
-        return Icons.clipboard || "󰅍"
-    }
-
     function formatPreview(text) {
         if (!text) return ""
         var lines = text.split("\n")

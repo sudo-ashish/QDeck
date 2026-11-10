@@ -41,10 +41,12 @@ if [[ -f "$VSCODIUM_SETTINGS" ]]; then
   echo "    Deploying VSCodium user settings..."
   mkdir -p "$HOME/.config/VSCodium/User"
   cp -f "$VSCODIUM_SETTINGS" "$HOME/.config/VSCodium/User/settings.json"
+  ANTIGRAVITY_SETTINGS="$REPO_ROOT/assets/antigravity/settings.json"
+  [[ -f "$ANTIGRAVITY_SETTINGS" ]] || ANTIGRAVITY_SETTINGS="$VSCODIUM_SETTINGS"
   if command -v antigravity-ide >/dev/null 2>&1 || [[ -d "$HOME/.config/Antigravity IDE" ]]; then
     echo "    Deploying Antigravity IDE user settings..."
     mkdir -p "$HOME/.config/Antigravity IDE/User"
-    cp -f "$VSCODIUM_SETTINGS" "$HOME/.config/Antigravity IDE/User/settings.json"
+    cp -f "$ANTIGRAVITY_SETTINGS" "$HOME/.config/Antigravity IDE/User/settings.json"
   fi
 fi
 

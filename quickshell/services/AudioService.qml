@@ -28,6 +28,9 @@ QtObject {
     }
 
     readonly property var sink: Pipewire.defaultAudioSink
+    onSinkChanged: {
+        if (!sinkAvailabilityProc.running) sinkAvailabilityProc.running = true
+    }
     readonly property var source: Pipewire.defaultAudioSource
     readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
 
@@ -140,7 +143,7 @@ QtObject {
 
     property Timer sinkAvailTimer: Timer {
         interval: 4000
-        running: true
+        running: root.menuOpen
         repeat: true
         triggeredOnStart: true
         onTriggered: if (!sinkAvailabilityProc.running) sinkAvailabilityProc.running = true

@@ -56,11 +56,9 @@ set_bar_visibility() {
 
   if [[ "$state" == "hidden" ]]; then
     call_bar_ipc bar hide
-    call_bar_ipc barpopups hideBar
     echo "Top bar is now hidden."
   else
     call_bar_ipc bar show
-    call_bar_ipc barpopups showBar
     echo "Top bar is now visible."
   fi
 }

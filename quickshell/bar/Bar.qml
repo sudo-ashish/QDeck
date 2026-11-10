@@ -245,24 +245,5 @@ PanelWindow {
         function getMode(): string {
             return root.barMode
         }
-
-        function toggleBar(): string {
-            Appearance.barVisible = !Appearance.barVisible
-            return Appearance.barVisible ? "visible" : "hidden"
-        }
-
-        function hideBar(): string {
-            Appearance.barVisible = false
-            return "hidden"
-        }
-
-        function showBar(): string {
-            Appearance.barVisible = true
-            return "visible"
-        }
-
-        function isBarVisible(): string {
-            return Appearance.barVisible ? "true" : "false"
-        }
     }
 }
