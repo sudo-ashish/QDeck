@@ -83,13 +83,32 @@ if [[ -n "$THEMES_SRC" ]]; then
     done
   fi
 
-  # Dynamically compile runtime configs (color.conf, btop.theme) from colors.toml
+  # Dynamically compile runtime configs (color.conf, btop.theme, gtk-3.0.css, gtk-4.0.css) from colors.toml
   if [[ -f "$HOME/.config/themes/current/colors.toml" ]]; then
     if command -v qdeck-theme-gen &>/dev/null; then
       qdeck-theme-gen "$HOME/.config/themes/current" 2>/dev/null || true
     elif [[ -x "$REPO_ROOT/bin/qdeck-theme-gen" ]]; then
       "$REPO_ROOT/bin/qdeck-theme-gen" "$HOME/.config/themes/current" 2>/dev/null || true
     fi
+  fi
+
+  # Initialize GTK, Kitty, and btop runtime symlinks and dark mode settings
+  if [[ -d "$HOME/.config/themes/current" ]]; then
+    mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/kitty" "$HOME/.config/btop/themes"
+    ln -sfn "$HOME/.config/themes/current/gtk-3.0.css" "$HOME/.config/gtk-3.0/gtk.css"
+    ln -sfn "$HOME/.config/themes/current/gtk-4.0.css" "$HOME/.config/gtk-4.0/gtk.css"
+    ln -sfn "$HOME/.config/themes/current/color.conf" "$HOME/.config/kitty/color.conf"
+    ln -sfn "$HOME/.config/themes/current/btop.theme" "$HOME/.config/btop/themes/current.theme"
+
+    for ini in "$HOME/.config/gtk-3.0/settings.ini" "$HOME/.config/gtk-4.0/settings.ini"; do
+      if [[ -f "$ini" ]]; then
+        if ! grep -q "gtk-application-prefer-dark-theme" "$ini"; then
+          printf 'gtk-application-prefer-dark-theme=1\n' >> "$ini"
+        fi
+      else
+        printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > "$ini"
+      fi
+    done
   fi
 fi
 

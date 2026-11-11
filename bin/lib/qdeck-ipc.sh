@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # QDeck: Shared IPC caller for QDeck CLI scripts
+export QS_NO_RELOAD_POPUP=1
 
 call_ipc() {
   local target="$1"; shift

@@ -253,6 +253,59 @@ apply_icon_theme() {
     fi
 }
 
+apply_gtk_theme() {
+    local target_dir="${1:-$CURRENT_LINK}"
+    local gtk3_dir="$CONFIG_HOME/gtk-3.0"
+    local gtk4_dir="$CONFIG_HOME/gtk-4.0"
+
+    mkdir -p "$gtk3_dir" "$gtk4_dir" 2>/dev/null || true
+
+    # 1. Symlink generated GTK CSS files to current active theme outputs
+    if [[ -f "$target_dir/gtk-3.0.css" || -f "$CURRENT_LINK/gtk-3.0.css" ]]; then
+        ln -sfn "$CURRENT_LINK/gtk-3.0.css" "$gtk3_dir/gtk.css" 2>/dev/null || true
+    fi
+    if [[ -f "$target_dir/gtk-4.0.css" || -f "$CURRENT_LINK/gtk-4.0.css" ]]; then
+        ln -sfn "$CURRENT_LINK/gtk-4.0.css" "$gtk4_dir/gtk.css" 2>/dev/null || true
+    fi
+
+    # 2. Ensure gtk-application-prefer-dark-theme=1 in settings.ini for GTK 3.0 and 4.0
+    for ini in "$gtk3_dir/settings.ini" "$gtk4_dir/settings.ini"; do
+        if [[ -f "$ini" ]]; then
+            if grep -q "^[[:space:]]*gtk-application-prefer-dark-theme" "$ini"; then
+                sed -i -E "s|^[[:space:]]*gtk-application-prefer-dark-theme[[:space:]]*=.*|gtk-application-prefer-dark-theme=1|" "$ini" 2>/dev/null || true
+            else
+                if grep -q "^\[Settings\]" "$ini"; then
+                    sed -i "/^\[Settings\]/a gtk-application-prefer-dark-theme=1" "$ini" 2>/dev/null || true
+                else
+                    printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' >> "$ini"
+                fi
+            fi
+        else
+            printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > "$ini"
+        fi
+    done
+
+    # 3. Enforce dark color scheme and trigger live reload via gsettings
+    if command -v gsettings >/dev/null 2>&1; then
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+
+        local dark_theme="Adwaita-dark"
+        if [[ -d "/usr/share/themes/adw-gtk3-dark" || -d "$HOME/.themes/adw-gtk3-dark" || -d "$HOME/.local/share/themes/adw-gtk3-dark" ]]; then
+            dark_theme="adw-gtk3-dark"
+        fi
+
+        local cur_theme
+        cur_theme=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'" || true)
+        if [[ "$cur_theme" == "$dark_theme" ]]; then
+            # Briefly toggle to trigger xdg-desktop-portal-gtk live stylesheet reload
+            gsettings set org.gnome.desktop.interface gtk-theme "Adwaita" 2>/dev/null || true
+            gsettings set org.gnome.desktop.interface gtk-theme "$dark_theme" 2>/dev/null || true
+        else
+            gsettings set org.gnome.desktop.interface gtk-theme "$dark_theme" 2>/dev/null || true
+        fi
+    fi
+}
+
 apply_wallpaper() {
     local target_dir="${1:-$CURRENT_LINK}"
     local backgrounds_dir="$target_dir/backgrounds"
@@ -389,33 +442,36 @@ switch_theme() {
     ln -sfn "$target_dir" "$tmp_link"
     mv -fT "$tmp_link" "$CURRENT_LINK"
 
-    # 2. Dynamically compile runtime configs (color.conf, btop.theme) from colors.toml
+    # 2. Dynamically compile runtime configs (color.conf, hyprlock-color.conf, btop.theme, gtk-3.0.css, gtk-4.0.css) from colors.toml
     if [[ -x "$SCRIPT_DIR/qdeck-theme-gen" ]]; then
         "$SCRIPT_DIR/qdeck-theme-gen" "$CURRENT_LINK" 2>/dev/null || true
     elif command -v qdeck-theme-gen >/dev/null 2>&1; then
         qdeck-theme-gen "$CURRENT_LINK" 2>/dev/null || true
     fi
 
-    # 3. Update Kitty color.conf symlink and reload Kitty
+    # 3. Apply GTK 3.0 / GTK 4.0 / Libadwaita stylesheets and live settings
+    apply_gtk_theme "$target_dir"
+
+    # 4. Update Kitty color.conf symlink and reload Kitty
     if [[ -f "$CURRENT_LINK/color.conf" ]]; then
         mkdir -p "$CONFIG_HOME/kitty" 2>/dev/null || true
         ln -sfn "$CURRENT_LINK/color.conf" "$CONFIG_HOME/kitty/color.conf" 2>/dev/null || true
         reload_kitty
     fi
 
-    # 3. Update editor themes (VSCodium, Code, Antigravity IDE) if vscode.json present; skip silently if not found
+    # 5. Update editor themes (VSCodium, Code, Antigravity IDE) if vscode.json present; skip silently if not found
     update_editor_themes "$target_dir"
 
-    # 4. Apply icon theme if icons.theme present; skip silently if not found
+    # 6. Apply icon theme if icons.theme present; skip silently if not found
     apply_icon_theme "$target_dir"
 
-    # 5. Apply wallpaper if present; skip silently if not found
+    # 7. Apply wallpaper if present; skip silently if not found
     apply_wallpaper "$target_dir"
 
-    # 6. Apply btop theme if btop.theme present; skip silently if not found
+    # 8. Apply btop theme if btop.theme present; skip silently if not found
     apply_btop_theme "$target_dir"
 
-    # 7. Live reloads for editors/compositors (skip neovim if neovim.lua not found)
+    # 9. Live reloads for editors/compositors (skip neovim if neovim.lua not found)
     if [[ -f "$target_dir/neovim.lua" ]]; then
         reload_neovim "$target_dir"
     fi
@@ -437,7 +493,10 @@ run_setup() {
         fi
     fi
 
-    # 1. btop theme symlink and config
+    # 1. Apply GTK theme symlinks and dark mode settings
+    apply_gtk_theme "$CURRENT_LINK"
+
+    # 2. btop theme symlink and config
     local btop_themes_dir="$CONFIG_HOME/btop/themes"
     mkdir -p "$btop_themes_dir"
     if [[ -f "$CURRENT_LINK/btop.theme" ]]; then

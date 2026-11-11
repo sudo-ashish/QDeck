@@ -28,6 +28,11 @@ ShellRoot {
                 Quickshell.inhibitReloadPopup()
             }
         }
+        function onReloadFailed(errorString) {
+            if (typeof Quickshell.inhibitReloadPopup === "function") {
+                Quickshell.inhibitReloadPopup()
+            }
+        }
     }
 
     // Core Shared Services
