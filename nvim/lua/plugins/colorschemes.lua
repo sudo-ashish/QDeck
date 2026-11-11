@@ -4,4 +4,5 @@ return {
   { "ellisonleao/gruvbox.nvim", lazy = true },
   { "EdenEast/nightfox.nvim", lazy = true },
   { "folke/tokyonight.nvim", lazy = true },
+  { "rebelot/kanagawa.nvim", name = "kanagawa.nvim", lazy = true },
 }

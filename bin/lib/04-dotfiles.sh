@@ -73,8 +73,8 @@ if [[ -n "$THEMES_SRC" ]]; then
   cp -rf "$THEMES_SRC/." "$HOME/.config/themes/"
 
   # Initialize active theme symlink if missing
-  if [[ ! -e "$HOME/.config/themes/current" ]]; then
-    for t in catppuccin gruvbox everforest nord tokyo-night; do
+  if [[ ! -L "$HOME/.config/themes/current" && ! -e "$HOME/.config/themes/current" ]]; then
+    for t in kanagawa tokyo-night catppuccin gruvbox everforest nord; do
       if [[ -d "$HOME/.config/themes/$t" ]]; then
         ln -sfn "$HOME/.config/themes/$t" "$HOME/.config/themes/current"
         echo "    Initialized active theme symlink -> $t"
