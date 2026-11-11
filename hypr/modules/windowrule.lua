@@ -64,6 +64,13 @@ hl.window_rule({
 
 hl.window_rule({ match = { class = "org.gnome.Calculator" }, float = true, center = true })
 
+hl.window_rule({
+	name = "quickshell-reload-popup-suppress",
+	match = { title = "^Quickshell: Config.*" },
+	workspace = "special:silent silent",
+	no_focus = true,
+})
+
 --------------------------------
 ---- QUICKSHELL LAYER RULES ----
 --------------------------------

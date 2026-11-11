@@ -271,7 +271,12 @@ apply_gtk_theme() {
         touch "$gtk4_dir/gtk.css" 2>/dev/null || true
     fi
 
-    # 2. Ensure gtk-application-prefer-dark-theme=1 in settings.ini for GTK 3.0 and 4.0
+    # 2. Ensure gtk-application-prefer-dark-theme=1 and dark theme in settings.ini for GTK 3.0 and 4.0
+    local dark_theme="Adwaita-dark"
+    if [[ -d "/usr/share/themes/adw-gtk3-dark" || -d "$HOME/.themes/adw-gtk3-dark" || -d "$HOME/.local/share/themes/adw-gtk3-dark" ]]; then
+        dark_theme="adw-gtk3-dark"
+    fi
+
     for ini in "$gtk3_dir/settings.ini" "$gtk4_dir/settings.ini"; do
         if [[ -f "$ini" ]]; then
             if grep -q "^[[:space:]]*gtk-application-prefer-dark-theme" "$ini"; then
@@ -283,10 +288,18 @@ apply_gtk_theme() {
                     printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' >> "$ini"
                 fi
             fi
+            if grep -q "^[[:space:]]*gtk-theme-name" "$ini"; then
+                sed -i -E "s|^[[:space:]]*gtk-theme-name[[:space:]]*=.*|gtk-theme-name=$dark_theme|" "$ini" 2>/dev/null || true
+            fi
         else
-            printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > "$ini"
+            printf '[Settings]\ngtk-theme-name=%s\ngtk-application-prefer-dark-theme=1\n' "$dark_theme" > "$ini"
         fi
     done
+
+    if [[ -f "$CONFIG_HOME/xsettingsd/xsettingsd.conf" ]]; then
+        sed -i -E "s|^[[:space:]]*Net/ThemeName.*|Net/ThemeName \"$dark_theme\"|" "$CONFIG_HOME/xsettingsd/xsettingsd.conf" 2>/dev/null || true
+        killall -HUP xsettingsd 2>/dev/null || true
+    fi
 
     # 3. Enforce dark color scheme and trigger live reload via gsettings
     if command -v gsettings >/dev/null 2>&1; then
@@ -303,16 +316,12 @@ apply_gtk_theme() {
         esac
         gsettings set org.gnome.desktop.interface accent-color "$gnome_accent" 2>/dev/null || true
 
-        local dark_theme="Adwaita-dark"
-        if [[ -d "/usr/share/themes/adw-gtk3-dark" || -d "$HOME/.themes/adw-gtk3-dark" || -d "$HOME/.local/share/themes/adw-gtk3-dark" ]]; then
-            dark_theme="adw-gtk3-dark"
-        fi
-
         local cur_theme
         cur_theme=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'" || true)
         if [[ "$cur_theme" == "$dark_theme" ]]; then
-            # Briefly toggle to trigger xdg-desktop-portal-gtk live stylesheet reload
-            gsettings set org.gnome.desktop.interface gtk-theme "Adwaita" 2>/dev/null || true
+            local alt_dark="Adwaita-dark"
+            [[ "$dark_theme" == "Adwaita-dark" ]] && alt_dark="adw-gtk3-dark"
+            gsettings set org.gnome.desktop.interface gtk-theme "$alt_dark" 2>/dev/null || true
             gsettings set org.gnome.desktop.interface gtk-theme "$dark_theme" 2>/dev/null || true
         else
             gsettings set org.gnome.desktop.interface gtk-theme "$dark_theme" 2>/dev/null || true

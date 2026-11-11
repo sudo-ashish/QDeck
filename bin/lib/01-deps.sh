@@ -34,6 +34,8 @@ CORE_PACKAGES=(
   imv
   pinta
   nwg-look
+  adw-gtk-theme
+  gnome-themes-extra
 
   # Terminal, shell & monitor
   kitty

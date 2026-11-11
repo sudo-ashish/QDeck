@@ -1,4 +1,5 @@
 //@ pragma IconTheme Yaru-blue
+//@ pragma Env QS_NO_RELOAD_POPUP=1
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -14,7 +15,8 @@ import "modules/polkit"
 ShellRoot {
     id: root
 
-    // Suppress intrusive Quickshell reload popup windows
+    // Suppress intrusive Quickshell reload popup windows at both evaluation and runtime
+    readonly property var _noReloadPopup: (typeof Quickshell.inhibitReloadPopup === "function") ? Quickshell.inhibitReloadPopup() : null
     Component.onCompleted: {
         if (typeof Quickshell.inhibitReloadPopup === "function") {
             Quickshell.inhibitReloadPopup()

@@ -114,11 +114,17 @@ if [[ -f "$HOME/.config/themes/current/icons.theme" ]]; then
   [[ -z "$DEFAULT_ICON" ]] && DEFAULT_ICON="Yaru-blue"
 fi
 
+# Determine preferred GTK theme (prefer adw-gtk3-dark for perfect libadwaita parity, fallback to Adwaita-dark)
+DEFAULT_GTK_THEME="Adwaita-dark"
+if [[ -d "/usr/share/themes/adw-gtk3-dark" || -d "$HOME/.themes/adw-gtk3-dark" || -d "$HOME/.local/share/themes/adw-gtk3-dark" ]]; then
+  DEFAULT_GTK_THEME="adw-gtk3-dark"
+fi
+
 # Deploy GTK 3.0 settings.ini
 if [[ ! -f "$HOME/.config/gtk-3.0/settings.ini" && -f "$GTK_ASSETS/gtk-3.0/settings.ini" ]]; then
   cp -f "$GTK_ASSETS/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/settings.ini"
 elif [[ -f "$GTK_ASSETS/gtk-3.0/settings.ini" ]]; then
-  for key in "gtk-application-prefer-dark-theme=1" "gtk-theme-name=Adwaita-dark" "gtk-font-name=JetBrainsMono Nerd Font 11" "gtk-cursor-theme-name=Bibata-Modern-Ice" "gtk-cursor-theme-size=18"; do
+  for key in "gtk-application-prefer-dark-theme=1" "gtk-theme-name=$DEFAULT_GTK_THEME" "gtk-font-name=JetBrainsMono Nerd Font 11" "gtk-cursor-theme-name=Bibata-Modern-Ice" "gtk-cursor-theme-size=18"; do
     kname="${key%%=*}"
     if ! grep -q "^[[:space:]]*$kname" "$HOME/.config/gtk-3.0/settings.ini"; then
       if grep -q "^\[Settings\]" "$HOME/.config/gtk-3.0/settings.ini"; then
@@ -134,7 +140,7 @@ fi
 if [[ ! -f "$HOME/.config/gtk-4.0/settings.ini" && -f "$GTK_ASSETS/gtk-4.0/settings.ini" ]]; then
   cp -f "$GTK_ASSETS/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/settings.ini"
 elif [[ -f "$GTK_ASSETS/gtk-4.0/settings.ini" ]]; then
-  for key in "gtk-application-prefer-dark-theme=1" "gtk-theme-name=Adwaita-dark" "gtk-font-name=JetBrainsMono Nerd Font 11" "gtk-cursor-theme-name=Bibata-Modern-Ice" "gtk-cursor-theme-size=18"; do
+  for key in "gtk-application-prefer-dark-theme=1" "gtk-theme-name=$DEFAULT_GTK_THEME" "gtk-font-name=JetBrainsMono Nerd Font 11" "gtk-cursor-theme-name=Bibata-Modern-Ice" "gtk-cursor-theme-size=18"; do
     kname="${key%%=*}"
     if ! grep -q "^[[:space:]]*$kname" "$HOME/.config/gtk-4.0/settings.ini"; then
       if grep -q "^\[Settings\]" "$HOME/.config/gtk-4.0/settings.ini"; then
@@ -182,7 +188,7 @@ fi
 # Apply system appearance via gsettings
 if command -v gsettings >/dev/null 2>&1; then
   gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme "$DEFAULT_GTK_THEME" 2>/dev/null || true
   gsettings set org.gnome.desktop.interface font-name 'JetBrainsMono Nerd Font 11' 2>/dev/null || true
   gsettings set org.gnome.desktop.interface document-font-name 'JetBrainsMono Nerd Font 11' 2>/dev/null || true
   gsettings set org.gnome.desktop.interface monospace-font-name 'JetBrainsMono Nerd Font 11' 2>/dev/null || true
@@ -196,7 +202,7 @@ fi
 # Apply system appearance via dconf
 if command -v dconf >/dev/null 2>&1; then
   dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
-  dconf write /org/gnome/desktop/interface/gtk-theme "'Adwaita-dark'" 2>/dev/null || true
+  dconf write /org/gnome/desktop/interface/gtk-theme "'$DEFAULT_GTK_THEME'" 2>/dev/null || true
   dconf write /org/gnome/desktop/interface/font-name "'JetBrainsMono Nerd Font 11'" 2>/dev/null || true
   dconf write /org/gnome/desktop/interface/document-font-name "'JetBrainsMono Nerd Font 11'" 2>/dev/null || true
   dconf write /org/gnome/desktop/interface/monospace-font-name "'JetBrainsMono Nerd Font 11'" 2>/dev/null || true

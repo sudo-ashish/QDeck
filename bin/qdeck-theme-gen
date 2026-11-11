@@ -343,10 +343,41 @@ theme[process_end]="{magenta}"
   --borders: {selection};
 }}
 
-window.background {{
+window,
+window.background,
+dialog {
   background-color: var(--window-bg-color);
   color: var(--window-fg-color);
-}}
+}
+
+headerbar,
+.titlebar,
+headerbar.titlebar {
+  background-color: var(--headerbar-bg-color);
+  color: var(--headerbar-fg-color);
+  border-color: var(--headerbar-border-color);
+}
+
+headerbar windowhandle {
+  background-color: transparent;
+}
+
+headerbar button {
+  color: var(--headerbar-fg-color);
+}
+
+.view,
+view,
+textview text {
+  background-color: var(--view-bg-color);
+  color: var(--view-fg-color);
+}
+
+popover,
+popover.background {
+  background-color: var(--popover-bg-color);
+  color: var(--popover-fg-color);
+}
 """
 
     color_conf_path = theme_dir / "color.conf"

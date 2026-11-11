@@ -248,20 +248,25 @@ sleep 0.3
 systemctl --user start pipewire pipewire-pulse wireplumber 2>/dev/null || true
 
 # 4. Sync helper scripts into ~/.local/bin
-mkdir -p "$HOME/.local/bin"
-for s in "$BIN_DIR"/*; do
-  [[ -f "$s" ]] || continue
-  base=$(basename "$s")
-  [[ "$base" == "install.sh" ]] && continue
-  chmod +x "$s"
-  if [[ -L "$s" ]]; then
-    cp -P "$s" "$HOME/.local/bin/$base"
-  elif [[ -L "$HOME/.local/bin/$base" || ! -f "$HOME/.local/bin/$base" || "$s" -nt "$HOME/.local/bin/$base" ]]; then
+if [[ "$BIN_DIR" != "$HOME/.local/bin" ]]; then
+  mkdir -p "$HOME/.local/bin"
+  for s in "$BIN_DIR"/*; do
+    [[ -f "$s" ]] || continue
+    base=$(basename "$s")
+    [[ "$base" == "install.sh" ]] && continue
+    chmod +x "$s"
+    if [[ "$s" -ef "$HOME/.local/bin/$base" ]]; then
+      continue
+    fi
     rm -f "$HOME/.local/bin/$base"
-    cp -f "$s" "$HOME/.local/bin/$base"
-    chmod +x "$HOME/.local/bin/$base"
-  fi
-done
+    if [[ -L "$s" ]]; then
+      cp -P "$s" "$HOME/.local/bin/$base"
+    elif [[ ! -f "$HOME/.local/bin/$base" || "$s" -nt "$HOME/.local/bin/$base" ]]; then
+      cp -f "$s" "$HOME/.local/bin/$base"
+      chmod +x "$HOME/.local/bin/$base"
+    fi
+  done
+fi
 
 # 4b. Ensure default system color scheme is set to prefer-dark
 if command -v gsettings >/dev/null 2>&1; then
