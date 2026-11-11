@@ -76,7 +76,7 @@ PanelWindow {
     // ─────────────────────────────────────────────────────────────────────────
     Timer {
         id: autoHideTimer
-        interval: 3500
+        interval: 1800
         repeat: false
         onTriggered: {
             root.close()
@@ -103,29 +103,18 @@ PanelWindow {
     }
 
     function toggle(): string {
-        if (root.isOpen) {
-            // Already open: cycle to next window/workspace and keep active
-            return root.next()
-        } else {
-            return root.open()
-        }
+        return root.next()
     }
 
     function next(): string {
-        if (!root.isOpen) {
-            root.open()
-        }
-        autoHideTimer.restart()
-        spacesCore.cycleNext()
+        spacesCore.nextWorkspace()
+        root.open()
         return "next"
     }
 
     function prev(): string {
-        if (!root.isOpen) {
-            root.open()
-        }
-        autoHideTimer.restart()
-        spacesCore.cyclePrev()
+        spacesCore.prevWorkspace()
+        root.open()
         return "prev"
     }
 
@@ -207,16 +196,17 @@ PanelWindow {
                 }
             }
 
-            // Embedded Spaces Widget
+            // Embedded Spaces Widget (Only show active tab)
             SpacesWidget {
                 id: spacesCore
                 anchors.horizontalCenter: parent.horizontalCenter
+                onlyActiveWorkspace: true
 
-                pillHeight: 34
-                pillRadius: 17
-                pillPadding: 12
-                iconSize: 20
-                iconSpacing: 6
+                pillHeight: 38
+                pillRadius: 19
+                pillPadding: 14
+                iconSize: 22
+                iconSpacing: 8
                 spacing: 8
 
                 onWorkspaceSelected: function(id) {

@@ -162,7 +162,7 @@ PanelWindow {
                 ? Math.round((barContainer.width - root.totalContentWidth) / 2)
                 : Appearance.barMarginHorizontal
 
-            SpacesWidget {
+            WorkspacesWidget {
                 service: root.workspacesService
             }
 

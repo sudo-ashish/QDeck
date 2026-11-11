@@ -72,6 +72,9 @@ Item {
     // Drop-in compatibility with WorkspacesWidget
     property var service: null
 
+    // When true, displays solely the active workspace tab (ideal for Alt+Tab HUD)
+    property bool onlyActiveWorkspace: false
+
     // Programmatic / external hover preview property (-1 = none)
     property int previewHoveredWsId: -1
 
@@ -189,6 +192,9 @@ Item {
     // Dynamic list of visible workspace IDs (persistent 1..5 + active/occupied)
     readonly property var workspaceIds: {
         root._rev
+        if (root.onlyActiveWorkspace) {
+            return [ root.currentWorkspaceId ]
+        }
         var set = [1, 2, 3, 4, 5]
         var list = Hyprland.workspaces ? Hyprland.workspaces.values : []
         for (var i = 0; i < list.length; i++) {
@@ -332,15 +338,15 @@ Item {
     }
 
     function nextWorkspace() {
-        Hyprland.dispatch("hl.dsp.focus({ workspace = \"+1\" })")
-        Hyprland.dispatch("workspace e+1")
-        refreshDebounce.restart()
+        var cur = root.currentWorkspaceId
+        var nextWs = (cur >= 10 || cur < 1) ? 1 : cur + 1
+        root.switchToWorkspace(nextWs)
     }
 
     function prevWorkspace() {
-        Hyprland.dispatch("hl.dsp.focus({ workspace = \"-1\" })")
-        Hyprland.dispatch("workspace e-1")
-        refreshDebounce.restart()
+        var cur = root.currentWorkspaceId
+        var prevWs = (cur <= 1 || cur > 10) ? 10 : cur - 1
+        root.switchToWorkspace(prevWs)
     }
 
     function cycleNext() {
