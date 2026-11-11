@@ -14,6 +14,22 @@ import "modules/polkit"
 ShellRoot {
     id: root
 
+    // Suppress intrusive Quickshell reload popup windows
+    Component.onCompleted: {
+        if (typeof Quickshell.inhibitReloadPopup === "function") {
+            Quickshell.inhibitReloadPopup()
+        }
+    }
+
+    Connections {
+        target: Quickshell
+        function onReloadCompleted() {
+            if (typeof Quickshell.inhibitReloadPopup === "function") {
+                Quickshell.inhibitReloadPopup()
+            }
+        }
+    }
+
     // Core Shared Services
     property WorkspacesService workspacesService: WorkspacesService { }
     property AudioService audioService: AudioService { }

@@ -248,14 +248,17 @@ for s in "$BIN_DIR"/*; do
   base=$(basename "$s")
   [[ "$base" == "install.sh" ]] && continue
   chmod +x "$s"
-  if [[ -L "$HOME/.local/bin/$base" || ! -f "$HOME/.local/bin/$base" || "$s" -nt "$HOME/.local/bin/$base" ]]; then
+  if [[ -L "$s" ]]; then
+    cp -P "$s" "$HOME/.local/bin/$base"
+  elif [[ -L "$HOME/.local/bin/$base" || ! -f "$HOME/.local/bin/$base" || "$s" -nt "$HOME/.local/bin/$base" ]]; then
     rm -f "$HOME/.local/bin/$base"
     cp -f "$s" "$HOME/.local/bin/$base"
     chmod +x "$HOME/.local/bin/$base"
   fi
 done
 
-# 5. Start Quickshell daemon attached to configuration
+# 5. Start Quickshell daemon attached to configuration (suppress internal reload popup windows)
+export QS_NO_RELOAD_POPUP=1
 if [[ "$QS_DIR" == "$HOME/.config/quickshell" ]]; then
   # Standard default configuration does not require -p flag
   if command -v qs >/dev/null 2>&1; then

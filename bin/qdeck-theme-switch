@@ -18,6 +18,9 @@ if [[ -d "$HOME/.local/bin" ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; the
     export PATH="$HOME/.local/bin:$PATH"
 fi
 
+# Suppress Quickshell reload popup windows during theme switching
+export QS_NO_RELOAD_POPUP=1
+
 get_current_theme() {
     if [[ -L "$CURRENT_LINK" ]]; then
         basename "$(readlink -f "$CURRENT_LINK")"
@@ -235,15 +238,19 @@ apply_icon_theme() {
         xfconf-query -c xsettings -p /Net/IconThemeName -s "$icon_theme" >/dev/null 2>&1 || true
     fi
 
-    # 9. Update Quickshell icon pragma in shell.qml
-    local qmldir="$CONFIG_HOME/quickshell"
-    local repo_root
-    repo_root="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)"
-    for shell_qml in "$qmldir/shell.qml" "$repo_root/quickshell/shell.qml"; do
-        if [[ -f "$shell_qml" ]]; then
-            sed -i -E "1s|^//@ pragma IconTheme .*|//@ pragma IconTheme $icon_theme|" "$shell_qml" 2>/dev/null || true
-        fi
-    done
+    # 9. Update Quickshell icon pragma in shell.qml (only if changed to avoid unnecessary reloads)
+    if [[ -n "$icon_theme" ]]; then
+        local qmldir="$CONFIG_HOME/quickshell"
+        local repo_root
+        repo_root="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)"
+        for shell_qml in "$qmldir/shell.qml" "$repo_root/quickshell/shell.qml"; do
+            if [[ -f "$shell_qml" ]]; then
+                if ! grep -q "^//@ pragma IconTheme $icon_theme\$" "$shell_qml" 2>/dev/null; then
+                    sed -i -E "1s|^//@ pragma IconTheme .*|//@ pragma IconTheme $icon_theme|" "$shell_qml" 2>/dev/null || true
+                fi
+            fi
+        done
+    fi
 }
 
 apply_wallpaper() {
