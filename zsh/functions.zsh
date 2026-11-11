@@ -26,7 +26,6 @@ gitpt() {
   local dir
   dir="$(basename "$repo" .git)"
 
-  cd /tmp || return
   git clone --filter=blob:none --sparse "$repo" || return
   cd "$dir" || return
   git sparse-checkout set "$folder" || return
