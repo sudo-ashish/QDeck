@@ -47,6 +47,7 @@ Control Center & Widgets:
   qdeck powermenu [action]       Toggle power & session menu
   qdeck wallpaper [action]       Toggle wallpaper picker or switch wallpaper
   qdeck theme [action]           Toggle theme switcher or switch active theme
+  qdeck theme-gen [dir]          Dynamically compile color.conf and btop.theme from colors.toml
   qdeck qshelf [action]          Toggle or control drag-and-drop staging QShelf (or: qdeck shelf)
   qdeck clipboard [action]       Toggle or control text clipboard manager (wl-clipboard backed)
   qdeck bar [action|mode]        Toggle, hide, show, or switch layout (floating, islands, wide, compact)
@@ -138,6 +139,11 @@ case "$CMD" in
   theme|themeswitcher)
     shift
     exec "$BIN_DIR/qdeck-themeswitcher" "$@"
+    ;;
+
+  theme-gen)
+    shift
+    exec "$BIN_DIR/qdeck-theme-gen" "$@"
     ;;
 
   qshelf|shelf|stagingshelf)

@@ -389,10 +389,17 @@ switch_theme() {
     ln -sfn "$target_dir" "$tmp_link"
     mv -fT "$tmp_link" "$CURRENT_LINK"
 
-    # 2. Update Kitty color.conf symlink if present; skip silently if not found
-    if [[ -f "$target_dir/color.conf" ]]; then
+    # 2. Dynamically compile runtime configs (color.conf, btop.theme) from colors.toml
+    if [[ -x "$SCRIPT_DIR/qdeck-theme-gen" ]]; then
+        "$SCRIPT_DIR/qdeck-theme-gen" "$CURRENT_LINK" 2>/dev/null || true
+    elif command -v qdeck-theme-gen >/dev/null 2>&1; then
+        qdeck-theme-gen "$CURRENT_LINK" 2>/dev/null || true
+    fi
+
+    # 3. Update Kitty color.conf symlink and reload Kitty
+    if [[ -f "$CURRENT_LINK/color.conf" ]]; then
         mkdir -p "$CONFIG_HOME/kitty" 2>/dev/null || true
-        ln -sfn "$target_dir/color.conf" "$CONFIG_HOME/kitty/color.conf" 2>/dev/null || true
+        ln -sfn "$CURRENT_LINK/color.conf" "$CONFIG_HOME/kitty/color.conf" 2>/dev/null || true
         reload_kitty
     fi
 
@@ -420,6 +427,15 @@ switch_theme() {
 
 run_setup() {
     echo "==> Configuring QDeck theme integration..."
+
+    # Ensure dynamic runtime configs are generated for active theme
+    if [[ -d "$CURRENT_LINK" && -f "$CURRENT_LINK/colors.toml" ]]; then
+        if [[ -x "$SCRIPT_DIR/qdeck-theme-gen" ]]; then
+            "$SCRIPT_DIR/qdeck-theme-gen" "$CURRENT_LINK" 2>/dev/null || true
+        elif command -v qdeck-theme-gen >/dev/null 2>&1; then
+            qdeck-theme-gen "$CURRENT_LINK" 2>/dev/null || true
+        fi
+    fi
 
     # 1. btop theme symlink and config
     local btop_themes_dir="$CONFIG_HOME/btop/themes"

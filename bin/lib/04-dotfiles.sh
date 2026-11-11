@@ -82,6 +82,15 @@ if [[ -n "$THEMES_SRC" ]]; then
       fi
     done
   fi
+
+  # Dynamically compile runtime configs (color.conf, btop.theme) from colors.toml
+  if [[ -f "$HOME/.config/themes/current/colors.toml" ]]; then
+    if command -v qdeck-theme-gen &>/dev/null; then
+      qdeck-theme-gen "$HOME/.config/themes/current" 2>/dev/null || true
+    elif [[ -x "$REPO_ROOT/bin/qdeck-theme-gen" ]]; then
+      "$REPO_ROOT/bin/qdeck-theme-gen" "$HOME/.config/themes/current" 2>/dev/null || true
+    fi
+  fi
 fi
 
 # Ensure sensible permissions on deployed user configs

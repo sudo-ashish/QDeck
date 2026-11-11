@@ -39,10 +39,10 @@ for themes_src in "$REPO_ROOT/themes" "$REPO_ROOT/assets/themes"; do
 done
 
 # Ensure current theme link exists if themes are available
-if [[ -d "$THEMES_DEST" && ! -e "$THEMES_DEST/current" ]]; then
-  # Link to catppuccin, gruvbox, or first available directory
+if [[ -d "$THEMES_DEST" && ! -L "$THEMES_DEST/current" && ! -e "$THEMES_DEST/current" ]]; then
+  # Link to kanagawa, tokyo-night, catppuccin, or first available directory
   first_theme=""
-  for t in catppuccin gruvbox everforest nord tokyo-night; do
+  for t in kanagawa tokyo-night catppuccin gruvbox everforest nord; do
     if [[ -d "$THEMES_DEST/$t" ]]; then
       first_theme="$THEMES_DEST/$t"
       break
@@ -62,6 +62,15 @@ if [[ -d "$THEMES_DEST" && ! -e "$THEMES_DEST/current" ]]; then
   if [[ -n "$first_theme" ]]; then
     ln -sf "$first_theme" "$THEMES_DEST/current"
     echo "    Initialized active theme symlink -> $(basename "$first_theme")"
+  fi
+fi
+
+# Dynamically compile runtime configs for active theme if needed
+if [[ -f "$THEMES_DEST/current/colors.toml" ]]; then
+  if command -v qdeck-theme-gen &>/dev/null; then
+    qdeck-theme-gen "$THEMES_DEST/current" 2>/dev/null || true
+  elif [[ -x "$REPO_ROOT/bin/qdeck-theme-gen" ]]; then
+    "$REPO_ROOT/bin/qdeck-theme-gen" "$THEMES_DEST/current" 2>/dev/null || true
   fi
 fi
 
