@@ -1,5 +1,6 @@
 local function reload_current_theme()
   local theme_path = vim.fn.expand("~/.config/themes/current/neovim.lua")
+  if vim.fn.filereadable(theme_path) ~= 1 then return end
   local ok, spec = pcall(dofile, theme_path)
   if not ok or type(spec) ~= "table" then return end
   for _, item in ipairs(spec) do
@@ -28,10 +29,9 @@ end
 
 _G.reload_qdeck_theme = reload_current_theme
 
--- User command to reload theme manually anytime
+-- User command to reload theme manually anytime (silent without popup notification)
 pcall(vim.api.nvim_create_user_command, "ReloadTheme", function()
   reload_current_theme()
-  vim.notify("QDeck theme reloaded", vim.log.levels.INFO)
 end, { desc = "Reload QDeck active theme in LazyVim" })
 
 -- Auto-reload when Neovim terminal window regains focus
@@ -49,13 +49,12 @@ if vim.uv and vim.uv.new_signal then
 end
 
 local theme_path = vim.fn.expand("~/.config/themes/current/neovim.lua")
-local ok, spec = pcall(dofile, theme_path)
-
-if not ok then
+if vim.fn.filereadable(theme_path) ~= 1 then
   return {}
 end
+local ok, spec = pcall(dofile, theme_path)
 
-if type(spec) ~= "table" then
+if not ok or type(spec) ~= "table" then
   return {}
 end
 

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # QDeck: Unified Theme Discovery, Listing, Setup & Switching Engine
-# Self-contained CLI: qdeck-theme-switch / qdeck theme
+# Self-contained CLI: qdeck-theme-switch / theme-switch / qdeck theme
+#
+# If any asset is not found (wallpaper, icons, color.conf, neovim.lua,
+# vscode.json, btop.theme, colors.toml), it is skipped silently without notify.
 # ==============================================================================
 set -euo pipefail
 
@@ -39,9 +42,8 @@ list_themes_json() {
         local id
         id="$(basename "$dir")"
         [[ "$id" == .* || "$id" == "current" ]] && continue
-        [[ ! -f "$dir/colors.toml" && ! -d "$dir/backgrounds" && ! -f "$dir/default.png" ]] && continue
 
-        # Find first wallpaper matching standard formats
+        # Find first wallpaper matching standard formats if backgrounds/ exists
         local wallpaper=""
         if [[ -d "$dir/backgrounds" ]]; then
             for img in "$dir/backgrounds"/*; do
@@ -55,7 +57,7 @@ list_themes_json() {
             done
         fi
 
-        # Fallback to default.png or any direct image if backgrounds is empty
+        # Fallback to default.png if backgrounds is empty or missing
         if [[ -z "$wallpaper" && -f "$dir/default.png" ]]; then
             wallpaper="$(readlink -f "$dir/default.png" 2>/dev/null || echo "$dir/default.png")"
         fi
@@ -69,21 +71,23 @@ list_themes_json() {
             is_current=true
         fi
 
-        # Extract icon theme from icons.theme
+        # Extract icon theme from icons.theme if present; skip silently if absent
         local icon_theme=""
         if [[ -f "$dir/icons.theme" ]]; then
             icon_theme="$(head -n 1 "$dir/icons.theme" 2>/dev/null | tr -d '\r\n' | xargs)"
         fi
 
-        # Extract colors from colors.toml
+        # Extract colors from colors.toml if present; fallback to standard defaults if absent
         get_color() {
             local k1="$1"
             local k2="${2:-}"
             local def="${3:-}"
-            local v
-            v="$(grep -E "^[[:space:]]*$k1[[:space:]]*=" "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*[^=]+=[[:space:]]*["\x27]?([^"\x27[:space:]]+).*/\1/' | xargs)"
-            if [[ -z "$v" && -n "$k2" ]]; then
-                v="$(grep -E "^[[:space:]]*$k2[[:space:]]*=" "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*[^=]+=[[:space:]]*["\x27]?([^"\x27[:space:]]+).*/\1/' | xargs)"
+            local v=""
+            if [[ -f "$dir/colors.toml" ]]; then
+                v="$(grep -E "^[[:space:]]*$k1[[:space:]]*=" "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*[^=]+=[[:space:]]*["\x27]?([^"\x27[:space:]]+).*/\1/' | xargs)"
+                if [[ -z "$v" && -n "$k2" ]]; then
+                    v="$(grep -E "^[[:space:]]*$k2[[:space:]]*=" "$dir/colors.toml" 2>/dev/null | head -n1 | sed -E 's/^[[:space:]]*[^=]+=[[:space:]]*["\x27]?([^"\x27[:space:]]+).*/\1/' | xargs)"
+                fi
             fi
             if [[ -n "$v" ]]; then
                 [[ "$v" != \#* ]] && v="#$v"
@@ -145,7 +149,8 @@ apply_icon_theme() {
         icon_file="$CURRENT_LINK/icons.theme"
     fi
 
-    [[ -n "$icon_file" ]] || return 0
+    # If icons.theme asset not found, skip silently without notify
+    [[ -n "$icon_file" && -f "$icon_file" ]] || return 0
 
     local icon_theme
     icon_theme="$(head -n 1 "$icon_file" 2>/dev/null | tr -d '\r\n' | xargs)"
@@ -242,7 +247,8 @@ apply_icon_theme() {
 }
 
 apply_wallpaper() {
-    local backgrounds_dir="$CURRENT_LINK/backgrounds"
+    local target_dir="${1:-$CURRENT_LINK}"
+    local backgrounds_dir="$target_dir/backgrounds"
     local first_wallpaper=""
 
     if [[ -d "$backgrounds_dir" ]]; then
@@ -259,19 +265,30 @@ apply_wallpaper() {
         shopt -u nullglob
     fi
 
-    if [[ -z "$first_wallpaper" && -f "$CURRENT_LINK/default.png" ]]; then
-        first_wallpaper="$CURRENT_LINK/default.png"
+    if [[ -z "$first_wallpaper" && -f "$target_dir/default.png" ]]; then
+        first_wallpaper="$target_dir/default.png"
     fi
 
-    if [[ -n "$first_wallpaper" ]]; then
-        if [[ -x "$SCRIPT_DIR/qdeck-wallpaper" ]]; then
-            "$SCRIPT_DIR/qdeck-wallpaper" switch "$first_wallpaper" >/dev/null 2>&1 || true
-        elif command -v qdeck-wallpaper >/dev/null 2>&1; then
-            qdeck-wallpaper switch "$first_wallpaper" >/dev/null 2>&1 || true
-        elif command -v awww >/dev/null 2>&1; then
-            awww img "$first_wallpaper" >/dev/null 2>&1 || true
-        fi
+    # If wallpaper asset not found, skip silently without notify
+    [[ -n "$first_wallpaper" && -f "$first_wallpaper" ]] || return 0
+
+    if [[ -x "$SCRIPT_DIR/qdeck-wallpaper" ]]; then
+        "$SCRIPT_DIR/qdeck-wallpaper" switch "$first_wallpaper" >/dev/null 2>&1 || true
+    elif command -v qdeck-wallpaper >/dev/null 2>&1; then
+        qdeck-wallpaper switch "$first_wallpaper" >/dev/null 2>&1 || true
+    elif command -v awww >/dev/null 2>&1; then
+        awww img "$first_wallpaper" >/dev/null 2>&1 || true
     fi
+}
+
+apply_btop_theme() {
+    local target_dir="${1:-$CURRENT_LINK}"
+    # If btop.theme asset not found, skip silently without notify
+    [[ -f "$target_dir/btop.theme" ]] || return 0
+
+    local btop_themes_dir="$CONFIG_HOME/btop/themes"
+    mkdir -p "$btop_themes_dir" 2>/dev/null || true
+    ln -sfn "$CURRENT_LINK/btop.theme" "$btop_themes_dir/current.theme" 2>/dev/null || true
 }
 
 reload_kitty() {
@@ -281,6 +298,10 @@ reload_kitty() {
 }
 
 reload_neovim() {
+    local target_dir="${1:-$CURRENT_LINK}"
+    # If neovim.lua asset not found, skip silently without notify
+    [[ -f "$target_dir/neovim.lua" || -f "$CURRENT_LINK/neovim.lua" ]] || return 0
+
     # 1. Send SIGUSR1 signal for native reload in listening Neovim instances
     pkill -SIGUSR1 -u "$UID" -x nvim 2>/dev/null || true
 
@@ -295,7 +316,7 @@ reload_neovim() {
     shopt -u nullglob
 
     if (( ${#sockets[@]} > 0 )) && command -v nvim >/dev/null 2>&1; then
-        local remote_cmd='<Cmd>lua pcall(function() local p = vim.fn.expand("~/.config/themes/current/neovim.lua"); local ok, spec = pcall(dofile, p); if ok and type(spec) == "table" then for _, item in ipairs(spec) do if type(item) == "table" and item[1] and item[1] ~= "LazyVim/LazyVim" then local name = item.name or item[1]:match("/([^/]+)$") or item[1]; pcall(function() if package.loaded["lazy"] then require("lazy").load({ plugins = { name } }) end end) end; if item.opts and item.opts.colorscheme then if item.opts.background then if item.opts.background == "dark" or item.opts.background == "light" then pcall(function() vim.o.background = item.opts.background end) else pcall(function() vim.g.everforest_background = item.opts.background end) pcall(function() vim.g.gruvbox_material_background = item.opts.background end) end end; pcall(vim.cmd.colorscheme, item.opts.colorscheme) end end; pcall(vim.cmd, "redraw!") end end)<CR>'
+        local remote_cmd='<Cmd>lua pcall(function() local p = vim.fn.expand("~/.config/themes/current/neovim.lua"); if vim.fn.filereadable(p) == 1 then local ok, spec = pcall(dofile, p); if ok and type(spec) == "table" then for _, item in ipairs(spec) do if type(item) == "table" and item[1] and item[1] ~= "LazyVim/LazyVim" then local name = item.name or item[1]:match("/([^/]+)$") or item[1]; pcall(function() if package.loaded["lazy"] then require("lazy").load({ plugins = { name } }) end end) end; if item.opts and item.opts.colorscheme then if item.opts.background then if item.opts.background == "dark" or item.opts.background == "light" then pcall(function() vim.o.background = item.opts.background end) else pcall(function() vim.g.everforest_background = item.opts.background end) pcall(function() vim.g.gruvbox_material_background = item.opts.background end) end end; pcall(vim.cmd.colorscheme, item.opts.colorscheme) end end; pcall(vim.cmd, "redraw!") end end end)<CR>'
         for sock in "${sockets[@]}"; do
             [[ -S "$sock" ]] || continue
             nvim --server "$sock" --remote-send "$remote_cmd" >/dev/null 2>&1 &
@@ -319,6 +340,7 @@ reload_hyprland() {
 
 update_editor_themes() {
     local theme_dir="$1"
+    # If vscode.json asset not found, skip silently without notify
     [[ -f "$theme_dir/vscode.json" ]] || return 0
 
     local vscode_metadata
@@ -360,24 +382,29 @@ switch_theme() {
     ln -sfn "$target_dir" "$tmp_link"
     mv -fT "$tmp_link" "$CURRENT_LINK"
 
-    # 2. Update Kitty color.conf symlink if present
+    # 2. Update Kitty color.conf symlink if present; skip silently if not found
     if [[ -f "$target_dir/color.conf" ]]; then
-        mkdir -p "$CONFIG_HOME/kitty"
-        ln -sfn "$target_dir/color.conf" "$CONFIG_HOME/kitty/color.conf"
+        mkdir -p "$CONFIG_HOME/kitty" 2>/dev/null || true
+        ln -sfn "$target_dir/color.conf" "$CONFIG_HOME/kitty/color.conf" 2>/dev/null || true
+        reload_kitty
     fi
 
-    # 3. Update editor themes (VSCodium, Code, Antigravity IDE)
+    # 3. Update editor themes (VSCodium, Code, Antigravity IDE) if vscode.json present; skip silently if not found
     update_editor_themes "$target_dir"
 
-    # 4. Apply icon theme
+    # 4. Apply icon theme if icons.theme present; skip silently if not found
     apply_icon_theme "$target_dir"
 
-    # 5. Apply wallpaper
-    apply_wallpaper
+    # 5. Apply wallpaper if present; skip silently if not found
+    apply_wallpaper "$target_dir"
 
-    # 6. Live reloads
-    reload_kitty
-    reload_neovim
+    # 6. Apply btop theme if btop.theme present; skip silently if not found
+    apply_btop_theme "$target_dir"
+
+    # 7. Live reloads for editors/compositors (skip neovim if neovim.lua not found)
+    if [[ -f "$target_dir/neovim.lua" ]]; then
+        reload_neovim "$target_dir"
+    fi
     reload_hyprland
     reload_quickshell
 
@@ -390,7 +417,9 @@ run_setup() {
     # 1. btop theme symlink and config
     local btop_themes_dir="$CONFIG_HOME/btop/themes"
     mkdir -p "$btop_themes_dir"
-    ln -sfn "$CURRENT_LINK/btop.theme" "$btop_themes_dir/current.theme"
+    if [[ -f "$CURRENT_LINK/btop.theme" ]]; then
+        ln -sfn "$CURRENT_LINK/btop.theme" "$btop_themes_dir/current.theme"
+    fi
 
     local btop_conf="$CONFIG_HOME/btop/btop.conf"
     if [[ -f "$btop_conf" ]]; then
@@ -412,6 +441,7 @@ run_setup() {
     cat <<'EOF' > "$nvim_loader"
 local function reload_current_theme()
   local theme_path = vim.fn.expand("~/.config/themes/current/neovim.lua")
+  if vim.fn.filereadable(theme_path) ~= 1 then return end
   local ok, spec = pcall(dofile, theme_path)
   if not ok or type(spec) ~= "table" then return end
   for _, item in ipairs(spec) do
@@ -442,7 +472,6 @@ _G.reload_qdeck_theme = reload_current_theme
 
 pcall(vim.api.nvim_create_user_command, "ReloadTheme", function()
   reload_current_theme()
-  vim.notify("QDeck theme reloaded", vim.log.levels.INFO)
 end, { desc = "Reload QDeck active theme in LazyVim" })
 
 pcall(vim.api.nvim_create_autocmd, "FocusGained", {
@@ -458,6 +487,9 @@ if vim.uv and vim.uv.new_signal then
 end
 
 local theme_path = vim.fn.expand("~/.config/themes/current/neovim.lua")
+if vim.fn.filereadable(theme_path) ~= 1 then
+  return {}
+end
 local ok, spec = pcall(dofile, theme_path)
 
 if not ok or type(spec) ~= "table" then
@@ -513,7 +545,12 @@ case "$CMD" in
         run_setup
         ;;
     *)
-        echo "Usage: $0 {list|current|switch <theme>|setup}" >&2
-        exit 1
+        # If $CMD matches an existing theme directory, switch to it directly (supports `theme-switch <theme>`)
+        if [[ -d "$THEMES_DIR/$CMD" && "$CMD" != "current" ]]; then
+            switch_theme "$CMD"
+        else
+            echo "Usage: $0 {list|current|switch <theme>|setup|<theme>}" >&2
+            exit 1
+        fi
         ;;
 esac
