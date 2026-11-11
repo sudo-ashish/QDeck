@@ -92,37 +92,122 @@ if [[ -n "$THEMES_SRC" ]]; then
     fi
   fi
 
-  # Initialize GTK, Kitty, and btop runtime symlinks and dark mode settings
+  # Initialize GTK, Kitty, and btop runtime symlinks
   if [[ -d "$HOME/.config/themes/current" ]]; then
     mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/kitty" "$HOME/.config/btop/themes"
     ln -sfn "$HOME/.config/themes/current/gtk-3.0.css" "$HOME/.config/gtk-3.0/gtk.css"
     ln -sfn "$HOME/.config/themes/current/gtk-4.0.css" "$HOME/.config/gtk-4.0/gtk.css"
     ln -sfn "$HOME/.config/themes/current/color.conf" "$HOME/.config/kitty/color.conf"
     ln -sfn "$HOME/.config/themes/current/btop.theme" "$HOME/.config/btop/themes/current.theme"
-
-    for ini in "$HOME/.config/gtk-3.0/settings.ini" "$HOME/.config/gtk-4.0/settings.ini"; do
-      if [[ -f "$ini" ]]; then
-        if ! grep -q "gtk-application-prefer-dark-theme" "$ini"; then
-          printf 'gtk-application-prefer-dark-theme=1\n' >> "$ini"
-        fi
-      else
-        printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > "$ini"
-      fi
-    done
-
-    # Enforce default color scheme to prefer-dark
-    if command -v gsettings >/dev/null 2>&1; then
-      gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
-    fi
-    if command -v dconf >/dev/null 2>&1; then
-      dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
-    fi
   fi
 fi
 
+# 7. GTK Suite & Global Appearance Settings (GTK 2.0, 3.0, 4.0, xsettingsd, gsettings, dconf)
+echo "    Deploying GTK appearance settings (font, cursor, theme, prefer-dark)..."
+GTK_ASSETS="$REPO_ROOT/assets/gtk"
+mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/xsettingsd"
+
+# Determine active/default icon theme
+DEFAULT_ICON="Yaru-blue"
+if [[ -f "$HOME/.config/themes/current/icons.theme" ]]; then
+  DEFAULT_ICON="$(head -n 1 "$HOME/.config/themes/current/icons.theme" 2>/dev/null | tr -d '\r\n' | xargs)"
+  [[ -z "$DEFAULT_ICON" ]] && DEFAULT_ICON="Yaru-blue"
+fi
+
+# Deploy GTK 3.0 settings.ini
+if [[ ! -f "$HOME/.config/gtk-3.0/settings.ini" && -f "$GTK_ASSETS/gtk-3.0/settings.ini" ]]; then
+  cp -f "$GTK_ASSETS/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/settings.ini"
+elif [[ -f "$GTK_ASSETS/gtk-3.0/settings.ini" ]]; then
+  for key in "gtk-application-prefer-dark-theme=1" "gtk-theme-name=Adwaita-dark" "gtk-font-name=JetBrainsMono Nerd Font 11" "gtk-cursor-theme-name=Bibata-Modern-Ice" "gtk-cursor-theme-size=18"; do
+    kname="${key%%=*}"
+    if ! grep -q "^[[:space:]]*$kname" "$HOME/.config/gtk-3.0/settings.ini"; then
+      if grep -q "^\[Settings\]" "$HOME/.config/gtk-3.0/settings.ini"; then
+        sed -i "/^\[Settings\]/a $key" "$HOME/.config/gtk-3.0/settings.ini" 2>/dev/null || echo "$key" >> "$HOME/.config/gtk-3.0/settings.ini"
+      else
+        printf '[Settings]\n%s\n' "$key" >> "$HOME/.config/gtk-3.0/settings.ini"
+      fi
+    fi
+  done
+fi
+
+# Deploy GTK 4.0 settings.ini
+if [[ ! -f "$HOME/.config/gtk-4.0/settings.ini" && -f "$GTK_ASSETS/gtk-4.0/settings.ini" ]]; then
+  cp -f "$GTK_ASSETS/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/settings.ini"
+elif [[ -f "$GTK_ASSETS/gtk-4.0/settings.ini" ]]; then
+  for key in "gtk-application-prefer-dark-theme=1" "gtk-theme-name=Adwaita-dark" "gtk-font-name=JetBrainsMono Nerd Font 11" "gtk-cursor-theme-name=Bibata-Modern-Ice" "gtk-cursor-theme-size=18"; do
+    kname="${key%%=*}"
+    if ! grep -q "^[[:space:]]*$kname" "$HOME/.config/gtk-4.0/settings.ini"; then
+      if grep -q "^\[Settings\]" "$HOME/.config/gtk-4.0/settings.ini"; then
+        sed -i "/^\[Settings\]/a $key" "$HOME/.config/gtk-4.0/settings.ini" 2>/dev/null || echo "$key" >> "$HOME/.config/gtk-4.0/settings.ini"
+      else
+        printf '[Settings]\n%s\n' "$key" >> "$HOME/.config/gtk-4.0/settings.ini"
+      fi
+    fi
+  done
+fi
+
+# Deploy xsettingsd.conf
+if [[ ! -f "$HOME/.config/xsettingsd/xsettingsd.conf" && -f "$GTK_ASSETS/xsettingsd.conf" ]]; then
+  cp -f "$GTK_ASSETS/xsettingsd.conf" "$HOME/.config/xsettingsd/xsettingsd.conf"
+fi
+
+# Deploy ~/.gtkrc-2.0
+if [[ ! -f "$HOME/.gtkrc-2.0" && -f "$GTK_ASSETS/gtkrc-2.0" ]]; then
+  cp -f "$GTK_ASSETS/gtkrc-2.0" "$HOME/.gtkrc-2.0"
+fi
+
+# Synchronize active icon theme into ini/conf files
+for ini in "$HOME/.config/gtk-3.0/settings.ini" "$HOME/.config/gtk-4.0/settings.ini"; do
+  if [[ -f "$ini" ]]; then
+    if grep -q "^[[:space:]]*gtk-icon-theme-name" "$ini"; then
+      sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=$DEFAULT_ICON|" "$ini" 2>/dev/null || true
+    else
+      if grep -q "^\[Settings\]" "$ini"; then
+        sed -i "/^\[Settings\]/a gtk-icon-theme-name=$DEFAULT_ICON" "$ini" 2>/dev/null || true
+      else
+        printf '[Settings]\ngtk-icon-theme-name=%s\n' "$DEFAULT_ICON" >> "$ini"
+      fi
+    fi
+  fi
+done
+
+if [[ -f "$HOME/.config/xsettingsd/xsettingsd.conf" ]]; then
+  sed -i -E "s|^[[:space:]]*Net/IconThemeName.*|Net/IconThemeName \"$DEFAULT_ICON\"|" "$HOME/.config/xsettingsd/xsettingsd.conf" 2>/dev/null || true
+fi
+
+if [[ -f "$HOME/.gtkrc-2.0" ]]; then
+  sed -i -E "s|^[[:space:]]*gtk-icon-theme-name[[:space:]]*=.*|gtk-icon-theme-name=\"$DEFAULT_ICON\"|" "$HOME/.gtkrc-2.0" 2>/dev/null || true
+fi
+
+# Apply system appearance via gsettings
+if command -v gsettings >/dev/null 2>&1; then
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface font-name 'JetBrainsMono Nerd Font 11' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface document-font-name 'JetBrainsMono Nerd Font 11' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface monospace-font-name 'JetBrainsMono Nerd Font 11' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface cursor-theme 'Bibata-Modern-Ice' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface cursor-size 18 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface icon-theme "$DEFAULT_ICON" 2>/dev/null || true
+  gsettings set org.gnome.desktop.sound theme-name 'freedesktop' 2>/dev/null || true
+  gsettings set org.gnome.desktop.sound event-sounds true 2>/dev/null || true
+fi
+
+# Apply system appearance via dconf
+if command -v dconf >/dev/null 2>&1; then
+  dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
+  dconf write /org/gnome/desktop/interface/gtk-theme "'Adwaita-dark'" 2>/dev/null || true
+  dconf write /org/gnome/desktop/interface/font-name "'JetBrainsMono Nerd Font 11'" 2>/dev/null || true
+  dconf write /org/gnome/desktop/interface/document-font-name "'JetBrainsMono Nerd Font 11'" 2>/dev/null || true
+  dconf write /org/gnome/desktop/interface/monospace-font-name "'JetBrainsMono Nerd Font 11'" 2>/dev/null || true
+  dconf write /org/gnome/desktop/interface/cursor-theme "'Bibata-Modern-Ice'" 2>/dev/null || true
+  dconf write /org/gnome/desktop/interface/cursor-size 18 2>/dev/null || true
+  dconf write /org/gnome/desktop/interface/icon-theme "'$DEFAULT_ICON'" 2>/dev/null || true
+fi
+
 # Ensure sensible permissions on deployed user configs
-find "$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/themes" -type f -exec chmod 644 {} + 2>/dev/null || true
-find "$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/themes" -type d -exec chmod 755 {} + 2>/dev/null || true
+find "$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/themes" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/xsettingsd" -type f -exec chmod 644 {} + 2>/dev/null || true
+find "$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/themes" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/xsettingsd" -type d -exec chmod 755 {} + 2>/dev/null || true
 
 echo "==> [QDeck:04-dotfiles] Configurations deployed successfully for QDeck."
 exit 0

@@ -307,11 +307,6 @@ apply_gtk_theme() {
     if command -v dconf >/dev/null 2>&1; then
         dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
     fi
-
-    # 4. Quit running Nautilus daemon so newly opened windows immediately use updated CSS
-    if pgrep -u "$UID" -x nautilus >/dev/null 2>&1; then
-        nautilus -q >/dev/null 2>&1 || true
-    fi
 }
 
 apply_wallpaper() {
