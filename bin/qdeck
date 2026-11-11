@@ -263,6 +263,14 @@ for s in "$BIN_DIR"/*; do
   fi
 done
 
+# 4b. Ensure default system color scheme is set to prefer-dark
+if command -v gsettings >/dev/null 2>&1; then
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+fi
+if command -v dconf >/dev/null 2>&1; then
+  dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
+fi
+
 # 5. Start Quickshell daemon attached to configuration (suppress internal reload popup windows)
 export QS_NO_RELOAD_POPUP=1
 if [[ "$QS_DIR" == "$HOME/.config/quickshell" ]]; then

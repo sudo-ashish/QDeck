@@ -301,6 +301,52 @@ theme[process_end]="{magenta}"
 @define-color theme_unfocused_text_color {foreground};
 @define-color theme_unfocused_selected_bg_color {selection};
 @define-color theme_unfocused_selected_fg_color {foreground};
+
+/* ── Modern Libadwaita (1.6+) CSS Variables & Overrides ── */
+:root, window, .background {{
+  --accent-color: {accent};
+  --accent-bg-color: {accent};
+  --accent-fg-color: {darker_background};
+  --window-bg-color: {background};
+  --window-fg-color: {foreground};
+  --view-bg-color: {dark_background};
+  --view-fg-color: {foreground};
+  --headerbar-bg-color: {darker_background};
+  --headerbar-fg-color: {foreground};
+  --headerbar-border-color: {selection};
+  --headerbar-backdrop-color: {dark_background};
+  --sidebar-bg-color: {dark_background};
+  --sidebar-fg-color: {foreground};
+  --sidebar-backdrop-color: {darker_background};
+  --secondary-sidebar-bg-color: {darker_background};
+  --secondary-sidebar-fg-color: {foreground};
+  --secondary-sidebar-backdrop-color: {darker_background};
+  --card-bg-color: {lighter_background};
+  --card-fg-color: {foreground};
+  --dialog-bg-color: {dark_background};
+  --dialog-fg-color: {foreground};
+  --popover-bg-color: {dark_background};
+  --popover-fg-color: {foreground};
+  --destructive-color: {red};
+  --destructive-bg-color: {red};
+  --destructive-fg-color: {darker_background};
+  --success-color: {green};
+  --success-bg-color: {green};
+  --success-fg-color: {darker_background};
+  --warning-color: {yellow};
+  --warning-bg-color: {yellow};
+  --warning-fg-color: {darker_background};
+  --error-color: {red};
+  --error-bg-color: {red};
+  --error-fg-color: {darker_background};
+  --border-color: {selection};
+  --borders: {selection};
+}}
+
+window.background {{
+  background-color: var(--window-bg-color);
+  color: var(--window-fg-color);
+}}
 """
 
     color_conf_path = theme_dir / "color.conf"

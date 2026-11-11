@@ -109,6 +109,14 @@ if [[ -n "$THEMES_SRC" ]]; then
         printf '[Settings]\ngtk-application-prefer-dark-theme=1\n' > "$ini"
       fi
     done
+
+    # Enforce default color scheme to prefer-dark
+    if command -v gsettings >/dev/null 2>&1; then
+      gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+    fi
+    if command -v dconf >/dev/null 2>&1; then
+      dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
+    fi
   fi
 fi
 

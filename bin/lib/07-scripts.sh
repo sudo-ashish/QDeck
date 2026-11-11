@@ -117,6 +117,14 @@ fi
 # Ensure current execution environment has updated PATH
 export PATH="$TARGET_BIN_DIR:$PATH"
 
+# Ensure default color scheme is set to prefer-dark
+if command -v gsettings >/dev/null 2>&1; then
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+fi
+if command -v dconf >/dev/null 2>&1; then
+  dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
+fi
+
 # Run initial theme switcher setup if available
 if command -v qdeck-theme-switch &>/dev/null; then
   echo "==> [QDeck:07-scripts] Running initial theme setup via qdeck-theme-switch..."
