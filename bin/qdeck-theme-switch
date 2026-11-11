@@ -289,6 +289,17 @@ apply_gtk_theme() {
     if command -v gsettings >/dev/null 2>&1; then
         gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
 
+        local gnome_accent="blue"
+        case "$(basename "$target_dir")" in
+            kanagawa)    gnome_accent="blue" ;;
+            tokyo-night) gnome_accent="purple" ;;
+            gruvbox)     gnome_accent="yellow" ;;
+            everforest)  gnome_accent="green" ;;
+            nord)        gnome_accent="teal" ;;
+            catppuccin)  gnome_accent="blue" ;;
+        esac
+        gsettings set org.gnome.desktop.interface accent-color "$gnome_accent" 2>/dev/null || true
+
         local dark_theme="Adwaita-dark"
         if [[ -d "/usr/share/themes/adw-gtk3-dark" || -d "$HOME/.themes/adw-gtk3-dark" || -d "$HOME/.local/share/themes/adw-gtk3-dark" ]]; then
             dark_theme="adw-gtk3-dark"
@@ -306,6 +317,42 @@ apply_gtk_theme() {
     fi
     if command -v dconf >/dev/null 2>&1; then
         dconf write /org/gnome/desktop/interface/color-scheme "'prefer-dark'" 2>/dev/null || true
+    fi
+
+    # 4. Instant GTK4/Libadwaita live refresh:
+    # GTK4 caches stylesheets in memory. If Nautilus is running:
+    # - If active windows are open: seamlessly re-create the window with updated styles so work is not lost.
+    # - If running only as an idle background service: quit it cleanly so any newly opened window uses updated CSS immediately.
+    if pgrep -u "$UID" -x nautilus >/dev/null 2>&1; then
+        local win_info
+        win_info=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.class == "org.gnome.Nautilus") | .title][0] // empty' 2>/dev/null || echo "")
+        local win_count
+        win_count=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.class == "org.gnome.Nautilus")] | length' 2>/dev/null || echo "0")
+        if [[ "$win_count" -gt 0 ]]; then
+            local target_path=""
+            if [[ "$win_info" == "Home" || -z "$win_info" ]]; then
+                target_path="$HOME"
+            elif [[ "$win_info" =~ ^/ ]]; then
+                target_path="$win_info"
+            elif [[ -d "$HOME/$win_info" ]]; then
+                target_path="$HOME/$win_info"
+            fi
+            nautilus -q >/dev/null 2>&1 || true
+            (
+                sleep 0.15
+                if command -v hyprctl >/dev/null 2>&1; then
+                    if [[ -n "$target_path" ]]; then
+                        hyprctl dispatch "hl.dsp.exec_cmd(\"nautilus $target_path\")" >/dev/null 2>&1 || true
+                    else
+                        hyprctl dispatch 'hl.dsp.exec_cmd("nautilus")' >/dev/null 2>&1 || true
+                    fi
+                else
+                    nohup nautilus ${target_path:+"$target_path"} >/dev/null 2>&1 &
+                fi
+            ) &
+        else
+            nautilus -q >/dev/null 2>&1 || true
+        fi
     fi
 }
 
