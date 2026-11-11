@@ -263,9 +263,12 @@ apply_gtk_theme() {
     # 1. Symlink generated GTK CSS files to current active theme outputs
     if [[ -f "$target_dir/gtk-3.0.css" || -f "$CURRENT_LINK/gtk-3.0.css" ]]; then
         ln -sfn "$CURRENT_LINK/gtk-3.0.css" "$gtk3_dir/gtk.css" 2>/dev/null || true
+        touch "$gtk3_dir/gtk.css" 2>/dev/null || true
     fi
     if [[ -f "$target_dir/gtk-4.0.css" || -f "$CURRENT_LINK/gtk-4.0.css" ]]; then
         ln -sfn "$CURRENT_LINK/gtk-4.0.css" "$gtk4_dir/gtk.css" 2>/dev/null || true
+        touch -h "$gtk4_dir/gtk.css" 2>/dev/null || true
+        touch "$gtk4_dir/gtk.css" 2>/dev/null || true
     fi
 
     # 2. Ensure gtk-application-prefer-dark-theme=1 in settings.ini for GTK 3.0 and 4.0
@@ -320,7 +323,13 @@ apply_gtk_theme() {
     fi
 
     # 4. Instant GTK4/Libadwaita live refresh:
-    # GTK4 caches stylesheets in memory. If Nautilus is running:
+    # If gtk4-live-css is installed, GTK4 automatically watches ~/.config/gtk-4.0/gtk.css
+    # and re-styles all open windows live with ZERO restarts or window recreation!
+    if pacman -Q gtk4-live-css &>/dev/null; then
+        return 0
+    fi
+
+    # Fallback for stock GTK4 (which caches CSS in memory on startup):
     # - If active windows are open: seamlessly re-create the window with updated styles so work is not lost.
     # - If running only as an idle background service: quit it cleanly so any newly opened window uses updated CSS immediately.
     if pgrep -u "$UID" -x nautilus >/dev/null 2>&1; then

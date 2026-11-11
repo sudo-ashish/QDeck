@@ -82,6 +82,23 @@ else
   echo "    All core system packages are already installed."
 fi
 
+# 1.1 GTK4 Live CSS Reload Support (saneaspect repo for seamless theme switching)
+if ! grep -q "\[saneaspect\]" /etc/pacman.conf; then
+  echo "==> [01-deps] Configuring saneaspect repository for live GTK4 CSS reloading..."
+  sudo tee -a /etc/pacman.conf >/dev/null <<'EOF'
+
+[saneaspect]
+SigLevel = Optional TrustAll
+Server = https://github.com/saneaspect/gtk4-live-css/releases/download/repo
+EOF
+  sudo pacman -Sy --noconfirm 2>/dev/null || true
+fi
+
+if ! pacman -Qi gtk4-live-css &>/dev/null; then
+  echo "    Installing gtk4-live-css (patched GTK4 for native on-the-fly live CSS updates)..."
+  yes | sudo pacman -S --needed gtk4-live-css 2>/dev/null || echo "    (Skipping gtk4-live-css installation)"
+fi
+
 # 2. AUR Helper Setup (unattended yay/paru)
 AUR_HELPER=""
 if command -v paru &>/dev/null; then
