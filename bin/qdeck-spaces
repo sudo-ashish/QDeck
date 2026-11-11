@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# QDeck: Spaces Workspace Switcher & Alt+Tab HUD Controller
+# Supports: qdeck-spaces, qdeck spaces, qdeck-space, qdeck space
+# ==============================================================================
+set -euo pipefail
+
+CMD="${1:-toggle}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
+fi
+
+# Hyprland direct fallback if QuickShell IPC is offline or starting
+hypr_fallback() {
+  local action="$1"
+  if command -v hyprctl >/dev/null 2>&1; then
+    case "$action" in
+      next|toggle)
+        hyprctl dispatch cyclenext 2>/dev/null || true
+        ;;
+      prev)
+        hyprctl dispatch cyclenext prev 2>/dev/null || true
+        ;;
+      *)
+        ;;
+    esac
+  fi
+}
+
+invoke_spaces() {
+  local method="$1"; shift
+  call_ipc spaces "$method" "$@" 2>/dev/null || call_ipc space "$method" "$@" 2>/dev/null || hypr_fallback "$method"
+}
+
+case "$CMD" in
+  toggle)
+    invoke_spaces toggle
+    ;;
+  open|show)
+    invoke_spaces open
+    ;;
+  close|hide)
+    invoke_spaces close
+    ;;
+  next|cycle)
+    invoke_spaces next
+    ;;
+  prev)
+    invoke_spaces prev
+    ;;
+  peek)
+    WS_ID="${2:-1}"
+    invoke_spaces peek "$WS_ID"
+    ;;
+  status|is-visible)
+    invoke_spaces isVisible
+    ;;
+  *)
+    invoke_spaces toggle
+    ;;
+esac

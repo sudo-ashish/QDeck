@@ -7,6 +7,7 @@ import "theme"
 import "components"
 import "services"
 import "modules/bar"
+import "modules/bar/widgets"
 import "modules/launcher"
 import "modules/osd"
 import "modules/notifications"
@@ -93,6 +94,33 @@ ShellRoot {
         wallpaperService: root.wallpaperSwitcherService
         shelfService: root.shelfService
         clipboardService: root.clipboardService
+    }
+
+    // Spaces Switcher Overlay Window (centered HUD activated via Alt+Tab or qdeck spaces)
+    SpacesOverlay {
+        id: spacesOverlay
+    }
+
+    IpcHandler {
+        target: "spaces"
+
+        function toggle(): string { return spacesOverlay.toggle() }
+        function open(): string { return spacesOverlay.open() }
+        function close(): string { return spacesOverlay.close() }
+        function next(): string { return spacesOverlay.next() }
+        function prev(): string { return spacesOverlay.prev() }
+        function isVisible(): string { return spacesOverlay.isOpen ? "true" : "false" }
+    }
+
+    IpcHandler {
+        target: "space"
+
+        function toggle(): string { return spacesOverlay.toggle() }
+        function open(): string { return spacesOverlay.open() }
+        function close(): string { return spacesOverlay.close() }
+        function next(): string { return spacesOverlay.next() }
+        function prev(): string { return spacesOverlay.prev() }
+        function isVisible(): string { return spacesOverlay.isOpen ? "true" : "false" }
     }
 
     // Power Confirmation Dialog (centered overlay)

@@ -10,6 +10,16 @@ import "../../../theme" 1.0 as QDeckTheme
 Item {
     id: root
 
+    // Dimensions & Spacing (can be configured directly or via theme)
+    property int pillHeight: {
+        try { return Appearance.barButtonHeight } catch(e) { return 28 }
+    }
+    property int pillRadius: Math.round(root.pillHeight / 2)
+    property int pillPadding: 10
+    property int iconSize: 18
+    property int iconSpacing: 5
+    property int spacing: 6
+
     // =========================================================================
     // 1. THEME & COLOR TOKENS
     // Exposed as a clean top-level QtObject for dynamic theming & customization.
@@ -41,28 +51,33 @@ Item {
         property color borderColor: {
             try { return Theme.selection } catch(e) { return Qt.rgba(1, 1, 1, 0.10) }
         }
-        property int pillHeight: {
-            try { return Appearance.barButtonHeight } catch(e) { return 28 }
-        }
-        property int pillRadius: {
-            try { return Math.round(Appearance.barButtonHeight / 2) } catch(e) { return 14 }
-        }
-        property int pillPadding: 10
-        property int iconSize: 18
-        property int iconSpacing: 5
-        property int spacing: 6
+        property int pillHeight: root.pillHeight
+        property int pillRadius: root.pillRadius
+        property int pillPadding: root.pillPadding
+        property int iconSize: root.iconSize
+        property int iconSpacing: root.iconSpacing
+        property int spacing: root.spacing
         property int animDuration: 280
         property int fastDuration: 160
         property string fontFamily: {
-            try { return Appearance.fontFamily } catch(e) { return "JetBrainsMono Nerd Font" }
+            try { return Theme.fontFamily } catch(e) { return "JetBrainsMono Nerd Font" }
         }
     }
 
     implicitHeight: root.theme.pillHeight
     implicitWidth: pillRow.implicitWidth
+    height: implicitHeight
+    width: implicitWidth
+
+    // Drop-in compatibility with WorkspacesWidget
+    property var service: null
 
     // Programmatic / external hover preview property (-1 = none)
     property int previewHoveredWsId: -1
+
+    // Notification signals for external containers/HUDs
+    signal workspaceSelected(int id)
+    signal windowSelected(string address)
 
     // =========================================================================
     // 2. HYPRLAND STATE & WINDOW QUERYING
@@ -303,6 +318,7 @@ Item {
         if (!id) return
         Hyprland.dispatch("hl.dsp.focus({ workspace = " + id + " })")
         Hyprland.dispatch("workspace " + id)
+        root.workspaceSelected(id)
         refreshDebounce.restart()
     }
 
@@ -311,6 +327,7 @@ Item {
         var addr = root.normalizeAddress(address)
         Hyprland.dispatch("hl.dsp.focus({ window = \"address:" + addr + "\" })")
         Hyprland.dispatch("focuswindow address:" + addr)
+        root.windowSelected(addr)
         refreshDebounce.restart()
     }
 
@@ -324,6 +341,40 @@ Item {
         Hyprland.dispatch("hl.dsp.focus({ workspace = \"-1\" })")
         Hyprland.dispatch("workspace e-1")
         refreshDebounce.restart()
+    }
+
+    function cycleNext() {
+        var wins = root.getWindowsForWorkspace(root.currentWorkspaceId)
+        if (wins && wins.length > 1) {
+            var curIdx = -1
+            for (var i = 0; i < wins.length; i++) {
+                if (wins[i].address === root.focusedAddress || wins[i].isFocused) {
+                    curIdx = i
+                    break
+                }
+            }
+            var nextIdx = (curIdx + 1) % wins.length
+            root.focusWindow(wins[nextIdx].address)
+        } else {
+            root.nextWorkspace()
+        }
+    }
+
+    function cyclePrev() {
+        var wins = root.getWindowsForWorkspace(root.currentWorkspaceId)
+        if (wins && wins.length > 1) {
+            var curIdx = -1
+            for (var i = 0; i < wins.length; i++) {
+                if (wins[i].address === root.focusedAddress || wins[i].isFocused) {
+                    curIdx = i
+                    break
+                }
+            }
+            var prevIdx = curIdx <= 0 ? wins.length - 1 : curIdx - 1
+            root.focusWindow(wins[prevIdx].address)
+        } else {
+            root.prevWorkspace()
+        }
     }
 
     WheelHandler {
@@ -564,3 +615,4 @@ Item {
         }
     }
 }
+

@@ -50,8 +50,9 @@ hl.bind("SUPER + SHIFT + RIGHT", hl.dsp.window.swap({ direction = "r" }))
 hl.bind("SUPER + SHIFT + UP", hl.dsp.window.swap({ direction = "u" }))
 hl.bind("SUPER + SHIFT + DOWN", hl.dsp.window.swap({ direction = "d" }))
 
-hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
-hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
+-- Alt+Tab window & workspace switching is handled by QDeck Spaces (see keybinds/qdeck.lua)
+-- hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
+-- hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
 
 hl.bind("SUPER + code:20", hl.dsp.window.resize({ x = -100, y = 0, relative = true }))
 hl.bind("SUPER + code:21", hl.dsp.window.resize({ x = 100, y = 0, relative = true }))
