@@ -151,11 +151,6 @@ case "$CMD" in
     exec "$BIN_DIR/qdeck-qshelf" "$@"
     ;;
 
-  spaces|space)
-    shift
-    exec "$BIN_DIR/qdeck-spaces" "$@"
-    ;;
-
   clipboard|clip)
     shift
     exec "$BIN_DIR/qdeck-clipboard" "$@"
