@@ -1,13 +1,14 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../../../theme"
 import "../../../services"
 
 // Windows Alt+Tab-style Workspace Switcher Overlay
-// Activated via IPC: qs ipc call wsswitcher toggle/next/prev/open/close
+// Clean, text-free UI showing visual workspace previews with app logos only
 PanelWindow {
     id: root
 
@@ -27,18 +28,96 @@ PanelWindow {
         return Quickshell.screens[0]
     }
 
+    readonly property int monitorWidth: (root.screen && root.screen.width > 0) ? root.screen.width : 1920
+    readonly property int monitorHeight: (root.screen && root.screen.height > 0) ? root.screen.height : 1080
+
     // ─────────────────────────────────────────────────
-    // State
+    // State & Dynamic Windows Cache
     // ─────────────────────────────────────────────────
     property bool isOpen: false
     property int selectedId: 1
+    property var windowsByWorkspace: ({})
+    property var occupiedWorkspaceIds: []
+
+    // Process to query active clients and their layout geometries
+    Process {
+        id: windowsProc
+        command: ["hyprctl", "clients", "-j"]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                var rawText = (text || "").trim()
+                if (!rawText) return
+                try {
+                    var clients = JSON.parse(rawText) || []
+                    var map = {}
+                    var ids = []
+
+                    for (var i = 0; i < clients.length; i++) {
+                        var c = clients[i]
+                        if (!c || !c.workspace) continue
+                        var wsId = c.workspace.id
+                        // Only consider normal workspaces with valid numeric ID
+                        if (typeof wsId !== "number" || wsId <= 0) continue
+
+                        if (!map[wsId]) {
+                            map[wsId] = []
+                            ids.push(wsId)
+                        }
+
+                        map[wsId].push({
+                            x: (c.at && c.at.length > 0) ? c.at[0] : 0,
+                            y: (c.at && c.at.length > 1) ? c.at[1] : 0,
+                            w: (c.size && c.size.length > 0) ? c.size[0] : root.monitorWidth,
+                            h: (c.size && c.size.length > 1) ? c.size[1] : root.monitorHeight,
+                            appClass: c.class || "",
+                            floating: !!c.floating,
+                            fullscreen: !!c.fullscreen
+                        })
+                    }
+
+                    ids.sort(function(a, b) { return a - b })
+
+                    // If no occupied workspaces exist, fallback to active workspace
+                    if (ids.length === 0) {
+                        ids = [ root.workspacesService.activeWorkspaceId ]
+                    }
+
+                    root.windowsByWorkspace = map
+                    root.occupiedWorkspaceIds = ids
+
+                    // Ensure selectedId is in the occupied list
+                    if (root.occupiedWorkspaceIds.indexOf(root.selectedId) === -1) {
+                        root.selectedId = root.occupiedWorkspaceIds[0]
+                    }
+                } catch(e) {}
+            }
+        }
+    }
+
+    Connections {
+        target: Hyprland
+        function onRawEvent() {
+            if (root.isOpen) windowsProc.running = true
+        }
+        function onFocusedWorkspaceChanged() {
+            if (root.isOpen) windowsProc.running = true
+        }
+    }
+
+    Component.onCompleted: {
+        windowsProc.running = true
+    }
 
     // ─────────────────────────────────────────────────
     // Public API
     // ─────────────────────────────────────────────────
     function open(): string {
         if (root.isOpen) return "already-open"
-        root.selectedId = root.workspacesService.activeWorkspaceId
+        windowsProc.running = true
+
+        var cur = root.workspacesService.activeWorkspaceId
+        root.selectedId = cur
         root.isOpen = true
         return "opened"
     }
@@ -76,7 +155,7 @@ PanelWindow {
     }
 
     function _move(dir) {
-        var ids = root.workspacesService.workspaceIds
+        var ids = root.occupiedWorkspaceIds
         if (!ids || ids.length === 0) return
         var idx = ids.indexOf(root.selectedId)
         if (idx < 0) idx = 0
@@ -89,7 +168,7 @@ PanelWindow {
         root.close()
     }
 
-    // Helper: Resolve icon path from app class / title
+    // Helper: Resolve app logo icon path
     function resolveIcon(appClass) {
         if (!appClass || appClass === "") return ""
         var raw = String(appClass).trim()
@@ -104,7 +183,7 @@ PanelWindow {
             }
         }
 
-        // 2. Curated fallback aliases
+        // 2. Known desktop application aliases
         var candidates = [raw, lower]
         if (lower === "zen") candidates.push("zen-browser", "zen")
         else if (lower === "codium" || lower === "vscodium") candidates.push("vscodium", "codium", "code")
@@ -120,62 +199,11 @@ PanelWindow {
             var p = Quickshell.iconPath(candidates[i], true)
             if (p && p !== "") return p
         }
-        return ""
-    }
-
-    // Helper: Collect windows for a given workspace id
-    function getWindowsForWorkspace(wsId) {
-        var arr = []
-
-        // Source 1: Check Hyprland.workspaces
-        var wsList = Hyprland.workspaces ? Hyprland.workspaces.values : []
-        for (var i = 0; i < wsList.length; i++) {
-            var ws = wsList[i]
-            if (ws && ws.id === wsId && ws.toplevels) {
-                var tls = ws.toplevels.values || []
-                for (var j = 0; j < tls.length; j++) {
-                    var tl = tls[j]
-                    if (!tl) continue
-                    var app = ""
-                    if (tl.lastIpcObject && (tl.lastIpcObject["class"] || tl.lastIpcObject["initialClass"])) {
-                        app = tl.lastIpcObject["class"] || tl.lastIpcObject["initialClass"]
-                    } else if (tl.wayland && tl.wayland.appId) {
-                        app = tl.wayland.appId
-                    }
-                    arr.push({
-                        title: tl.title || app || "Window",
-                        appClass: app || "application-x-executable"
-                    })
-                }
-                if (arr.length > 0) return arr
-            }
-        }
-
-        // Source 2: Hyprland.toplevels global collection
-        if (Hyprland.toplevels) {
-            var allTls = Hyprland.toplevels.values || []
-            for (var k = 0; k < allTls.length; k++) {
-                var item = allTls[k]
-                if (item && item.workspace && item.workspace.id === wsId) {
-                    var a = ""
-                    if (item.lastIpcObject && (item.lastIpcObject["class"] || item.lastIpcObject["initialClass"])) {
-                        a = item.lastIpcObject["class"] || item.lastIpcObject["initialClass"]
-                    } else if (item.wayland && item.wayland.appId) {
-                        a = item.wayland.appId
-                    }
-                    arr.push({
-                        title: item.title || a || "Window",
-                        appClass: a || "application-x-executable"
-                    })
-                }
-            }
-        }
-
-        return arr
+        return Quickshell.iconPath("application-x-executable", true) || ""
     }
 
     // ─────────────────────────────────────────────────
-    // Window configuration
+    // Window Configuration
     // ─────────────────────────────────────────────────
     visible: root.isOpen
     color: "transparent"
@@ -210,6 +238,7 @@ PanelWindow {
 
     onIsOpenChanged: {
         if (isOpen) {
+            windowsProc.running = true
             focusGrabTimer.restart()
             keyHandler.forceActiveFocus()
         } else {
@@ -273,10 +302,10 @@ PanelWindow {
     }
 
     // ─────────────────────────────────────────────────
-    // Visual Layer
+    // Visual Layer: Pure Visual, Zero Text
     // ─────────────────────────────────────────────────
 
-    // Dim blurred backdrop
+    // Dim blurred backdrop (clicking closes without switching)
     Rectangle {
         anchors.fill: parent
         color: Theme.withAlpha(Theme.darker_background, 0.70)
@@ -292,13 +321,13 @@ PanelWindow {
         }
     }
 
-    // Centered Windows-style HUD container
+    // Floating Centered HUD Card
     Item {
         id: hud
         anchors.centerIn: parent
 
-        width: mainCol.implicitWidth + 56
-        height: mainCol.implicitHeight + 48
+        width: cardsRow.implicitWidth + 36
+        height: cardsRow.implicitHeight + 36
 
         opacity: root.isOpen ? 1.0 : 0.0
         scale: root.isOpen ? 1.0 : 0.90
@@ -314,11 +343,11 @@ PanelWindow {
             }
         }
 
-        // HUD Glass Background Card
+        // HUD Glass Background Panel
         Rectangle {
             anchors.fill: parent
             radius: 20
-            color: Theme.withAlpha(Theme.background, 0.92)
+            color: Theme.withAlpha(Theme.background, 0.88)
             border.color: Theme.withAlpha(Theme.border, 0.35)
             border.width: 1
 
@@ -332,274 +361,190 @@ PanelWindow {
             }
         }
 
-        ColumnLayout {
-            id: mainCol
+        // Row of workspace preview cards
+        Row {
+            id: cardsRow
             anchors.centerIn: parent
-            spacing: 14
+            spacing: 16
 
-            // ── Top Header Bar ────────────────────────
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 8
+            Repeater {
+                model: root.occupiedWorkspaceIds
 
-                Text {
-                    text: "󰍹"
-                    font.pixelSize: 13
-                    font.family: Icons.effectiveFont(text)
-                    color: Theme.accent
-                }
+                delegate: Item {
+                    id: cardItem
+                    required property var modelData
+                    required property int index
 
-                Text {
-                    text: "TASK VIEW  ·  WORKSPACES"
-                    font.pixelSize: 10
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 2.0
-                    color: Theme.withAlpha(Theme.foreground, 0.55)
-                }
-            }
+                    readonly property int wsId: Number(modelData || 0)
+                    readonly property bool isSelected: root.selectedId === wsId
+                    readonly property bool isActive: root.workspacesService.activeWorkspaceId === wsId
+                    readonly property var winList: root.windowsByWorkspace[wsId] || []
 
-            // ── Workspaces Cards Row ──────────────────
-            Row {
-                id: cardsRow
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 12
+                    // 16:9 Aspect Ratio card (256x144)
+                    width: 256
+                    height: 144
 
-                Repeater {
-                    model: root.workspacesService.workspaceIds
+                    // Elevation on selection
+                    y: isSelected ? -8 : 0
+                    Behavior on y {
+                        NumberAnimation { duration: Motion.medium1; easing.type: Easing.OutCubic }
+                    }
 
-                    delegate: Item {
-                        id: cardItem
-                        required property var modelData
-                        required property int index
+                    // Ambient selection glow
+                    Rectangle {
+                        anchors { fill: parent; margins: -4 }
+                        radius: 18
+                        color: Theme.withAlpha(Theme.accent, 0.35)
+                        visible: cardItem.isSelected
+                        opacity: cardItem.isSelected ? 1.0 : 0.0
+                        Behavior on opacity { NumberAnimation { duration: Motion.medium1 } }
+                    }
 
-                        readonly property int wsId: Number(modelData || 0)
-                        readonly property bool isSelected: root.selectedId === wsId
-                        readonly property bool isActive: root.workspacesService.activeWorkspaceId === wsId
-                        readonly property bool isOccupied: !!root.workspacesService.occupiedWorkspaces[wsId]
-                        readonly property var windows: root.getWindowsForWorkspace(wsId)
+                    // Workspace Miniature Monitor Frame
+                    Rectangle {
+                        id: cardBox
+                        anchors.fill: parent
+                        radius: 14
+                        antialiasing: true
+                        clip: true
 
-                        width: 148
-                        height: 96
+                        // Miniature desktop canvas
+                        color: cardItem.isSelected
+                            ? Theme.withAlpha(Theme.accent, 0.12)
+                            : Theme.withAlpha(Theme.darker_background, 0.85)
 
-                        // Elevate selected card
-                        y: isSelected ? -6 : 0
-                        Behavior on y {
-                            NumberAnimation { duration: Motion.medium1; easing.type: Easing.OutCubic }
+                        border.color: cardItem.isSelected
+                            ? Theme.accent
+                            : Theme.withAlpha(Theme.border, cardItem.isActive ? 0.45 : 0.20)
+                        border.width: cardItem.isSelected ? 2.5 : 1
+
+                        Behavior on color { ColorAnimation { duration: Motion.colorDuration } }
+                        Behavior on border.color { ColorAnimation { duration: Motion.colorDuration } }
+
+                        // Scale animation
+                        scale: cardItem.isSelected ? 1.06 : 1.0
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: Motion.medium1
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: Motion.emphasizedCurve
+                            }
                         }
 
-                        Rectangle {
-                            id: cardBox
-                            anchors.fill: parent
-                            radius: 12
-                            antialiasing: true
-                            clip: true
-
-                            // Card Background
-                            color: cardItem.isSelected
-                                ? Theme.withAlpha(Theme.accent, 0.16)
-                                : cardItem.isActive
-                                    ? Theme.withAlpha(Theme.foreground, 0.08)
-                                    : Theme.withAlpha(Theme.darker_background, 0.75)
-
-                            // Card Border
-                            border.color: cardItem.isSelected
-                                ? Theme.accent
-                                : Theme.withAlpha(Theme.border, cardItem.isActive ? 0.45 : 0.20)
-                            border.width: cardItem.isSelected ? 2 : 1
-
-                            Behavior on color { ColorAnimation { duration: Motion.colorDuration } }
-                            Behavior on border.color { ColorAnimation { duration: Motion.colorDuration } }
-
-                            // Card Scale
-                            scale: cardItem.isSelected ? 1.05 : 1.0
-                            Behavior on scale {
-                                NumberAnimation {
-                                    duration: Motion.medium1
-                                    easing.type: Easing.BezierSpline
-                                    easing.bezierCurve: Motion.emphasizedCurve
-                                }
+                        // ── Workspace Screen Preview Area ─────
+                        Item {
+                            id: previewCanvas
+                            anchors {
+                                fill: parent
+                                margins: 6
                             }
 
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.margins: 8
-                                spacing: 4
+                            readonly property real scaleX: width / root.monitorWidth
+                            readonly property real scaleY: height / root.monitorHeight
 
-                                // Top row: Workspace badge + Active dot
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 4
+                            // Render miniature window boxes inside this workspace
+                            Repeater {
+                                model: cardItem.winList
 
+                                delegate: Rectangle {
+                                    id: winRect
+                                    required property var modelData
+                                    required property int index
+
+                                    readonly property var win: modelData
+                                    readonly property bool singleWindow: cardItem.winList.length === 1
+                                    readonly property string iconSrc: root.resolveIcon(win ? win.appClass : "")
+
+                                    // Position and dimension scaled from monitor coordinates
+                                    x: singleWindow ? 4 : Math.max(2, Math.min(previewCanvas.width - width - 2, Math.round(win.x * previewCanvas.scaleX)))
+                                    y: singleWindow ? 4 : Math.max(2, Math.min(previewCanvas.height - height - 2, Math.round(win.y * previewCanvas.scaleY)))
+                                    width: singleWindow ? (previewCanvas.width - 8) : Math.max(36, Math.min(previewCanvas.width - 4, Math.round(win.w * previewCanvas.scaleX)))
+                                    height: singleWindow ? (previewCanvas.height - 8) : Math.max(36, Math.min(previewCanvas.height - 4, Math.round(win.h * previewCanvas.scaleY)))
+
+                                    radius: 6
+                                    antialiasing: true
+                                    clip: true
+
+                                    // Miniature window glass surface
+                                    color: Theme.withAlpha(Theme.background, 0.90)
+                                    border.color: Theme.withAlpha(Theme.foreground, 0.20)
+                                    border.width: 1
+
+                                    // Miniature window titlebar strip
                                     Rectangle {
-                                        implicitHeight: 18
-                                        implicitWidth: wsText.implicitWidth + 12
-                                        radius: 9
-                                        color: cardItem.isSelected
-                                            ? Theme.accent
-                                            : Theme.withAlpha(Theme.foreground, 0.10)
-
-                                        Text {
-                                            id: wsText
-                                            anchors.centerIn: parent
-                                            text: "WS " + cardItem.wsId
-                                            font.pixelSize: 9
-                                            font.weight: Font.Bold
-                                            color: cardItem.isSelected ? Theme.dark_background : Theme.foreground
+                                        anchors {
+                                            top: parent.top
+                                            left: parent.left
+                                            right: parent.right
+                                            margins: 2
                                         }
+                                        height: 3
+                                        radius: 1
+                                        color: Theme.withAlpha(Theme.foreground, 0.16)
                                     }
 
-                                    Item { Layout.fillWidth: true }
-
-                                    // Active indicator pill/dot
-                                    Rectangle {
-                                        visible: cardItem.isActive
-                                        implicitHeight: 16
-                                        implicitWidth: 44
-                                        radius: 8
-                                        color: Theme.withAlpha(Theme.accent, 0.20)
-                                        border.color: Theme.accent
-                                        border.width: 1
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: "CURRENT"
-                                            font.pixelSize: 7
-                                            font.weight: Font.Bold
-                                            color: Theme.accent
-                                        }
-                                    }
-                                }
-
-                                // Center: App Icons / Window Preview Icons
-                                Item {
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-
-                                    // Windows apps grid
-                                    Flow {
+                                    // App Logo centered in window
+                                    Image {
+                                        id: appLogoImg
                                         anchors.centerIn: parent
-                                        width: Math.min(parent.width, 120)
-                                        spacing: 6
+                                        width: singleWindow ? 54 : Math.min(38, Math.min(parent.width - 8, parent.height - 8))
+                                        height: width
+                                        source: winRect.iconSrc
+                                        fillMode: Image.PreserveAspectFit
+                                        smooth: true
+                                        mipmap: true
+                                        visible: status === Image.Ready && winRect.iconSrc !== ""
+                                    }
 
-                                        Repeater {
-                                            model: Math.min(cardItem.windows.length, 6)
-
-                                            delegate: Item {
-                                                id: appIconSlot
-                                                required property int index
-                                                readonly property var win: cardItem.windows[index]
-                                                readonly property string iconSrc: root.resolveIcon(win ? win.appClass : "")
-
-                                                width: 24
-                                                height: 24
-
-                                                Image {
-                                                    id: appImg
-                                                    anchors.fill: parent
-                                                    source: appIconSlot.iconSrc
-                                                    fillMode: Image.PreserveAspectFit
-                                                    smooth: true
-                                                    mipmap: true
-                                                    visible: status === Image.Ready && appIconSlot.iconSrc !== ""
-                                                }
-
-                                                // Letter badge fallback if icon not found
-                                                Rectangle {
-                                                    anchors.fill: parent
-                                                    radius: 5
-                                                    color: cardItem.isSelected
-                                                        ? Theme.withAlpha(Theme.accent, 0.35)
-                                                        : Theme.withAlpha(Theme.muted, 0.40)
-                                                    visible: !appImg.visible
-
-                                                    Text {
-                                                        anchors.centerIn: parent
-                                                        text: (appIconSlot.win && appIconSlot.win.appClass)
-                                                            ? appIconSlot.win.appClass.charAt(0).toUpperCase()
-                                                            : "?"
-                                                        font.pixelSize: 11
-                                                        font.weight: Font.Bold
-                                                        color: Theme.bright_foreground
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        // Empty Workspace Visual
-                                        Rectangle {
-                                            visible: cardItem.windows.length === 0
-                                            width: 8
-                                            height: 8
-                                            radius: 4
-                                            color: Theme.withAlpha(Theme.foreground, 0.18)
-                                        }
+                                    // Fallback logo placeholder if icon is loading / unresolvable
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: singleWindow ? 48 : Math.min(32, Math.min(parent.width - 8, parent.height - 8))
+                                        height: width
+                                        radius: width / 2
+                                        color: Theme.withAlpha(Theme.muted, 0.40)
+                                        visible: !appLogoImg.visible
                                     }
                                 }
-
-                                // Bottom count: Window count badge
-                                Text {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: cardItem.windows.length > 0
-                                        ? cardItem.windows.length + (cardItem.windows.length === 1 ? " window" : " windows")
-                                        : "Empty"
-                                    font.pixelSize: 8
-                                    color: Theme.withAlpha(Theme.foreground, 0.40)
-                                }
                             }
                         }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.selectedId = cardItem.wsId
-                                root._confirm()
+                        // ── Active Workspace Glowing Indicator Dot ─
+                        // (Only on current workspace, positioned top-right, NO text)
+                        Rectangle {
+                            visible: cardItem.isActive
+                            anchors {
+                                top: parent.top
+                                right: parent.right
+                                margins: 8
+                            }
+                            width: 8
+                            height: 8
+                            radius: 4
+                            color: Theme.accent
+
+                            // Subtle pulsing glow
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 14
+                                height: 14
+                                radius: 7
+                                color: Theme.withAlpha(Theme.accent, 0.35)
                             }
                         }
                     }
-                }
-            }
 
-            // ── Selected Workspace Window List Preview ─
-            Rectangle {
-                Layout.alignment: Qt.AlignHCenter
-                implicitHeight: 28
-                implicitWidth: Math.max(340, previewText.implicitWidth + 32)
-                radius: 14
-                color: Theme.withAlpha(Theme.darker_background, 0.55)
-                border.color: Theme.withAlpha(Theme.border, 0.20)
-                border.width: 1
-
-                readonly property var selWindows: root.getWindowsForWorkspace(root.selectedId)
-
-                Text {
-                    id: previewText
-                    anchors.centerIn: parent
-                    text: {
-                        var wins = parent.selWindows
-                        if (wins.length === 0) return "Workspace " + root.selectedId + "  ·  No open windows"
-                        var titles = []
-                        for (var i = 0; i < Math.min(wins.length, 3); i++) {
-                            var t = wins[i].title || wins[i].appClass
-                            if (t.length > 32) t = t.substring(0, 30) + "…"
-                            titles.push(t)
+                    // Click to switch immediately
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.selectedId = cardItem.wsId
+                            root._confirm()
                         }
-                        if (wins.length > 3) titles.push("+" + (wins.length - 3) + " more")
-                        return "WS " + root.selectedId + "  ·  " + titles.join("   |   ")
                     }
-                    font.pixelSize: 10
-                    color: Theme.withAlpha(Theme.foreground, 0.75)
-                    elide: Text.ElideRight
                 }
-            }
-
-            // ── Footer Keyboard Navigation Hints ──────
-            Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: "Tab / ← → to navigate   ·   Enter or release Alt to switch   ·   Esc to cancel"
-                font.pixelSize: 9
-                color: Theme.withAlpha(Theme.foreground, 0.35)
             }
         }
     }
