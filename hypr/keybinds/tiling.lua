@@ -43,15 +43,16 @@ hl.bind("SUPER + SHIFT + grave", hl.dsp.window.move({ workspace = "special:scrat
 
 hl.bind("SUPER + CTRL + TAB", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind("SUPER + SHIFT + TAB", hl.dsp.focus({ workspace = "e-1" }))
-hl.bind("SUPER + TAB", hl.dsp.focus({ workspace = "previous" }))
+-- SUPER + TAB is bound in qdeck.lua → qdeck-wsswitcher toggle
 
 hl.bind("SUPER + SHIFT + LEFT", hl.dsp.window.swap({ direction = "l" }))
 hl.bind("SUPER + SHIFT + RIGHT", hl.dsp.window.swap({ direction = "r" }))
 hl.bind("SUPER + SHIFT + UP", hl.dsp.window.swap({ direction = "u" }))
 hl.bind("SUPER + SHIFT + DOWN", hl.dsp.window.swap({ direction = "d" }))
 
-hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
-hl.bind("ALT + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false }))
+-- Alt+Tab / Alt+Shift+Tab → Workspace switcher (Windows-style)
+hl.bind("ALT + TAB", hl.dsp.exec_cmd("qdeck-wsswitcher next"))
+hl.bind("ALT + SHIFT + TAB", hl.dsp.exec_cmd("qdeck-wsswitcher prev"))
 
 hl.bind("SUPER + code:20", hl.dsp.window.resize({ x = -100, y = 0, relative = true }))
 hl.bind("SUPER + code:21", hl.dsp.window.resize({ x = 100, y = 0, relative = true }))

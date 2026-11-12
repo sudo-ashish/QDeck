@@ -34,26 +34,14 @@ QtObject {
 
     function switchTo(id) {
         if (!id) return
-        if (Hyprland.usingLua) {
-            Hyprland.dispatch("hl.dsp.focus({ workspace = \"" + id + "\" })")
-        } else {
-            Hyprland.dispatch("workspace " + id)
-        }
+        Hyprland.dispatch("hl.dsp.focus({ workspace = \"" + id + "\" })")
     }
 
     function next() {
-        if (Hyprland.usingLua) {
-            Hyprland.dispatch("hl.dsp.focus({ workspace = \"+1\" })")
-        } else {
-            Hyprland.dispatch("workspace e+1")
-        }
+        Hyprland.dispatch("hl.dsp.focus({ workspace = \"+1\" })")
     }
 
     function prev() {
-        if (Hyprland.usingLua) {
-            Hyprland.dispatch("hl.dsp.focus({ workspace = \"-1\" })")
-        } else {
-            Hyprland.dispatch("workspace e-1")
-        }
+        Hyprland.dispatch("hl.dsp.focus({ workspace = \"-1\" })")
     }
 }

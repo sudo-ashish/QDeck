@@ -7,6 +7,7 @@ import "theme"
 import "components"
 import "services"
 import "modules/bar"
+import "modules/bar/widgets"
 import "modules/launcher"
 import "modules/osd"
 import "modules/notifications"
@@ -104,6 +105,22 @@ ShellRoot {
     // Polkit Authentication Agent (centered overlay)
     Polkit {
         id: polkit
+    }
+
+    // Windows Alt+Tab-style Workspace Switcher Overlay
+    WorkspaceSwitcher {
+        id: workspaceSwitcher
+        workspacesService: root.workspacesService
+    }
+
+    IpcHandler {
+        target: "wsswitcher"
+        function toggle(): string { return workspaceSwitcher.toggle() }
+        function open(): string   { return workspaceSwitcher.open() }
+        function close(): string  { return workspaceSwitcher.close() }
+        function next(): string   { return workspaceSwitcher.next() }
+        function prev(): string   { return workspaceSwitcher.prev() }
+        function confirm(): string { return workspaceSwitcher.confirm() }
     }
 
     // On-Screen Display (OSD UI Window)
