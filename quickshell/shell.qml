@@ -1,4 +1,4 @@
-//@ pragma IconTheme Yaru-blue
+//@ pragma IconTheme Yaru-magenta
 //@ pragma Env QS_NO_RELOAD_POPUP=1
 import QtQuick
 import Quickshell
