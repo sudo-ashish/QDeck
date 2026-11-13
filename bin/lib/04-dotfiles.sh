@@ -95,6 +95,7 @@ if [[ -n "$THEMES_SRC" ]]; then
   # Initialize GTK, Kitty, and btop runtime symlinks
   if [[ -d "$HOME/.config/themes/current" ]]; then
     mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/kitty" "$HOME/.config/btop/themes"
+    rm -f "$HOME/.config/gtk-4.0/gtk-dark.css" "$HOME/.config/gtk-4.0/assets" 2>/dev/null || true
     ln -sfn "$HOME/.config/themes/current/gtk-3.0.css" "$HOME/.config/gtk-3.0/gtk.css"
     ln -sfn "$HOME/.config/themes/current/gtk-4.0.css" "$HOME/.config/gtk-4.0/gtk.css"
     ln -sfn "$HOME/.config/themes/current/color.conf" "$HOME/.config/kitty/color.conf"

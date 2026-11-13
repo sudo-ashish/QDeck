@@ -170,11 +170,6 @@ apply_icon_theme() {
         sed -i -E "s/^[[:space:]]*icon-theme=.*/icon-theme=$icon_theme/" "$nwg_gsettings" 2>/dev/null || true
     fi
 
-    # 3. Synchronize via nwg-look export in background
-    if command -v nwg-look >/dev/null 2>&1; then
-        nwg-look -x >/dev/null 2>&1 &
-    fi
-
     # 4. Explicitly update GTK 3.0 configuration
     local gtk3_dir="$CONFIG_HOME/gtk-3.0"
     local gtk3_file="$gtk3_dir/settings.ini"
@@ -260,12 +255,16 @@ apply_gtk_theme() {
 
     mkdir -p "$gtk3_dir" "$gtk4_dir" 2>/dev/null || true
 
+    # Clean up any broken adw-gtk3 symlinks from gtk-4.0 that fail libadwaita imports
+    rm -f "$gtk4_dir/gtk-dark.css" "$gtk4_dir/assets" 2>/dev/null || true
+
     # 1. Symlink generated GTK CSS files to current active theme outputs
     if [[ -f "$target_dir/gtk-3.0.css" || -f "$CURRENT_LINK/gtk-3.0.css" ]]; then
         ln -sfn "$CURRENT_LINK/gtk-3.0.css" "$gtk3_dir/gtk.css" 2>/dev/null || true
         touch "$gtk3_dir/gtk.css" 2>/dev/null || true
     fi
     if [[ -f "$target_dir/gtk-4.0.css" || -f "$CURRENT_LINK/gtk-4.0.css" ]]; then
+        rm -f "$gtk4_dir/gtk.css" 2>/dev/null || true
         ln -sfn "$CURRENT_LINK/gtk-4.0.css" "$gtk4_dir/gtk.css" 2>/dev/null || true
         touch -h "$gtk4_dir/gtk.css" 2>/dev/null || true
         touch "$gtk4_dir/gtk.css" 2>/dev/null || true
