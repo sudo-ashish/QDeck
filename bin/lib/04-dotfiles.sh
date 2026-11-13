@@ -115,11 +115,8 @@ if [[ -f "$HOME/.config/themes/current/icons.theme" ]]; then
   [[ -z "$DEFAULT_ICON" ]] && DEFAULT_ICON="Yaru-blue"
 fi
 
-# Determine preferred GTK theme (prefer adw-gtk3-dark for perfect libadwaita parity, fallback to Adwaita-dark)
+# Preferred GTK dark theme
 DEFAULT_GTK_THEME="Adwaita-dark"
-if [[ -d "/usr/share/themes/adw-gtk3-dark" || -d "$HOME/.themes/adw-gtk3-dark" || -d "$HOME/.local/share/themes/adw-gtk3-dark" ]]; then
-  DEFAULT_GTK_THEME="adw-gtk3-dark"
-fi
 
 # Deploy GTK 3.0 settings.ini
 if [[ ! -f "$HOME/.config/gtk-3.0/settings.ini" && -f "$GTK_ASSETS/gtk-3.0/settings.ini" ]]; then

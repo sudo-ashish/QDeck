@@ -33,7 +33,6 @@ CORE_PACKAGES=(
   wl-clipboard
   imv
   pinta
-  adw-gtk-theme
   gnome-themes-extra
 
   # Terminal, shell & monitor

@@ -266,9 +266,6 @@ apply_gtk_theme() {
 
     # 2. Ensure gtk-application-prefer-dark-theme=1 and dark theme in settings.ini for GTK 3.0 and 4.0
     local dark_theme="Adwaita-dark"
-    if [[ -d "/usr/share/themes/adw-gtk3-dark" || -d "$HOME/.themes/adw-gtk3-dark" || -d "$HOME/.local/share/themes/adw-gtk3-dark" ]]; then
-        dark_theme="adw-gtk3-dark"
-    fi
 
     for ini in "$gtk3_dir/settings.ini" "$gtk4_dir/settings.ini"; do
         if [[ -f "$ini" ]]; then
@@ -311,13 +308,11 @@ apply_gtk_theme() {
 
         local cur_theme
         cur_theme=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'" || true)
-        if [[ "$cur_theme" == "$dark_theme" ]]; then
-            local alt_dark="Adwaita-dark"
-            [[ "$dark_theme" == "Adwaita-dark" ]] && alt_dark="adw-gtk3-dark"
-            gsettings set org.gnome.desktop.interface gtk-theme "$alt_dark" 2>/dev/null || true
-            gsettings set org.gnome.desktop.interface gtk-theme "$dark_theme" 2>/dev/null || true
+        if [[ "$cur_theme" == "Adwaita-dark" ]]; then
+            gsettings set org.gnome.desktop.interface gtk-theme "Adwaita" 2>/dev/null || true
+            gsettings set org.gnome.desktop.interface gtk-theme "Adwaita-dark" 2>/dev/null || true
         else
-            gsettings set org.gnome.desktop.interface gtk-theme "$dark_theme" 2>/dev/null || true
+            gsettings set org.gnome.desktop.interface gtk-theme "Adwaita-dark" 2>/dev/null || true
         fi
     fi
     if command -v dconf >/dev/null 2>&1; then
