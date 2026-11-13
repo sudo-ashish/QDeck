@@ -229,6 +229,7 @@ bind = SUPER, D,         exec, qdeck launcher
 bind = SUPER, ESCAPE,    exec, qdeck powermenu
 bind = SUPER, SPACE,     exec, qdeck wallpaper
 bind = SUPER ALT, SPACE, exec, qdeck theme
+bind = CTRL SHIFT, W,    exec, qdeck bar toggle
 bind = SUPER SHIFT, W,   exec, qdeck bar next
 bind = SUPER ALT, B,     exec, qdeck blur toggle
 

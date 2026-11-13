@@ -11,6 +11,7 @@ hl.bind("SHIFT + PRINT", hl.dsp.exec_cmd("qdeck screenshot clipboard region"))
 
 ---- QDECK CONTROLS ----
 hl.bind("SUPER + B", hl.dsp.exec_cmd("qdeck bar toggle"))
+hl.bind("CTRL + SHIFT + W", hl.dsp.exec_cmd("qdeck bar toggle"))
 hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("qdeck bar next"))
 hl.bind("SUPER + ALT + B", hl.dsp.exec_cmd("qdeck blur toggle"))
 
