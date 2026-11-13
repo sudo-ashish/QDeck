@@ -164,13 +164,7 @@ apply_icon_theme() {
         gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" 2>/dev/null || true
     fi
 
-    # 2. Update nwg-look persistent state if present
-    local nwg_gsettings="$HOME/.local/share/nwg-look/gsettings"
-    if [[ -f "$nwg_gsettings" ]]; then
-        sed -i -E "s/^[[:space:]]*icon-theme=.*/icon-theme=$icon_theme/" "$nwg_gsettings" 2>/dev/null || true
-    fi
-
-    # 4. Explicitly update GTK 3.0 configuration
+    # 2. Explicitly update GTK 3.0 configuration
     local gtk3_dir="$CONFIG_HOME/gtk-3.0"
     local gtk3_file="$gtk3_dir/settings.ini"
     mkdir -p "$gtk3_dir" 2>/dev/null || true

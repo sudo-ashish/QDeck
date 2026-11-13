@@ -33,7 +33,6 @@ CORE_PACKAGES=(
   wl-clipboard
   imv
   pinta
-  nwg-look
   adw-gtk-theme
   gnome-themes-extra
 

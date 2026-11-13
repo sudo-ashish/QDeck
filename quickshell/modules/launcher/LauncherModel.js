@@ -8,7 +8,6 @@ var KNOWN_ICON_MAP = {
     "antigravity": "file:///usr/share/pixmaps/antigravity.png",
     "antigravity-ide": "file:///usr/share/pixmaps/antigravity-ide.png",
     "antigravity-ide-url-handler": "file:///usr/share/pixmaps/antigravity-ide.png",
-    "nwg-look": "file:///usr/share/pixmaps/nwg-look.svg",
     "pinentry": "file:///usr/share/pixmaps/pinentry.png",
     "spotify-launcher": "file:///usr/share/pixmaps/spotify-launcher.png",
     "network-wired": "file:///usr/share/icons/Adwaita/symbolic/devices/network-wired-symbolic.svg",
@@ -185,7 +184,7 @@ function getAppCategory(app) {
     if (all.indexOf("setting") !== -1 || all.indexOf("preference") !== -1 || all.indexOf("system") !== -1 ||
         all.indexOf("config") !== -1 || all.indexOf("monitor") !== -1 || all.indexOf("terminal") !== -1 ||
         all.indexOf("nautilus") !== -1 || all.indexOf("files") !== -1 || all.indexOf("pavucontrol") !== -1 ||
-        all.indexOf("nwg-look") !== -1 || all.indexOf("look") !== -1 || all.indexOf("btop") !== -1 ||
+        all.indexOf("btop") !== -1 ||
         all.indexOf("store") !== -1 || all.indexOf("hardware") !== -1) {
         return "System";
     }
