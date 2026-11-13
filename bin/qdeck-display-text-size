@@ -25,24 +25,38 @@ gtk_font_pt() {
 
 # Helper to update terminal font sizes
 set_terminal_size() {
-  local pt="$1"
-  if [[ -f ~/.config/alacritty/alacritty.toml ]]; then
-    sed -i -E "s/^size[[:space:]]*=.*/size = $pt/" ~/.config/alacritty/alacritty.toml
+  local global_size="$1"
+
+  # Kitty terminal font size:
+  # Follows global text size 1:1 up to 14, capped at 14 max
+  local kitty_pt="$global_size"
+  if (( kitty_pt > 14 )); then
+    kitty_pt=14
   fi
+
   if [[ -f ~/.config/kitty/kitty.conf ]]; then
     if grep -qE '^[[:space:]]*font_size[[:space:]]+' ~/.config/kitty/kitty.conf 2>/dev/null; then
-      sed --follow-symlinks -i -E "s/^[[:space:]]*font_size[[:space:]]+.*/font_size $pt.0/" ~/.config/kitty/kitty.conf
+      sed --follow-symlinks -i -E "s/^[[:space:]]*font_size[[:space:]]+.*/font_size $kitty_pt.0/" ~/.config/kitty/kitty.conf
     else
-      printf '\nfont_size %s.0\n' "$pt" >>~/.config/kitty/kitty.conf
+      printf '\nfont_size %s.0\n' "$kitty_pt" >>~/.config/kitty/kitty.conf
     fi
-    pkill -USR1 kitty 2>/dev/null || true
+    killall -SIGUSR1 kitty 2>/dev/null || pkill -SIGUSR1 -x kitty 2>/dev/null || true
+  fi
+
+  # Proportional font size for other terminals
+  local term_pt
+  term_pt=$(awk -v s="$global_size" -v p="$TERM_DEFAULT_PT" -v b="$SHELL_DEFAULT_PX" \
+    'BEGIN { printf "%d", int(s * p / b + 0.5) }')
+
+  if [[ -f ~/.config/alacritty/alacritty.toml ]]; then
+    sed -i -E "s/^size[[:space:]]*=.*/size = $term_pt/" ~/.config/alacritty/alacritty.toml
   fi
   if [[ -f ~/.config/ghostty/config ]]; then
-    sed -i -E "s/^font-size = .*/font-size = $pt/" ~/.config/ghostty/config
+    sed -i -E "s/^font-size = .*/font-size = $term_pt/" ~/.config/ghostty/config
     pkill -SIGUSR2 ghostty 2>/dev/null || true
   fi
   if [[ -f ~/.config/foot/foot.ini ]]; then
-    sed -i -E "s/(:size=)[0-9.]+/\1$pt/" ~/.config/foot/foot.ini
+    sed -i -E "s/(:size=)[0-9.]+/\1$term_pt/" ~/.config/foot/foot.ini
   fi
 }
 
@@ -75,9 +89,7 @@ factor=$(awk -v s="$size" -v b="$SHELL_DEFAULT_PX" -v f="$fpt" \
   'BEGIN { printf "%.4f", int(f * s / b + 0.5) / f }')
 gsettings set "$GKEY_SCHEMA" "$GKEY_NAME" "$factor" 2>/dev/null || true
 
-# Terminal font size (proportional)
-term_pt=$(awk -v s="$size" -v p="$TERM_DEFAULT_PT" -v b="$SHELL_DEFAULT_PX" \
-  'BEGIN { printf "%d", int(s * p / b + 0.5) }')
-set_terminal_size "$term_pt"
+# Terminal font size
+set_terminal_size "$size"
 
 echo "text size: ${size} px"
