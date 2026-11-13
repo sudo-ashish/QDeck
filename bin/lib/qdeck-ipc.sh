@@ -10,7 +10,7 @@ call_ipc() {
   command -v qs >/dev/null 2>&1 || qs_bin="quickshell"
 
   # 1. Direct IPC call
-  if out=$("$qs_bin" ipc call "$target" "$method" "$@" 2>&1); then
+  if out=$("$qs_bin" ipc call "$target" -- "$method" "$@" 2>&1); then
     printf '%s\n' "$out"
     return 0
   fi
@@ -18,7 +18,7 @@ call_ipc() {
   # 2. Config path fallback
   local cfg_dir="${QUICKSHELL_DIR:-$HOME/.config/quickshell}"
   if [[ -d "$cfg_dir" ]]; then
-    if out=$("$qs_bin" -p "$cfg_dir" ipc call "$target" "$method" "$@" 2>&1); then
+    if out=$("$qs_bin" -p "$cfg_dir" ipc call "$target" -- "$method" "$@" 2>&1); then
       printf '%s\n' "$out"
       return 0
     fi

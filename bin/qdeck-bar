@@ -67,6 +67,15 @@ set_bar_visibility() {
 }
 
 toggle_bar_visibility() {
+  local res
+  res="$(call_ipc bar toggle 2>/dev/null || true)"
+  if [[ "$res" == "visible" || "$res" == "hidden" ]]; then
+    mkdir -p "$CONFIG_DIR"
+    echo "$res" > "$VIS_FILE"
+    echo "Top bar is now $res."
+    return 0
+  fi
+
   local cur
   cur="$(is_bar_visible)"
   if [[ "$cur" == "hidden" ]]; then
