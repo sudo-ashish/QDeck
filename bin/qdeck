@@ -50,7 +50,7 @@ Control Center & Widgets:
   qdeck theme-gen [dir]          Dynamically compile color.conf and btop.theme from colors.toml
   qdeck qshelf [action]          Toggle or control drag-and-drop staging QShelf (or: qdeck shelf)
   qdeck clipboard [action]       Toggle or control text clipboard manager (wl-clipboard backed)
-  qdeck bar [action|mode]        Toggle, hide, show, or switch layout (floating, islands, wide, compact)
+  qdeck bar [action]             Toggle, hide, show, or check status of the top bar
   qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
   qdeck text-size [size]         Get or adjust system and shell font size
 

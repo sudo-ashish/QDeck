@@ -28,7 +28,7 @@
   - [5. Native Polkit Authentication Agent](#5-native-polkit-authentication-agent)
   - [6. Unified Power & Session Control Center](#6-unified-power--session-control-center)
 - [Configuration & Customization](#configuration--customization)
-  - [Bar Layout Modes](#bar-layout-modes)
+  - [Status Bar Visibility & Layout](#status-bar-visibility--layout)
   - [Dynamic Text Scaling](#dynamic-text-scaling)
   - [Dual-Alpha & Compositor Blur](#dual-alpha--compositor-blur)
   - [Themes & Color Tokens](#themes--color-tokens)
@@ -282,7 +282,7 @@ Control Center & Widgets:
   qdeck powermenu [action]       Toggle power & session menu
   qdeck wallpaper [action]       Toggle wallpaper picker or switch wallpaper
   qdeck theme [action]           Toggle theme switcher or switch active theme
-  qdeck bar [mode|next|list]     Switch top bar layout (floating, islands, wide, compact)
+  qdeck bar [action]             Toggle, hide, show, or check status of the top bar
   qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
   qdeck text-size [size]         Get or adjust system and shell font size
 
@@ -366,28 +366,20 @@ Located at `quickshell/modules/launcher/powermenu/PowerMenu.qml`.
 
 ## Configuration & Customization
 
-### Bar Layout Modes
+### Status Bar Visibility & Layout
 
-QDeck supports four distinct status bar styles out of the box:
-
-| Mode | Visual Style | Screen Coverage |
-| :--- | :--- | :--- |
-| `floating` | Default rounded pill floating near the top | Full width minus screen margins |
-| `islands` | Three decoupled capsules (workspaces, clock, hardware) | Segmented islands |
-| `wide` | Wide centered bar | ~72% screen width |
-| `compact` | Shrink-wrapped bar sizing strictly to contents | Auto-sized to content |
-
-Change the layout dynamically without restarting Quickshell:
+QDeck features a centered, content-fitted compact notch status bar. Control its visibility dynamically without restarting Quickshell:
 
 ```bash
-# Set specific style
-qdeck bar floating
-qdeck bar islands
-qdeck bar wide
-qdeck bar compact
+# Toggle top bar visibility
+qdeck bar toggle
 
-# Cycle to next style
-qdeck bar next
+# Hide or show the bar
+qdeck bar hide
+qdeck bar show
+
+# Check status
+qdeck bar status
 ```
 
 ### Dynamic Text Scaling
@@ -478,7 +470,7 @@ Then switch to it with `qdeck theme rose-pine`.
 - [x] Full single-runtime desktop shell with Quickshell.
 - [x] Native Freedesktop notification daemon (`org.freedesktop.Notifications`).
 - [x] Integrated Polkit authentication agent dialog.
-- [x] Dynamic multi-layout status bar (Floating, Islands, Wide, Compact).
+- [x] Centered compact notch status bar with dynamic visibility toggling.
 - [x] Zero-overhead hardware lockstate detection (CapsLock/NumLock).
 - [x] Unified bottom power, theme, and wallpaper drawer.
 - [ ] **StatusNotifierItem (SNI) Tray Support**: System tray icons are currently work-in-progress pending upstream Quickshell tray stabilization.
