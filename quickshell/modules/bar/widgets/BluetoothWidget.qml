@@ -10,6 +10,7 @@ Item {
     id: root
 
     required property BluetoothService service
+    readonly property bool popupOpen: btPopup.open
 
     property int iconSize: Appearance.bluetoothIconSize
 

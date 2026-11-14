@@ -9,6 +9,8 @@ Item {
     id: root
 
     property PowerService powerService: null
+    property bool minimal: false
+    readonly property bool popupOpen: clockPopup.open
 
     property date today: new Date()
     property date now: new Date()
@@ -79,7 +81,7 @@ Item {
     BarButton {
         id: clockButton
         icon: ""
-        text: root.formatDayTime(root.now)
+        text: root.minimal ? root.formatTime(root.now) : root.formatDayTime(root.now)
         active: clockPopup.open
         onClicked: {
             clockPopup.toggle()

@@ -10,6 +10,7 @@ Item {
     id: root
 
     required property NetworkService service
+    readonly property bool popupOpen: netPopup.open
 
     property string selectedSsid: ""
     property bool showPasswordInput: false

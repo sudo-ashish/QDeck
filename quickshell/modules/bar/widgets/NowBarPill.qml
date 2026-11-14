@@ -11,6 +11,7 @@ Item {
     property MediaController controller: MediaController { id: defaultCtrl }
     property AudioService audioService: null
     property alias popup: mediaPopup
+    readonly property bool popupOpen: mediaPopup.open
 
     readonly property bool hasMedia: controller ? controller.hasMedia : false
     readonly property string trackTitle: root.controller ? (root.controller.title || root.controller.artist || "Music") : ""

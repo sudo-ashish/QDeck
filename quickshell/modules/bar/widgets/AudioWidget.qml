@@ -11,6 +11,7 @@ Item {
     id: root
 
     required property AudioService service
+    readonly property bool popupOpen: audioPopup.open
 
     property int iconSize: Appearance.audioIconSize
 

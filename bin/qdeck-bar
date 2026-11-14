@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# QDeck: Manage top bar visibility and status (qdeck-bar / qdeck bar)
-# Layout: Centered compact notch bar (content-fitted dynamic width)
+# QDeck: Manage top bar visibility, modes, and status (qdeck-bar / qdeck bar)
+# Modes:
+#   compact - Standard centered compact notch bar with all widgets
+#   clock   - Minimal clock pill showing only time; expands to full bar on hover
 
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 VIS_FILE="$CONFIG_DIR/bar-visibility"
+MODE_FILE="$CONFIG_DIR/bar-mode"
+MODES=("compact" "clock")
+DEFAULT_MODE="compact"
 
 is_bar_visible() {
   if [[ -f "$VIS_FILE" ]]; then
@@ -15,6 +20,21 @@ is_bar_visible() {
     fi
   fi
   echo "visible"
+}
+
+get_current_mode() {
+  if [[ -f "$MODE_FILE" ]]; then
+    local m
+    m="$(tr -d '[:space:]' < "$MODE_FILE" | tr '[:upper:]' '[:lower:]')"
+    if [[ "$m" == "clock" || "$m" == "minimal" || "$m" == "peek" || "$m" == "clock-pill" ]]; then
+      echo "clock"
+      return 0
+    elif [[ "$m" == "compact" || "$m" == "normal" || "$m" == "full" ]]; then
+      echo "compact"
+      return 0
+    fi
+  fi
+  echo "$DEFAULT_MODE"
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -64,23 +84,49 @@ toggle_bar_visibility() {
   fi
 }
 
+set_mode() {
+  local target="$1"
+  mkdir -p "$CONFIG_DIR"
+  echo "$target" > "$MODE_FILE"
+  call_bar_ipc barpopups setMode "$target"
+  echo "QDeck bar layout mode set to: $target"
+}
+
+toggle_mode() {
+  local cur
+  cur="$(get_current_mode)"
+  if [[ "$cur" == "clock" ]]; then
+    set_mode "compact"
+  else
+    set_mode "clock"
+  fi
+}
+
 show_help() {
   cat <<EOF
-Usage: qdeck bar [COMMAND]
-       qdeck-bar [COMMAND]
+Usage: qdeck bar [COMMAND|MODE]
+       qdeck-bar [COMMAND|MODE]
 
-Manage QDeck top bar visibility and status.
-Layout is locked to the centered compact notch design.
+Manage QDeck top bar layout modes and visibility.
 
 Commands:
-  status (default)    Show current active bar status and visibility
+  status (default)    Show current active bar mode and visibility
   toggle              Toggle top bar visibility on/off
   hide                Hide the top bar
   show                Show the top bar
+  mode                Toggle between compact and clock modes
+  list                List all available layout modes
   help, -h, --help    Show this help message
 
+Modes:
+  compact             Standard compact notch bar (always shows all widgets)
+  clock               Minimal time-only clock pill; expands to full bar on hover
+
 Examples:
-  qdeck bar               # Show current visibility status
+  qdeck bar               # Show current mode and visibility
+  qdeck bar clock         # Switch to minimal clock pill mode (expands on hover)
+  qdeck bar compact       # Switch to standard compact notch bar
+  qdeck bar mode          # Toggle between compact and clock modes
   qdeck bar toggle        # Toggle top bar on/off
   qdeck bar hide          # Hide top bar
   qdeck bar show          # Show top bar
@@ -91,8 +137,9 @@ cmd="${1:-status}"
 
 case "$cmd" in
   status)
+    current="$(get_current_mode)"
     vis="$(is_bar_visible)"
-    echo "Current bar layout: compact (status: $vis)"
+    echo "Current bar layout: $current (status: $vis)"
     ;;
 
   toggle|toggle-bar)
@@ -108,16 +155,27 @@ case "$cmd" in
     ;;
 
   list)
+    current="$(get_current_mode)"
     echo "Available QDeck Bar Layout Modes:"
-    echo "  * compact (active & default)"
+    for m in "${MODES[@]}"; do
+      if [[ "$m" == "$current" ]]; then
+        echo "  * $m (active)"
+      else
+        echo "    $m"
+      fi
+    done
     ;;
 
-  compact)
-    echo "QDeck top bar is in compact layout mode."
+  compact|normal|full)
+    set_mode "compact"
     ;;
 
-  next|prev|floating|islands|wide)
-    echo "Notice: Multi-mode switching has been deprecated. QDeck now uses the compact notch bar layout exclusively."
+  clock|minimal|peek|clock-pill)
+    set_mode "clock"
+    ;;
+
+  mode|toggle-mode|cycle|next)
+    toggle_mode
     ;;
 
   help|-h|--help)

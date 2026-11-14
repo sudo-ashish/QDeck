@@ -281,7 +281,7 @@ Control Center & Widgets:
   qdeck powermenu [action]       Toggle power & session menu
   qdeck wallpaper [action]       Toggle wallpaper picker or switch wallpaper
   qdeck theme [action]           Toggle theme switcher or switch active theme
-  qdeck bar [action]             Toggle, hide, show, or check status of the top bar
+  qdeck bar [action|mode]        Toggle, hide, show, or switch layout (compact, clock)
   qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
   qdeck text-size [size]         Get or adjust system and shell font size
 
@@ -365,11 +365,23 @@ Located at `quickshell/modules/launcher/powermenu/PowerMenu.qml`.
 
 ## Configuration & Customization
 
-### Status Bar Visibility & Layout
+### Status Bar Visibility & Layout Modes
 
-QDeck features a centered, content-fitted compact notch status bar. Control its visibility dynamically without restarting Quickshell:
+QDeck supports two centered notch bar layout modes:
+
+| Mode | Visual Style | Screen Coverage |
+| :--- | :--- | :--- |
+| `compact` *(default)* | Standard compact notch bar with all widgets (workspaces, media, clock, status controls) | Auto-sized to content |
+| `clock` | Minimal time-only clock pill (`HH:mm`); automatically expands to the full bar on mouse hover | Compact time pill $\to$ Full bar |
+
+Control the mode and visibility dynamically without restarting Quickshell:
 
 ```bash
+# Switch layout mode
+qdeck bar clock        # Minimal time-only pill (expands on hover)
+qdeck bar compact      # Standard compact notch bar
+qdeck bar mode         # Toggle between compact and clock modes
+
 # Toggle top bar visibility
 qdeck bar toggle
 

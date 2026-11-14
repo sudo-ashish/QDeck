@@ -9,6 +9,7 @@ Item {
 
     required property BatteryService batteryService
     required property PowerService powerService
+    readonly property bool popupOpen: batPopup.open
 
     property bool showPercentage: Appearance.batteryShowPercentage
     property int iconSize: Appearance.batteryIconSize

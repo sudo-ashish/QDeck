@@ -9,6 +9,7 @@ Item {
     id: root
 
     required property BrightnessService service
+    readonly property bool popupOpen: monPopup.open
 
     property int iconSize: Appearance.monitorIconSize
 
