@@ -48,7 +48,15 @@ hl.window_rule({
 
 hl.window_rule({
 	name = "tui-float",
-	match = { class = "^(tui-btop)" },
+	match = { class = "^(tui-.*|qdeck-pkg)" },
+	float = true,
+	center = true,
+	size = "960 650",
+})
+
+hl.window_rule({
+	name = "pkg-float",
+	match = { title = "^(qdeck-pkg|default-package-manager|QDeck Package Manager)" },
 	float = true,
 	center = true,
 	size = "960 650",

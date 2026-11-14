@@ -40,12 +40,21 @@ impl Drop for OpGuard {
     }
 }
 
-/// Builds the yay install argv — no shell interpolation, never as root
+/// Builds the yay install argv — non-interactive, no shell interpolation, never as root
 fn install_argv(pkg: &Package) -> Vec<OsString> {
     let mut args: Vec<OsString> = vec![
         "yay".into(),
         "-S".into(),
         "--needed".into(),
+        "--noconfirm".into(),
+        "--answerclean".into(),
+        "None".into(),
+        "--answerdiff".into(),
+        "None".into(),
+        "--answeredit".into(),
+        "None".into(),
+        "--answerupgrade".into(),
+        "None".into(),
     ];
     // For AUR packages, explicitly target the AUR to avoid shadowing
     match &pkg.source {
@@ -65,6 +74,7 @@ fn remove_argv(pkg: &Package) -> Vec<OsString> {
     vec![
         "yay".into(),
         "-Rns".into(),
+        "--noconfirm".into(),
         "--".into(),
         (&pkg.name).into(),
     ]
