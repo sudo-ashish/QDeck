@@ -9,6 +9,7 @@ Rectangle {
 
     property string icon: ""
     property string text: ""
+    property Component customContent: null
     property bool active: false
     property bool accentActive: false
     property color customColor: "transparent"
@@ -49,8 +50,14 @@ Rectangle {
         anchors.centerIn: parent
         spacing: Appearance.spacingMedium - 2 // 6px
 
+        Loader {
+            visible: root.customContent !== null
+            sourceComponent: root.customContent
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
         Text {
-            visible: root.icon.length > 0
+            visible: root.customContent === null && root.icon.length > 0
             text: root.icon
             font.family: Icons.effectiveFont(root.icon)
             font.pixelSize: root.iconSize
@@ -63,7 +70,7 @@ Rectangle {
         }
 
         Text {
-            visible: root.text.length > 0
+            visible: root.customContent === null && root.text.length > 0
             text: root.text
             font.family: Fonts.uiFont
             font.pixelSize: root.textSize

@@ -11,8 +11,87 @@ Item {
     required property PowerService powerService
     readonly property bool popupOpen: batPopup.open
 
-    property bool showPercentage: Appearance.batteryShowPercentage
+    property bool showPercentage: true
     property int iconSize: Appearance.batteryIconSize
+
+    readonly property color batteryColor: {
+        if (root.batteryService.isCharging) return Theme.accent
+        if (root.batteryService.capacity <= 20) return Theme.red
+        if (root.batteryService.capacity <= 40) return Theme.yellow
+        if (batPopup.open) return Theme.accent
+        return Theme.foreground
+    }
+
+    Component {
+        id: batteryIconWithPercentage
+
+        Item {
+            implicitWidth: batteryBody.width + 1 + batteryNub.width
+            implicitHeight: batteryBody.height
+            width: implicitWidth
+            height: implicitHeight
+
+            // Battery frame
+            Rectangle {
+                id: batteryBody
+                width: root.batteryService.isCharging ? (root.batteryService.capacity >= 100 ? 36 : 34) : (root.batteryService.capacity >= 100 ? 33 : 31)
+                height: 15
+                radius: 4
+                color: "transparent"
+                border.color: root.batteryColor
+                border.width: 1.5
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+
+                // Charge fill bar
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.margins: 2
+                    width: Math.max(0, Math.min(parent.width - 4, (parent.width - 4) * (root.batteryService.capacity / 100.0)))
+                    radius: 2
+                    color: Theme.withAlpha(root.batteryColor, 0.28)
+                }
+
+                // Centered percentage + charging bolt inside the battery icon
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 1
+
+                    Text {
+                        visible: root.batteryService.isCharging
+                        text: "󱐋"
+                        font.family: Icons.iconFont
+                        font.pixelSize: 8
+                        color: root.batteryColor
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text: root.batteryService.capacity + "%"
+                        font.family: Fonts.monoFont
+                        font.pixelSize: (root.batteryService.isCharging && root.batteryService.capacity >= 100) ? 7 : 8
+                        font.bold: true
+                        color: Theme.bright_foreground
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
+            // Battery positive terminal nub
+            Rectangle {
+                id: batteryNub
+                anchors.left: batteryBody.right
+                anchors.leftMargin: 1
+                anchors.verticalCenter: parent.verticalCenter
+                width: 2
+                height: 6
+                radius: 1
+                color: root.batteryColor
+            }
+        }
+    }
 
     implicitWidth: batButton.implicitWidth
     implicitHeight: batButton.implicitHeight
@@ -21,16 +100,8 @@ Item {
 
     BarButton {
         id: batButton
-        icon: root.batteryService.icon
-        iconSize: root.iconSize
-        text: root.showPercentage ? (root.batteryService.capacity + "%") : ""
-        accentActive: root.batteryService.isCharging
-        customColor: {
-            if (root.batteryService.isCharging) return Theme.accent
-            if (root.batteryService.capacity <= 20) return Theme.red
-            if (root.batteryService.capacity <= 40) return Theme.yellow
-            return Theme.foreground
-        }
+        customContent: batteryIconWithPercentage
+        customPadding: 4
         active: batPopup.open
         onClicked: {
             root.toggle()

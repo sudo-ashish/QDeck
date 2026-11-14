@@ -39,7 +39,7 @@ QtObject {
     property alias wallpaperCardBorder: root.wallpaperSwitcherCardBorder
 
     // Bar widget display options
-    property bool batteryShowPercentage: false
+    property bool batteryShowPercentage: true
 
     // Individual bar widget icon sizes (px) - adaptively scaled with global text size
     property int barIconSize: Icons.barIconSize
