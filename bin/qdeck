@@ -52,6 +52,7 @@ Control Center & Widgets:
   qdeck clipboard [action]       Toggle or control text clipboard manager (wl-clipboard backed)
   qdeck bar [action|mode]        Toggle, hide, show, or switch layout (compact, clock)
   qdeck sysmon [action]          Toggle or control downward system monitoring shell
+  qdeck pkg [query]              Launch TUI package manager (search & install via yay)
   qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
   qdeck text-size [size]         Get or adjust system and shell font size
 
@@ -165,6 +166,11 @@ case "$CMD" in
   sysmon|system-monitor|monitoring)
     shift
     exec "$BIN_DIR/qdeck-sysmon" "$@"
+    ;;
+
+  pkg|package|package-manager|pkgmgr)
+    shift
+    exec "$BIN_DIR/qdeck-pkg" "$@"
     ;;
 
   volume)
