@@ -6,3 +6,7 @@ themes/*/hyprlock-color.conf
 themes/*/btop.theme
 themes/*/gtk-3.0.css
 themes/*/gtk-4.0.css
+
+# Package manager compiled binary
+/native/package-manager/target/
+/bin/qdeck-pkg-tui
