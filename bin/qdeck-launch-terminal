@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# QDeck: System-independent floating terminal launcher (qdeck-launch-terminal / qdeck terminal)
+# QDeck: System terminal launcher (qdeck-launch-terminal / qdeck terminal)
+set -euo pipefail
 
 TERM_BIN=""
-for t in "$TERMINAL" foot kitty alacritty ghostty wezterm gnome-terminal xfce4-terminal xterm; do
+for t in kitty foot "${TERMINAL:-}" alacritty ghostty wezterm gnome-terminal xfce4-terminal xterm; do
   if [[ -n "$t" ]] && command -v "$t" >/dev/null 2>&1; then
     TERM_BIN="$t"
     break
@@ -15,22 +16,38 @@ if [[ -z "$TERM_BIN" ]]; then
 fi
 
 case "$TERM_BIN" in
-  foot)
-    exec foot --app-id=floating-terminal "$@"
-    ;;
   kitty)
-    exec kitty --class=floating-terminal "$@"
+    exec kitty "$@"
+    ;;
+  foot)
+    exec foot "$@"
     ;;
   alacritty)
-    exec alacritty --class=floating-terminal -e "$@"
+    if [[ $# -gt 0 ]]; then
+      exec alacritty -e "$@"
+    else
+      exec alacritty
+    fi
     ;;
   ghostty)
-    exec ghostty --class=floating-terminal -e "$@"
+    if [[ $# -gt 0 ]]; then
+      exec ghostty -e "$@"
+    else
+      exec ghostty
+    fi
     ;;
   wezterm)
-    exec wezterm start --class=floating-terminal -- "$@"
+    if [[ $# -gt 0 ]]; then
+      exec wezterm start -- "$@"
+    else
+      exec wezterm start
+    fi
     ;;
   *)
-    exec "$TERM_BIN" -e "$@"
+    if [[ $# -gt 0 ]]; then
+      exec "$TERM_BIN" -e "$@"
+    else
+      exec "$TERM_BIN"
+    fi
     ;;
 esac
