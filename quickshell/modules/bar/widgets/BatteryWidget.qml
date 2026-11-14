@@ -50,9 +50,9 @@ Item {
                 font.family: Fonts.monoFont
                 font.pixelSize: root.batteryService.capacity >= 100 ? 8 : 9
                 font.bold: true
-                color: Theme.bright_foreground
-                style: Text.Outline
-                styleColor: Theme.withAlpha(Theme.darker_background, 0.95)
+                color: root.batteryService.isCharging ? "#ffffff" : "#121212"
+                style: root.batteryService.isCharging ? Text.Outline : Text.Normal
+                styleColor: "#121212"
             }
         }
     }
