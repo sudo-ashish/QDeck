@@ -1,14 +1,8 @@
 ---------------------
----- MY PROGRAMS ----
----------------------
-
-local terminal = "kitty"
-
----------------------
 ---- KEYBINDINGS ----
 ---------------------
 
-hl.bind("SUPER + RETURN", hl.dsp.exec_cmd(terminal))
+hl.bind("SUPER + RETURN", hl.dsp.exec_cmd("qdeck-launch-terminal"))
 hl.bind("SUPER + Q", hl.dsp.window.close())
 hl.bind(
 	"SUPER + M",
