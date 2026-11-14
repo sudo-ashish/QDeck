@@ -75,6 +75,13 @@ pub struct App {
     /// Channel for receiving install events
     install_tx:         mpsc::Sender<InstallEvent>,
     install_rx:         mpsc::Receiver<InstallEvent>,
+
+    /// Default package manager modal
+    pub show_default_mgr_modal: bool,
+    pub default_mgr_options:    Vec<(String, String)>,
+    pub default_mgr_selected:   usize,
+    pub current_default_mgr:    String,
+    pub status_notification:    Option<(String, Instant)>,
 }
 
 struct SearchResult {
@@ -104,6 +111,11 @@ impl App {
             search_rx,
             install_tx,
             install_rx,
+            show_default_mgr_modal: false,
+            default_mgr_options:    vec![],
+            default_mgr_selected:   0,
+            current_default_mgr:    crate::config::get_default_pkg_mgr(),
+            status_notification:    None,
         }
     }
 
@@ -184,6 +196,10 @@ impl App {
             return Ok(false);
         }
 
+        if self.show_default_mgr_modal {
+            return self.handle_key_default_mgr_modal(key).await;
+        }
+
         match self.focused {
             FocusedPanel::Search => self.handle_key_search(key).await,
             FocusedPanel::Results => self.handle_key_results(key).await,
@@ -260,6 +276,9 @@ impl App {
             KeyCode::Char('u') => {
                 self.start_install(true).await;
             }
+            KeyCode::Char('d') => {
+                self.open_default_mgr_modal();
+            }
             KeyCode::Esc => {
                 self.focused = FocusedPanel::Search;
             }
@@ -277,6 +296,9 @@ impl App {
             KeyCode::Char('u') => {
                 self.start_install(true).await;
             }
+            KeyCode::Char('d') => {
+                self.open_default_mgr_modal();
+            }
             KeyCode::Esc | KeyCode::Tab => {
                 self.focused = FocusedPanel::Results;
             }
@@ -291,6 +313,48 @@ impl App {
                 if self.selected_index + 1 < self.results.len() {
                     self.selected_index += 1;
                 }
+            }
+            _ => {}
+        }
+        Ok(false)
+    }
+
+    pub fn open_default_mgr_modal(&mut self) {
+        self.default_mgr_options = crate::config::detect_available_package_managers();
+        self.current_default_mgr = crate::config::get_default_pkg_mgr();
+        self.default_mgr_selected = self
+            .default_mgr_options
+            .iter()
+            .position(|(b, _)| b == &self.current_default_mgr)
+            .unwrap_or(0);
+        self.show_default_mgr_modal = true;
+    }
+
+    async fn handle_key_default_mgr_modal(&mut self, key: KeyEvent) -> anyhow::Result<bool> {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('d') => {
+                self.show_default_mgr_modal = false;
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                if self.default_mgr_selected > 0 {
+                    self.default_mgr_selected -= 1;
+                }
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                if self.default_mgr_selected + 1 < self.default_mgr_options.len() {
+                    self.default_mgr_selected += 1;
+                }
+            }
+            KeyCode::Enter => {
+                if let Some((bin, label)) = self.default_mgr_options.get(self.default_mgr_selected) {
+                    let _ = crate::config::set_default_pkg_mgr(bin);
+                    self.current_default_mgr = bin.clone();
+                    self.status_notification = Some((
+                        format!("Default package manager set to: {label}"),
+                        Instant::now(),
+                    ));
+                }
+                self.show_default_mgr_modal = false;
             }
             _ => {}
         }

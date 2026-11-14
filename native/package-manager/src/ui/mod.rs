@@ -43,6 +43,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
             Span::raw(":install "),
             Span::styled("u", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
             Span::raw(":remove "),
+            Span::styled("d", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::raw(":default mgr "),
             Span::styled("Tab", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
             Span::raw(":switch panel "),
         ]));
@@ -71,9 +73,28 @@ pub fn draw(frame: &mut Frame, app: &App) {
     } else {
         results::draw(frame, app, geo.results);
     }
+
+    if app.show_default_mgr_modal {
+        draw_default_mgr_modal(frame, app, area);
+    }
 }
 
 fn header_title(app: &App) -> Line<'static> {
+    if let Some((msg, time)) = &app.status_notification {
+        if time.elapsed().as_secs() < 3 {
+            return Line::from(vec![
+                Span::styled(
+                    " 󰏖 ",
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!(" ✓ {msg} "),
+                    Style::default().fg(Color::Black).bg(Color::Green).add_modifier(Modifier::BOLD),
+                ),
+            ]);
+        }
+    }
+
     let loading_indicator = if app.searching {
         Span::styled(" ⟳ ", Style::default().fg(Color::Yellow))
     } else {
@@ -89,6 +110,67 @@ fn header_title(app: &App) -> Line<'static> {
         ),
         loading_indicator,
     ])
+}
+
+fn draw_default_mgr_modal(frame: &mut Frame, app: &App, area: Rect) {
+    let popup_width = 62.min(area.width.saturating_sub(4));
+    let popup_height = (app.default_mgr_options.len() as u16 + 5).min(area.height.saturating_sub(4));
+    let x = (area.width.saturating_sub(popup_width)) / 2;
+    let y = (area.height.saturating_sub(popup_height)) / 2;
+    let popup_rect = Rect::new(x, y, popup_width, popup_height);
+
+    frame.render_widget(Clear, popup_rect);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(Color::Cyan))
+        .title(" Set Default Package Manager ")
+        .title_bottom(Line::from(vec![
+            Span::styled(" Enter", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::raw(":save "),
+            Span::styled("Esc", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::raw(":cancel "),
+        ]));
+
+    let inner = block.inner(popup_rect);
+    frame.render_widget(block, popup_rect);
+
+    let mut lines = Vec::new();
+    lines.push(Line::from(Span::styled(
+        "Choose package manager to set as default:",
+        Style::default().fg(Color::Gray),
+    )));
+    lines.push(Line::raw(""));
+
+    for (i, (bin, label)) in app.default_mgr_options.iter().enumerate() {
+        let is_selected = i == app.default_mgr_selected;
+        let is_current = bin == &app.current_default_mgr;
+
+        let cursor_marker = if is_selected { "▶ " } else { "  " };
+        let default_badge = if is_current { " [DEFAULT]" } else { "" };
+
+        let style = if is_selected {
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
+        } else if is_current {
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::White)
+        };
+
+        lines.push(Line::from(vec![
+            Span::styled(cursor_marker, style),
+            Span::styled(format!("{label}{default_badge}"), style),
+        ]));
+    }
+
+    let para = Paragraph::new(lines);
+    frame.render_widget(para, inner);
 }
 
 fn draw_install_overlay(
