@@ -9,6 +9,7 @@ NetworkService 1.0 NetworkService.qml
 OsdService 1.0 OsdService.qml
 PowerService 1.0 PowerService.qml
 ShelfService 1.0 ShelfService.qml
+SysmonService 1.0 SysmonService.qml
 ThemeSwitcherService 1.0 ThemeSwitcherService.qml
 WallpaperSwitcherService 1.0 WallpaperSwitcherService.qml
 WorkspacesService 1.0 WorkspacesService.qml

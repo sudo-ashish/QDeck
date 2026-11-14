@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""
+QDeck: High-performance real-time system metrics collector.
+Outputs structured JSON for CPU, RAM, Storage, and Network rates.
+"""
+import os
+import sys
+import time
+import json
+import glob
+
+def format_bytes(n):
+    if n >= 1024**4:
+        return f"{n / (1024**4):.1f} TB"
+    elif n >= 1024**3:
+        return f"{n / (1024**3):.1f} GB"
+    elif n >= 1024**2:
+        return f"{n / (1024**2):.0f} MB"
+    elif n >= 1024:
+        return f"{n / 1024:.0f} KB"
+    return f"{n} B"
+
+def format_rate(bps):
+    if bps >= 1024**3:
+        return f"{bps / (1024**3):.1f} GB/s"
+    elif bps >= 1024**2:
+        return f"{bps / (1024**2):.1f} MB/s"
+    elif bps >= 1024:
+        return f"{bps / 1024:.0f} KB/s"
+    return f"{bps:.0f} B/s"
+
+def sample_raw():
+    now = time.time()
+    total_cpu = 0.0
+    idle_cpu = 0.0
+    try:
+        with open("/proc/stat", "r") as f:
+            first = f.readline().split()
+            fields = [float(x) for x in first[1:8]]
+            total_cpu = sum(fields)
+            idle_cpu = fields[3] + fields[4]  # idle + iowait
+    except Exception:
+        pass
+
+    rx_bytes = 0
+    tx_bytes = 0
+    try:
+        with open("/proc/net/dev", "r") as f:
+            for line in f.readlines()[2:]:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    dev = parts[0].strip()
+                    if dev == "lo":
+                        continue
+                    data = parts[1].split()
+                    rx_bytes += int(data[0])
+                    tx_bytes += int(data[8])
+    except Exception:
+        pass
+
+    return {
+        "time": now,
+        "cpu_total": total_cpu,
+        "cpu_idle": idle_cpu,
+        "rx_bytes": rx_bytes,
+        "tx_bytes": tx_bytes
+    }
+
+def get_cpu_temp():
+    # 1. Check hwmon for coretemp / k10temp / cpu
+    for name_file in glob.glob("/sys/class/hwmon/hwmon*/name"):
+        try:
+            name = open(name_file).read().strip().lower()
+            if any(k in name for k in ["coretemp", "k10temp", "zenpower", "cpu"]):
+                d = os.path.dirname(name_file)
+                for t_input in ["temp1_input", "temp2_input"]:
+                    tp = os.path.join(d, t_input)
+                    if os.path.exists(tp):
+                        val = int(open(tp).read().strip())
+                        return round(val / 1000.0)
+        except Exception:
+            pass
+
+    # 2. Check thermal_zone type
+    for type_file in glob.glob("/sys/class/thermal/thermal_zone*/type"):
+        try:
+            ztype = open(type_file).read().strip().lower()
+            if any(k in ztype for k in ["pkg_temp", "cpu", "x86_pkg_temp"]):
+                tp = os.path.join(os.path.dirname(type_file), "temp")
+                if os.path.exists(tp):
+                    val = int(open(tp).read().strip())
+                    return round(val / 1000.0)
+        except Exception:
+            pass
+
+    # 3. Fallback to any thermal zone
+    for tp in glob.glob("/sys/class/thermal/thermal_zone*/temp"):
+        try:
+            val = int(open(tp).read().strip())
+            return round(val / 1000.0)
+        except Exception:
+            pass
+
+    return 0
+
+def main():
+    state_dir = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    state_file = os.path.join(state_dir, "qdeck-sysmon.state")
+
+    prev = None
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, "r") as f:
+                prev = json.load(f)
+        except Exception:
+            prev = None
+
+    raw_now = sample_raw()
+
+    # If no previous state or state is stale (> 30s) or invalid, take a short delta
+    if not prev or not isinstance(prev, dict) or "time" not in prev or not (0.05 <= (raw_now["time"] - prev["time"]) <= 30.0):
+        time.sleep(0.08)
+        prev = raw_now
+        raw_now = sample_raw()
+
+    # Save current state for next poll
+    try:
+        with open(state_file, "w") as f:
+            json.dump(raw_now, f)
+    except Exception:
+        pass
+
+    dt = max(0.01, raw_now["time"] - prev["time"])
+
+    # CPU Usage
+    cpu_d = raw_now["cpu_total"] - prev.get("cpu_total", 0)
+    idle_d = raw_now["cpu_idle"] - prev.get("cpu_idle", 0)
+    if cpu_d > 0 and idle_d <= cpu_d:
+        cpu_usage = round(max(0.0, min(100.0, (1.0 - (idle_d / cpu_d)) * 100.0)), 1)
+    else:
+        cpu_usage = 0.0
+
+    cores = os.cpu_count() or 1
+    cpu_temp = get_cpu_temp()
+
+    # RAM
+    mem = {}
+    try:
+        with open("/proc/meminfo", "r") as f:
+            for line in f:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    mem[parts[0].strip()] = int(parts[1].strip().split()[0]) * 1024
+    except Exception:
+        pass
+
+    mem_total = mem.get("MemTotal", 0)
+    mem_avail = mem.get("MemAvailable", mem.get("MemFree", 0))
+    mem_used = max(0, mem_total - mem_avail)
+    mem_pct = round((mem_used / mem_total * 100.0), 1) if mem_total > 0 else 0.0
+
+    # Storage (Root filesystem /)
+    try:
+        st = os.statvfs("/")
+        disk_total = st.f_blocks * st.f_frsize
+        disk_avail = st.f_bavail * st.f_frsize
+        disk_used = max(0, disk_total - disk_avail)
+        disk_pct = round((disk_used / disk_total * 100.0), 1) if disk_total > 0 else 0.0
+    except Exception:
+        disk_total = 0
+        disk_used = 0
+        disk_pct = 0.0
+
+    # Network rates
+    rx_delta = max(0, raw_now["rx_bytes"] - prev.get("rx_bytes", 0))
+    tx_delta = max(0, raw_now["tx_bytes"] - prev.get("tx_bytes", 0))
+    rx_rate = rx_delta / dt
+    tx_rate = tx_delta / dt
+
+    result = {
+        "cpu": {
+            "usage": cpu_usage,
+            "temp": cpu_temp,
+            "cores": cores
+        },
+        "ram": {
+            "used": mem_used,
+            "total": mem_total,
+            "percent": mem_pct,
+            "usedStr": format_bytes(mem_used),
+            "totalStr": format_bytes(mem_total)
+        },
+        "storage": {
+            "used": disk_used,
+            "total": disk_total,
+            "percent": disk_pct,
+            "usedStr": format_bytes(disk_used),
+            "totalStr": format_bytes(disk_total)
+        },
+        "network": {
+            "rxRate": round(rx_rate),
+            "txRate": round(tx_rate),
+            "rxStr": format_rate(rx_rate),
+            "txStr": format_rate(tx_rate)
+        }
+    }
+
+    print(json.dumps(result))
+
+if __name__ == "__main__":
+    main()
