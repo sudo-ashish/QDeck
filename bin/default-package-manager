@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# QDeck: Default Package Manager Launcher (default-package-manager)
+# Launches the QDeck package manager (or focuses an existing window).
+# ==============================================================================
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN_DIR="$SCRIPT_DIR"
+
+# Ensure local bin is in PATH
+if [[ -d "$HOME/.local/bin" ]] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Target class for window focus
+CLASS="qdeck-pkg"
+
+# If already running in Hyprland, focus the existing window
+if command -v hyprctl &>/dev/null && command -v jq &>/dev/null; then
+  ADDR=$(hyprctl clients -j 2>/dev/null | jq -r --arg class "$CLASS" '.[] | select(.class == $class) | .address' 2>/dev/null | head -n1 || true)
+  if [[ -n "$ADDR" && "$ADDR" != "null" ]]; then
+    hyprctl dispatch focuswindow "address:$ADDR" >/dev/null 2>&1 || true
+    exit 0
+  fi
+fi
+
+# Otherwise launch the package manager
+if [[ -x "$BIN_DIR/qdeck-pkg" ]]; then
+  exec "$BIN_DIR/qdeck-pkg" "$@"
+elif command -v qdeck-pkg &>/dev/null; then
+  exec qdeck-pkg "$@"
+else
+  echo "default-package-manager: error: qdeck-pkg not found." >&2
+  if command -v notify-send &>/dev/null; then
+    notify-send "QDeck" "Package manager (qdeck-pkg) not found." --urgency=critical 2>/dev/null || true
+  fi
+  exit 1
+fi
