@@ -28,11 +28,11 @@ case "$tui" in
     ;;
 esac
 
-if [[ -n "$address" ]]; then
+if [[ -n "$address" && "$address" != "null" ]]; then
   hyprctl dispatch "hl.dsp.focus({ window = \"address:$address\" })"
 else
   kitty \
     --class "$class" \
     --title "$tui" \
-    -e "$tui"
+    -e "$@"
 fi

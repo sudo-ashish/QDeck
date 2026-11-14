@@ -43,8 +43,8 @@ fi
 
 # ── Launch in terminal ─────────────────────────────────────────────────────
 
-# If already inside an interactive terminal, run the binary directly
-if [[ -t 0 && -t 1 ]]; then
+# If already inside an interactive terminal (or invoked by tui-launch), run the binary directly
+if [[ -n "${KITTY_WINDOW_ID:-}" || -t 0 || -t 1 ]]; then
   exec "$PKG_TUI" "$@"
 fi
 
