@@ -43,6 +43,11 @@ fi
 
 # ── Launch in terminal ─────────────────────────────────────────────────────
 
+# If already inside an interactive terminal, run the binary directly
+if [[ -t 0 && -t 1 ]]; then
+  exec "$PKG_TUI" "$@"
+fi
+
 TITLE="QDeck Package Manager"
 CLASS="qdeck-pkg"
 

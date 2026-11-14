@@ -145,11 +145,17 @@ select_interactive() {
 focus_window_by_class() {
   local target_class="$1"
   if command -v hyprctl &>/dev/null && command -v jq &>/dev/null; then
+    local my_pid="$$"
     local addr
-    addr=$(hyprctl clients -j 2>/dev/null | jq -r --arg class "$target_class" '.[] | select(.class == $class) | .address' 2>/dev/null | head -n1 || true)
+    addr=$(hyprctl clients -j 2>/dev/null | jq -r --arg class "$target_class" --argjson mypid "$my_pid" \
+      '.[] | select(.class == $class and .pid != $mypid) | .address' 2>/dev/null | head -n1 || true)
     if [[ -n "$addr" && "$addr" != "null" ]]; then
-      hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1 || true
-      return 0
+      if hyprctl dispatch "hl.dsp.focus({ window = \"address:$addr\" })" >/dev/null 2>&1; then
+        return 0
+      fi
+      if hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1; then
+        return 0
+      fi
     fi
   fi
   return 1
@@ -159,6 +165,32 @@ launch_target() {
   local target="$1"
   shift || true
 
+  # If already inside an interactive terminal (e.g. invoked via tui-launch or interactive shell),
+  # run the target directly instead of spawning another terminal emulator.
+  if [[ -t 0 && -t 1 ]]; then
+    case "$target" in
+      qdeck-pkg)
+        if [[ -x "$BIN_DIR/qdeck-pkg-tui" ]]; then
+          exec "$BIN_DIR/qdeck-pkg-tui" "$@"
+        elif [[ -x "$BIN_DIR/qdeck-pkg" ]]; then
+          exec "$BIN_DIR/qdeck-pkg" "$@"
+        else
+          exec qdeck-pkg "$@"
+        fi
+        ;;
+      yay|paru|pacman)
+        exec "$target" "$@"
+        ;;
+      pamac-manager|bauh|octopi|discover|gnome-software)
+        exec "$target" "$@"
+        ;;
+      *)
+        exec "$target" "$@"
+        ;;
+    esac
+  fi
+
+  # Otherwise (spawned directly without a terminal, e.g. from Hyprland keybind):
   case "$target" in
     qdeck-pkg)
       if focus_window_by_class "qdeck-pkg"; then
