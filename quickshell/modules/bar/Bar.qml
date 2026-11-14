@@ -19,6 +19,15 @@ PanelWindow {
     required property NetworkService networkService
     required property BluetoothService bluetoothService
     required property PowerService powerService
+    required property SysmonService sysmonService
+
+    property bool sysmonOpen: false
+    onSysmonOpenChanged: {
+        root.sysmonService.active = root.sysmonOpen
+    }
+    function toggleSysmon() {
+        root.sysmonOpen = !root.sysmonOpen
+    }
 
     // Bar layout mode configuration (compact, clock)
     property string barMode: "compact"
@@ -90,8 +99,8 @@ PanelWindow {
         || (monitorWidget && monitorWidget.popupOpen)
         || (networkWidget && networkWidget.popupOpen)
 
-    // In clock mode, expand when hovered or when any popup is open
-    readonly property bool isExpanded: !isClockMode || isHovered || anyPopupOpen
+    // In clock mode, expand when hovered or when any popup is open or sysmon is open
+    readonly property bool isExpanded: !isClockMode || isHovered || anyPopupOpen || sysmonOpen
 
     readonly property real totalContentWidth: leftSection.width + clockWidget.width + rightSection.width + (Appearance.barSectionSpacing * 4)
 
@@ -105,17 +114,19 @@ PanelWindow {
     }
 
     readonly property real collapsedWidth: Math.max(56, Math.round(collapsedTimeMeasure.implicitWidth + (Appearance.buttonPadding * 2) + 12))
+    readonly property real sysmonWidth: 540
     readonly property real expandedWidth: Math.round(root.totalContentWidth + (Appearance.barMarginHorizontal * 2))
 
-    implicitHeight: Appearance.barHeight
-    implicitWidth: root.expandedWidth
+    implicitHeight: Appearance.barHeight + 110
+    implicitWidth: Math.max(root.expandedWidth, root.sysmonWidth)
 
     color: "transparent"
 
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "quickshell-bar"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    exclusionMode: ExclusionMode.Auto
+    exclusionMode: ExclusionMode.Normal
+    exclusiveZone: Appearance.barHeight
 
     // Wayland input region tracking the animated barBackground card
     Region {
@@ -130,8 +141,8 @@ PanelWindow {
         id: barBackground
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        height: parent.height
-        width: root.isExpanded ? parent.width : root.collapsedWidth
+        height: root.sysmonOpen ? (Appearance.barHeight + sysmonDrawer.implicitHeight + 10) : Appearance.barHeight
+        width: root.isExpanded ? (root.sysmonOpen ? Math.max(root.expandedWidth, root.sysmonWidth) : root.expandedWidth) : root.collapsedWidth
         topLeftRadius: 0
         topRightRadius: 0
         bottomLeftRadius: Appearance.barRadius > 0 ? Appearance.barRadius : 16
@@ -144,6 +155,13 @@ PanelWindow {
         Behavior on width {
             NumberAnimation {
                 duration: Motion.medium1
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Behavior on height {
+            NumberAnimation {
+                duration: Motion.medium2
                 easing.type: Easing.OutCubic
             }
         }
@@ -163,7 +181,10 @@ PanelWindow {
         // Collapsed Clock View (shown only when collapsed in clock mode)
         Item {
             id: collapsedClock
-            anchors.fill: parent
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width
+            height: Appearance.barHeight
             visible: opacity > 0.01
             opacity: root.isExpanded ? 0.0 : 1.0
 
@@ -191,9 +212,10 @@ PanelWindow {
         // Expanded Bar View (compact bar layout)
         Item {
             id: barContainer
-            anchors.centerIn: parent
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
             width: root.expandedWidth
-            height: parent.height
+            height: Appearance.barHeight
             visible: opacity > 0.01
             opacity: root.isExpanded ? 1.0 : 0.0
 
@@ -257,11 +279,33 @@ PanelWindow {
                     service: root.brightnessService
                 }
 
+                SysmonWidget {
+                    id: sysmonWidget
+                    service: root.sysmonService
+                    open: root.sysmonOpen
+                    onClicked: root.toggleSysmon()
+                }
+
                 BatteryWidget {
                     id: batteryWidget
                     batteryService: root.batteryService
                     powerService: root.powerService
                 }
+            }
+        }
+
+        // Downward Expanding System Resource Monitoring Drawer
+        SysmonDrawer {
+            id: sysmonDrawer
+            service: root.sysmonService
+            anchors.top: barContainer.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            visible: opacity > 0.01
+            opacity: root.sysmonOpen ? 1.0 : 0.0
+
+            Behavior on opacity {
+                NumberAnimation { duration: Motion.short3 }
             }
         }
     }
@@ -277,6 +321,7 @@ PanelWindow {
             else if (name === "network") networkWidget.toggle()
             else if (name === "audio") audioWidget.toggle()
             else if (name === "bluetooth") bluetoothWidget.toggle()
+            else if (name === "sysmon" || name === "monitoring" || name === "system") root.toggleSysmon()
             return "ok"
         }
 

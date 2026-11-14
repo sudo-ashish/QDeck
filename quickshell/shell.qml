@@ -49,6 +49,7 @@ ShellRoot {
     property WallpaperSwitcherService wallpaperSwitcherService: WallpaperSwitcherService { }
     property ShelfService shelfService: ShelfService { id: shelfService }
     property ClipboardService clipboardService: ClipboardService { id: clipboardService }
+    property SysmonService sysmonService: SysmonService { id: sysmonService }
 
     IpcHandler {
         target: "bar"
@@ -139,6 +140,7 @@ ShellRoot {
             networkService: root.networkService
             bluetoothService: root.bluetoothService
             powerService: root.powerService
+            sysmonService: root.sysmonService
         }
     }
 }

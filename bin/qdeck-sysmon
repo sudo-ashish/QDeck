@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# QDeck: System Monitoring Shell CLI Control & Telemetry (qdeck-sysmon)
+# ==============================================================================
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
+fi
+
+call_bar_ipc() {
+  call_ipc "$@" >/dev/null 2>&1 || qs ipc call "$@" >/dev/null 2>&1 || true
+}
+
+ACTION="${1:-toggle}"
+
+case "$ACTION" in
+  toggle|t)
+    call_bar_ipc barpopups toggle sysmon
+    echo "Toggled QDeck system monitoring drawer."
+    ;;
+
+  open|show|on)
+    call_bar_ipc barpopups toggle sysmon
+    echo "Opened QDeck system monitoring drawer."
+    ;;
+
+  close|hide|off)
+    call_bar_ipc barpopups toggle sysmon
+    echo "Closed QDeck system monitoring drawer."
+    ;;
+
+  stats|json|query)
+    if [[ -x "$SCRIPT_DIR/qdeck-sysmon-stats" ]]; then
+      exec "$SCRIPT_DIR/qdeck-sysmon-stats"
+    elif command -v qdeck-sysmon-stats >/dev/null 2>&1; then
+      exec qdeck-sysmon-stats
+    else
+      echo "Error: qdeck-sysmon-stats collector script not found." >&2
+      exit 1
+    fi
+    ;;
+
+  -h|--help|help)
+    cat <<'EOF'
+Usage:
+  qdeck sysmon [action]
+
+Actions:
+  toggle, t       Toggle system resource monitoring drawer in top bar (default)
+  open, on        Open monitoring drawer
+  close, off      Close monitoring drawer
+  stats, json     Print raw real-time resource telemetry JSON to stdout
+  help, -h        Show this help message
+EOF
+    exit 0
+    ;;
+
+  *)
+    call_bar_ipc barpopups toggle sysmon
+    echo "Toggled QDeck system monitoring drawer."
+    ;;
+esac

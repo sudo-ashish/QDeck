@@ -51,6 +51,7 @@ Control Center & Widgets:
   qdeck qshelf [action]          Toggle or control drag-and-drop staging QShelf (or: qdeck shelf)
   qdeck clipboard [action]       Toggle or control text clipboard manager (wl-clipboard backed)
   qdeck bar [action|mode]        Toggle, hide, show, or switch layout (compact, clock)
+  qdeck sysmon [action]          Toggle or control downward system monitoring shell
   qdeck blur [toggle|on|off]     Toggle dual-alpha compositor blur
   qdeck text-size [size]         Get or adjust system and shell font size
 
@@ -159,6 +160,11 @@ case "$CMD" in
   bar|bar-style)
     shift
     exec "$BIN_DIR/qdeck-bar" "$@"
+    ;;
+
+  sysmon|system-monitor|monitoring)
+    shift
+    exec "$BIN_DIR/qdeck-sysmon" "$@"
     ;;
 
   volume)
