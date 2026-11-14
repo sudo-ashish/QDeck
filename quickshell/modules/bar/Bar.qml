@@ -95,18 +95,20 @@ PanelWindow {
 
     readonly property real totalContentWidth: leftSection.width + clockWidget.width + rightSection.width + (Appearance.barSectionSpacing * 4)
 
-    readonly property real collapsedWidth: Math.round(clockWidget.width + (Appearance.barMarginHorizontal * 2))
+    Text {
+        id: collapsedTimeMeasure
+        visible: false
+        text: clockWidget ? clockWidget.formatTime(clockWidget.now) : "00:00"
+        font.family: Fonts.monoFont
+        font.pixelSize: Fonts.sizeRegular
+        font.weight: Fonts.weightMedium
+    }
+
+    readonly property real collapsedWidth: Math.max(56, Math.round(collapsedTimeMeasure.implicitWidth + (Appearance.buttonPadding * 2) + 12))
     readonly property real expandedWidth: Math.round(root.totalContentWidth + (Appearance.barMarginHorizontal * 2))
 
     implicitHeight: Appearance.barHeight
-    implicitWidth: root.isExpanded ? root.expandedWidth : root.collapsedWidth
-
-    Behavior on implicitWidth {
-        NumberAnimation {
-            duration: Motion.short4
-            easing.type: Easing.OutCubic
-        }
-    }
+    implicitWidth: root.expandedWidth
 
     color: "transparent"
 
@@ -115,10 +117,21 @@ PanelWindow {
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Auto
 
+    // Wayland input region tracking the animated barBackground card
+    Region {
+        id: barInputRegion
+        item: barBackground
+    }
+
+    mask: barInputRegion
+
     // Unified background surface with rounded bottom corners (compact notch design)
     Rectangle {
         id: barBackground
-        anchors.fill: parent
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        height: parent.height
+        width: root.isExpanded ? parent.width : root.collapsedWidth
         topLeftRadius: 0
         topRightRadius: 0
         bottomLeftRadius: Appearance.barRadius > 0 ? Appearance.barRadius : 16
@@ -126,6 +139,14 @@ PanelWindow {
         color: Theme.withAlpha(Theme.background, Theme.baseOpacity)
         border.color: Appearance.barBorder ? Theme.selection : "transparent"
         border.width: Appearance.barBorder ? Appearance.borderWidthThin : 0
+        clip: true
+
+        Behavior on width {
+            NumberAnimation {
+                duration: Motion.medium1
+                easing.type: Easing.OutCubic
+            }
+        }
 
         HoverHandler {
             id: barHoverHandler
@@ -138,96 +159,109 @@ PanelWindow {
                 }
             }
         }
-    }
 
-    // Widget content container
-    Item {
-        id: barContainer
-        anchors.fill: parent
-        clip: true
-
-        // Left section: workspace switcher and media pill
-        Row {
-            id: leftSection
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Appearance.barSectionSpacing
-            width: implicitWidth
-            height: implicitHeight
-            x: Appearance.barMarginHorizontal
+        // Collapsed Clock View (shown only when collapsed in clock mode)
+        Item {
+            id: collapsedClock
+            anchors.fill: parent
             visible: opacity > 0.01
-            opacity: root.isExpanded ? 1.0 : 0.0
+            opacity: root.isExpanded ? 0.0 : 1.0
 
             Behavior on opacity {
                 NumberAnimation { duration: Motion.short3 }
             }
 
-            WorkspacesWidget {
-                service: root.workspacesService
+            Text {
+                id: collapsedTimeText
+                anchors.centerIn: parent
+                text: clockWidget ? clockWidget.formatTime(clockWidget.now) : ""
+                font.family: Fonts.monoFont
+                font.pixelSize: Fonts.sizeRegular
+                font.weight: Fonts.weightMedium
+                color: Theme.foreground
             }
 
-            NowBarPill {
-                id: nowBarPill
-                audioService: root.audioService
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: clockWidget.toggle()
             }
         }
 
-        // Center section: date and clock
-        ClockWidget {
-            id: clockWidget
-            anchors.verticalCenter: parent.verticalCenter
-            minimal: root.isClockMode && !root.isExpanded
-            x: root.isExpanded
-                ? (leftSection.x + leftSection.width + (Appearance.barSectionSpacing * 2))
-                : Math.round((barContainer.width - width) / 2)
-            powerService: root.powerService
+        // Expanded Bar View (compact bar layout)
+        Item {
+            id: barContainer
+            anchors.centerIn: parent
+            width: root.expandedWidth
+            height: parent.height
+            visible: opacity > 0.01
+            opacity: root.isExpanded ? 1.0 : 0.0
 
-            Behavior on x {
-                NumberAnimation {
-                    duration: Motion.short4
-                    easing.type: Easing.OutCubic
+            Behavior on opacity {
+                NumberAnimation { duration: Motion.short4 }
+            }
+
+            // Left section: workspace switcher and media pill
+            Row {
+                id: leftSection
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Appearance.barSectionSpacing
+                width: implicitWidth
+                height: implicitHeight
+                x: Appearance.barMarginHorizontal
+
+                WorkspacesWidget {
+                    service: root.workspacesService
+                }
+
+                NowBarPill {
+                    id: nowBarPill
+                    audioService: root.audioService
                 }
             }
-        }
 
-        // Right section: hardware and status controls
-        Row {
-            id: rightSection
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Appearance.barSpacing
-            width: implicitWidth
-            height: implicitHeight
-            x: clockWidget.x + clockWidget.width + (Appearance.barSectionSpacing * 2)
-            visible: opacity > 0.01
-            opacity: root.isExpanded ? 1.0 : 0.0
-
-            Behavior on opacity {
-                NumberAnimation { duration: Motion.short3 }
-            }
-
-            BluetoothWidget {
-                id: bluetoothWidget
-                service: root.bluetoothService
-            }
-
-            NetworkWidget {
-                id: networkWidget
-                service: root.networkService
-            }
-
-            AudioWidget {
-                id: audioWidget
-                service: root.audioService
-            }
-
-            MonitorWidget {
-                id: monitorWidget
-                service: root.brightnessService
-            }
-
-            BatteryWidget {
-                id: batteryWidget
-                batteryService: root.batteryService
+            // Center section: date and clock
+            ClockWidget {
+                id: clockWidget
+                anchors.verticalCenter: parent.verticalCenter
+                x: leftSection.x + leftSection.width + (Appearance.barSectionSpacing * 2)
                 powerService: root.powerService
+            }
+
+            // Right section: hardware and status controls
+            Row {
+                id: rightSection
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Appearance.barSpacing
+                width: implicitWidth
+                height: implicitHeight
+                x: clockWidget.x + clockWidget.width + (Appearance.barSectionSpacing * 2)
+
+                BluetoothWidget {
+                    id: bluetoothWidget
+                    service: root.bluetoothService
+                }
+
+                NetworkWidget {
+                    id: networkWidget
+                    service: root.networkService
+                }
+
+                AudioWidget {
+                    id: audioWidget
+                    service: root.audioService
+                }
+
+                MonitorWidget {
+                    id: monitorWidget
+                    service: root.brightnessService
+                }
+
+                BatteryWidget {
+                    id: batteryWidget
+                    batteryService: root.batteryService
+                    powerService: root.powerService
+                }
             }
         }
     }
