@@ -26,69 +26,33 @@ Item {
         id: batteryIconWithPercentage
 
         Item {
-            implicitWidth: batteryBody.width + 1 + batteryNub.width
-            implicitHeight: batteryBody.height
+            implicitWidth: batIconText.implicitWidth
+            implicitHeight: batIconText.implicitHeight
             width: implicitWidth
             height: implicitHeight
 
-            // Battery frame
-            Rectangle {
-                id: batteryBody
-                width: root.batteryService.isCharging ? (root.batteryService.capacity >= 100 ? 36 : 34) : (root.batteryService.capacity >= 100 ? 33 : 31)
-                height: 15
-                radius: 4
-                color: "transparent"
-                border.color: root.batteryColor
-                border.width: 1.5
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-
-                // Charge fill bar
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.margins: 2
-                    width: Math.max(0, Math.min(parent.width - 4, (parent.width - 4) * (root.batteryService.capacity / 100.0)))
-                    radius: 2
-                    color: Theme.withAlpha(root.batteryColor, 0.28)
-                }
-
-                // Centered percentage + charging bolt inside the battery icon
-                Row {
-                    anchors.centerIn: parent
-                    spacing: 1
-
-                    Text {
-                        visible: root.batteryService.isCharging
-                        text: "󱐋"
-                        font.family: Icons.iconFont
-                        font.pixelSize: 8
-                        color: root.batteryColor
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Text {
-                        text: root.batteryService.capacity + "%"
-                        font.family: Fonts.monoFont
-                        font.pixelSize: (root.batteryService.isCharging && root.batteryService.capacity >= 100) ? 7 : 8
-                        font.bold: true
-                        color: Theme.bright_foreground
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
+            // Existing battery font icon glyph
+            Text {
+                id: batIconText
+                anchors.centerIn: parent
+                text: root.batteryService.icon
+                font.family: Icons.effectiveFont(text)
+                font.pixelSize: root.iconSize
+                color: root.batteryColor
             }
 
-            // Battery positive terminal nub
-            Rectangle {
-                id: batteryNub
-                anchors.left: batteryBody.right
-                anchors.leftMargin: 1
-                anchors.verticalCenter: parent.verticalCenter
-                width: 2
-                height: 6
-                radius: 1
-                color: root.batteryColor
+            // Percentage text overlaid on top of existing icon
+            Text {
+                visible: root.showPercentage
+                anchors.centerIn: batIconText
+                anchors.horizontalCenterOffset: root.batteryService.isCharging ? -2 : -1
+                text: root.batteryService.capacity
+                font.family: Fonts.monoFont
+                font.pixelSize: root.batteryService.capacity >= 100 ? 7 : 8
+                font.bold: true
+                color: Theme.bright_foreground
+                style: Text.Outline
+                styleColor: Theme.withAlpha(Theme.darker_background, 0.95)
             }
         }
     }
@@ -101,7 +65,7 @@ Item {
     BarButton {
         id: batButton
         customContent: batteryIconWithPercentage
-        customPadding: 4
+        customPadding: Appearance.buttonPadding
         active: batPopup.open
         onClicked: {
             root.toggle()
