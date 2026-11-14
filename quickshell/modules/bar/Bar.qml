@@ -114,10 +114,10 @@ PanelWindow {
     }
 
     readonly property real collapsedWidth: Math.max(56, Math.round(collapsedTimeMeasure.implicitWidth + (Appearance.buttonPadding * 2) + 12))
-    readonly property real sysmonWidth: 540
+    readonly property real sysmonWidth: 640
     readonly property real expandedWidth: Math.round(root.totalContentWidth + (Appearance.barMarginHorizontal * 2))
 
-    implicitHeight: Appearance.barHeight + 110
+    implicitHeight: Appearance.barHeight + 125
     implicitWidth: Math.max(root.expandedWidth, root.sysmonWidth)
 
     color: "transparent"
@@ -141,7 +141,7 @@ PanelWindow {
         id: barBackground
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        height: root.sysmonOpen ? (Appearance.barHeight + sysmonDrawer.implicitHeight + 10) : Appearance.barHeight
+        height: root.sysmonOpen ? (Appearance.barHeight + sysmonDrawer.implicitHeight + 12) : Appearance.barHeight
         width: root.isExpanded ? (root.sysmonOpen ? Math.max(root.expandedWidth, root.sysmonWidth) : root.expandedWidth) : root.collapsedWidth
         topLeftRadius: 0
         topRightRadius: 0
