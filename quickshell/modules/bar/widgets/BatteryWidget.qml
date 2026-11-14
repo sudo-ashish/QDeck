@@ -11,7 +11,7 @@ Item {
     required property PowerService powerService
     readonly property bool popupOpen: batPopup.open
 
-    property bool showPercentage: true
+    property bool showPercentage: Appearance.batteryShowPercentage
     property int iconSize: Appearance.batteryIconSize
 
     readonly property color batteryColor: {
@@ -19,7 +19,7 @@ Item {
         if (root.batteryService.capacity <= 20) return Theme.red
         if (root.batteryService.capacity <= 40) return Theme.yellow
         if (batPopup.open) return Theme.accent
-        return Theme.foreground
+        return Theme.bright_foreground
     }
 
     Component {
@@ -41,14 +41,14 @@ Item {
                 color: root.batteryColor
             }
 
-            // Percentage text overlaid on top of existing icon
+            // Percentage text overlaid on top of existing icon (toggled via Appearance.batteryShowPercentage)
             Text {
                 visible: root.showPercentage
                 anchors.centerIn: batIconText
                 anchors.horizontalCenterOffset: root.batteryService.isCharging ? -2 : -1
                 text: root.batteryService.capacity
                 font.family: Fonts.monoFont
-                font.pixelSize: root.batteryService.capacity >= 100 ? 7 : 8
+                font.pixelSize: root.batteryService.capacity >= 100 ? 8 : 9
                 font.bold: true
                 color: Theme.bright_foreground
                 style: Text.Outline
