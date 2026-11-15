@@ -19,6 +19,35 @@ Item {
     readonly property string netDown: root.service ? root.service.netRxStr : "0 B/s"
     readonly property string netUp: root.service ? root.service.netTxStr : "0 B/s"
 
+    // Solid availability metrics (e.g., "7.9 GB", "35.3 GB")
+    readonly property string ramAvail: {
+        if (root.service && root.service.ramAvailStr && root.service.ramAvailStr !== "0 GB") {
+            return root.service.ramAvailStr
+        }
+        if (root.service && root.service.ramTotalStr && root.service.ramUsedStr) {
+            var tot = parseFloat(root.service.ramTotalStr)
+            var usd = parseFloat(root.service.ramUsedStr)
+            if (!isNaN(tot) && !isNaN(usd)) {
+                return Math.max(0, tot - usd).toFixed(1) + " GB"
+            }
+        }
+        return "0 GB"
+    }
+
+    readonly property string diskAvail: {
+        if (root.service && root.service.storageAvailStr && root.service.storageAvailStr !== "0 GB") {
+            return root.service.storageAvailStr
+        }
+        if (root.service && root.service.storageTotalStr && root.service.storageUsedStr) {
+            var totD = parseFloat(root.service.storageTotalStr)
+            var usdD = parseFloat(root.service.storageUsedStr)
+            if (!isNaN(totD) && !isNaN(usdD)) {
+                return Math.max(0, totD - usdD).toFixed(1) + " GB"
+            }
+        }
+        return "0 GB"
+    }
+
     // Semantic accent colors with smooth threshold shifting
     readonly property color cpuAccent: {
         var u = root.cpuUsage
@@ -252,14 +281,15 @@ Item {
 
                 Item { Layout.fillHeight: true }
 
-                // Middle / Hero row: Large percentage readout (pixelSize: 24, font.bold: true)
+                // Middle / Hero row: Solid availability readout (e.g., "7.9 GB")
                 Text {
                     Layout.fillWidth: true
-                    text: root.ramUsage.toFixed(0) + "%"
+                    text: root.ramAvail
                     font.family: Fonts.monoFont
-                    font.pixelSize: 24
+                    font.pixelSize: 22
                     font.bold: true
                     color: root.ramUsage >= 90 ? Theme.bright_red : Theme.bright_foreground
+                    elide: Text.ElideRight
 
                     Behavior on color {
                         ColorAnimation { duration: 250 }
@@ -365,14 +395,15 @@ Item {
 
                 Item { Layout.fillHeight: true }
 
-                // Middle / Hero row: Large percentage readout (pixelSize: 24, font.bold: true)
+                // Middle / Hero row: Solid availability readout (e.g., "35.3 GB")
                 Text {
                     Layout.fillWidth: true
-                    text: root.diskUsage.toFixed(0) + "%"
+                    text: root.diskAvail
                     font.family: Fonts.monoFont
-                    font.pixelSize: 24
+                    font.pixelSize: 22
                     font.bold: true
                     color: root.diskUsage >= 90 ? Theme.bright_red : Theme.bright_foreground
+                    elide: Text.ElideRight
 
                     Behavior on color {
                         ColorAnimation { duration: 250 }

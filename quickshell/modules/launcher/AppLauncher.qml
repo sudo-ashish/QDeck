@@ -84,12 +84,11 @@ PanelWindow {
 
     // Dynamic target dimensions per view
     readonly property real targetWidth: {
-        if (root.currentView === "packages") return 820
-        if (root.currentView === "apps" || root.currentView === "shelf" || root.currentView === "clipboard") return Appearance.launcherWidth
+        if (root.currentView === "packages" || root.currentView === "apps" || root.currentView === "shelf" || root.currentView === "clipboard") return Appearance.launcherWidth
         if (root.currentView === "power") return 500
         if (root.currentView === "theme") return 720
         if (root.currentView === "wallpaper") return 720
-        return 580
+        return Appearance.launcherWidth
     }
 
     readonly property real targetHeight: {

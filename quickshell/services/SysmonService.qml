@@ -18,11 +18,15 @@ QtObject {
     property real ramPercent: 0.0
     property string ramUsedStr: "0 GB"
     property string ramTotalStr: "0 GB"
+    property string ramAvailStr: "0 GB"
+    property real ramAvail: 0
 
     // Storage Metrics
     property real storagePercent: 0.0
     property string storageUsedStr: "0 GB"
     property string storageTotalStr: "0 GB"
+    property string storageAvailStr: "0 GB"
+    property real storageAvail: 0
 
     // Network Metrics
     property int netRxRate: 0
@@ -71,11 +75,15 @@ QtObject {
                             if (typeof data.ram.percent === "number") root.ramPercent = data.ram.percent
                             if (data.ram.usedStr) root.ramUsedStr = data.ram.usedStr
                             if (data.ram.totalStr) root.ramTotalStr = data.ram.totalStr
+                            if (data.ram.availStr) root.ramAvailStr = data.ram.availStr
+                            if (typeof data.ram.avail === "number") root.ramAvail = data.ram.avail
                         }
                         if (data.storage) {
                             if (typeof data.storage.percent === "number") root.storagePercent = data.storage.percent
                             if (data.storage.usedStr) root.storageUsedStr = data.storage.usedStr
                             if (data.storage.totalStr) root.storageTotalStr = data.storage.totalStr
+                            if (data.storage.availStr) root.storageAvailStr = data.storage.availStr
+                            if (typeof data.storage.avail === "number") root.storageAvail = data.storage.avail
                         }
                         if (data.network) {
                             if (typeof data.network.rxRate === "number") root.netRxRate = data.network.rxRate
