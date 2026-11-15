@@ -14,7 +14,7 @@ hl.bind("SUPER + B", hl.dsp.exec_cmd("qdeck bar toggle"))
 
 ---- APPS ----
 hl.bind("SUPER + SHIFT + B", hl.dsp.exec_cmd("default-browser"))
-hl.bind("SUPER + SHIFT + P", hl.dsp.exec_cmd("tui-launch qdeck-pkg"))
+hl.bind("SUPER + SHIFT + P", hl.dsp.exec_cmd("qdeck-pkg"))
 hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("tui-launch webapp-create"))
 hl.bind("XF86Calculator", hl.dsp.exec_cmd("gnome-calculator"))
 hl.bind("SUPER + SHIFT + T", hl.dsp.exec_cmd("tui-launch btop"))

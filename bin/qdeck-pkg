@@ -1,67 +1,61 @@
 #!/usr/bin/env bash
-# qdeck-pkg — QDeck Package Manager launcher
-# Launches qdeck-pkg-tui (Rust binary) inside kitty or foot.
-# Auto-builds the binary on first run if missing.
-
+# ==============================================================================
+# QDeck: Package Manager Launcher (Quickshell Launcher Integration)
+# Opens or toggles the package search and installation view in QDeck launcher.
+# ==============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BIN_DIR="$SCRIPT_DIR"
-PKG_TUI="$BIN_DIR/qdeck-pkg-tui"
-NATIVE_DIR="$BIN_DIR/../native/package-manager"
 
-# ── Dependency checks ──────────────────────────────────────────────────────
-
-if ! command -v yay &>/dev/null; then
-  echo "qdeck-pkg: error: 'yay' is not installed." >&2
-  if command -v notify-send &>/dev/null; then
-    notify-send "QDeck Package Manager" "yay is required. Install it from AUR first." \
-      --urgency=critical 2>/dev/null || true
-  fi
-  exit 1
+# Source shared IPC helper
+if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
+  source "$SCRIPT_DIR/lib/qdeck-ipc.sh"
+elif [[ -f "$HOME/.local/bin/lib/qdeck-ipc.sh" ]]; then
+  source "$HOME/.local/bin/lib/qdeck-ipc.sh"
+elif command -v qdeck-ipc >/dev/null 2>&1; then
+  source "$(command -v qdeck-ipc)"
 fi
 
-# ── Build binary on first run ──────────────────────────────────────────────
-
-if [[ ! -x "$PKG_TUI" ]]; then
-  if ! command -v cargo &>/dev/null; then
-    echo "qdeck-pkg: error: Rust/Cargo is not installed. Cannot build qdeck-pkg-tui." >&2
-    echo "  Install with: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" >&2
-    exit 1
-  fi
-
-  echo "qdeck-pkg: building package manager binary (first run, please wait)..."
-  if cargo build --release --manifest-path "$NATIVE_DIR/Cargo.toml" 2>&1; then
-    cp "$NATIVE_DIR/target/release/qdeck-pkg" "$PKG_TUI"
-    chmod +x "$PKG_TUI"
-    echo "qdeck-pkg: build complete."
-  else
-    echo "qdeck-pkg: build failed." >&2
-    exit 1
-  fi
+if [[ $# -eq 0 ]]; then
+  call_ipc packages toggle
+  exit 0
 fi
 
-# ── Launch in terminal ─────────────────────────────────────────────────────
+case "$1" in
+  toggle)
+    call_ipc packages toggle
+    ;;
+  open)
+    shift || true
+    if [[ $# -gt 0 ]]; then
+      call_ipc packages search "$*"
+    else
+      call_ipc packages open
+    fi
+    ;;
+  search)
+    shift || true
+    call_ipc packages search "$*"
+    ;;
+  close)
+    call_ipc packages close
+    ;;
+  --help|-h|help)
+    cat <<EOF
+QDeck Package Manager (Launcher Integration)
 
-# If already inside an interactive terminal (or invoked by tui-launch), run the binary directly
-if [[ -n "${KITTY_WINDOW_ID:-}" || -t 0 || -t 1 ]]; then
-  exec "$PKG_TUI" "$@"
-fi
-
-TITLE="QDeck Package Manager"
-CLASS="qdeck-pkg"
-
-if command -v kitty &>/dev/null; then
-  exec kitty \
-    --title "$TITLE" \
-    --class "$CLASS" \
-    -- "$PKG_TUI" "$@"
-elif command -v foot &>/dev/null; then
-  exec foot \
-    --title "$TITLE" \
-    --app-id "$CLASS" \
-    -- "$PKG_TUI" "$@"
-else
-  # Fallback: run directly in current terminal
-  exec "$PKG_TUI" "$@"
-fi
+Usage:
+  qdeck-pkg                  Toggle package manager view in launcher
+  qdeck-pkg <query>          Open package manager with search query
+  qdeck-pkg toggle           Toggle package manager
+  qdeck-pkg open             Open package manager
+  qdeck-pkg search <query>   Open package manager with search query
+  qdeck-pkg close            Close package manager
+EOF
+    exit 0
+    ;;
+  *)
+    # Treat arguments as search query
+    call_ipc packages search "$*"
+    ;;
+esac

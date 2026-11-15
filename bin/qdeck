@@ -170,7 +170,7 @@ case "$CMD" in
 
   pkg|package|package-manager|pkgmgr)
     shift
-    exec "$BIN_DIR/default-package-manager" "$@"
+    exec "$BIN_DIR/qdeck-pkg" "$@"
     ;;
 
   volume)
@@ -278,6 +278,17 @@ if [[ "$BIN_DIR" != "$HOME/.local/bin" ]]; then
       chmod +x "$HOME/.local/bin/$base"
     fi
   done
+  # Clean up any removed legacy binaries in ~/.local/bin
+  rm -f "$HOME/.local/bin/default-package-manager" \
+        "$HOME/.local/bin/default-pkg-manager" \
+        "$HOME/.local/bin/pkg-manager" \
+        "$HOME/.local/bin/qdeck-pkg-tui" 2>/dev/null || true
+
+  # Sync quickshell configs from repo into ~/.config/quickshell if developing in repo
+  if [[ -d "$REPO_ROOT/quickshell" && "$HOME/.config/quickshell" != "$REPO_ROOT/quickshell" ]]; then
+    mkdir -p "$HOME/.config/quickshell"
+    cp -rf "$REPO_ROOT/quickshell/." "$HOME/.config/quickshell/"
+  fi
 fi
 
 # 4b. Ensure default system color scheme is set to prefer-dark

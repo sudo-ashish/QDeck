@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# QDeck: Non-interactive package installer helper
+# Runs yay with live line-buffered output and predetermined non-interactive answers.
+
+set -euo pipefail
+
+if [[ $# -eq 0 ]]; then
+  echo "Usage: qdeck-pkg-install <package-name>" >&2
+  exit 1
+fi
+
+PKG="$1"
+echo "==> Starting installation of: $PKG"
+
+# Trap interrupt to cleanly terminate any background child processes
+cleanup() {
+  local pids
+  pids=$(jobs -p 2>/dev/null || true)
+  if [[ -n "$pids" ]]; then
+    kill -TERM $pids 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
+
+# Ensure yay is present
+if ! command -v yay &>/dev/null; then
+  echo "Error: 'yay' is not installed." >&2
+  exit 127
+fi
+
+# Run yay non-interactively with line buffering
+export PYTHONUNBUFFERED=1
+export LC_ALL=C
+
+if command -v stdbuf &>/dev/null; then
+  exec stdbuf -oL -eL yay -S --needed --noconfirm \
+    --answerclean None \
+    --answerdiff None \
+    --answeredit None \
+    --answerupgrade None \
+    -- "$PKG" 2>&1
+else
+  exec yay -S --needed --noconfirm \
+    --answerclean None \
+    --answerdiff None \
+    --answeredit None \
+    --answerupgrade None \
+    -- "$PKG" 2>&1
+fi

@@ -23,7 +23,7 @@ PanelWindow {
     property ClipboardService clipboardService: null
 
     property bool isOpen: false
-    property string currentView: "apps" // "apps" | "power" | "theme" | "wallpaper" | "shelf" | "clipboard"
+    property string currentView: "apps" // "apps" | "power" | "theme" | "wallpaper" | "shelf" | "clipboard" | "packages"
     property real animProgress: 0.0
 
     // Transitions between views
@@ -84,6 +84,7 @@ PanelWindow {
 
     // Dynamic target dimensions per view
     readonly property real targetWidth: {
+        if (root.currentView === "packages") return 820
         if (root.currentView === "apps" || root.currentView === "shelf" || root.currentView === "clipboard") return Appearance.launcherWidth
         if (root.currentView === "power") return 500
         if (root.currentView === "theme") return 720
@@ -92,6 +93,7 @@ PanelWindow {
     }
 
     readonly property real targetHeight: {
+        if (root.currentView === "packages") return 580
         if (root.currentView === "apps") {
             var isSearching = searchInput && searchInput.text.trim().length > 0
             var count = root.filteredCount
@@ -154,6 +156,7 @@ PanelWindow {
                 if (root.wallpaperService) root.wallpaperService.isOpen = false
                 if (root.shelfService) root.shelfService.isOpen = false
                 if (root.clipboardService) root.clipboardService.isOpen = false
+                if (packageView) packageView.resetState()
                 root.currentView = "apps"
             }
         }
@@ -278,6 +281,7 @@ PanelWindow {
         openAnim.stop()
         if (root.shelfService) root.shelfService.isOpen = false
         if (root.clipboardService) root.clipboardService.isOpen = false
+        if (packageView) packageView.resetState()
         root.isOpen = false
         closeAnim.restart()
     }
@@ -374,9 +378,40 @@ PanelWindow {
         }
     }
 
+    function openPackages(initialQuery) {
+        var wasOpen = root.isOpen
+        if (closeAnim.running) {
+            closeAnim.stop()
+            root.animProgress = 1.0
+        }
+        root.currentView = "packages"
+        if (root.powerService) root.powerService.powerMenuOpen = false
+        if (root.themeService) root.themeService.isOpen = false
+        if (root.wallpaperService) root.wallpaperService.isOpen = false
+        if (root.shelfService) root.shelfService.isOpen = false
+        if (root.clipboardService) root.clipboardService.isOpen = false
+        root.isOpen = true
+        if (!wasOpen || root.animProgress < 1.0) {
+            openAnim.restart()
+        }
+        Qt.callLater(function() {
+            if (packageView) {
+                packageView.setInitialQuery(initialQuery)
+            }
+        })
+    }
+
+    function togglePackages(initialQuery) {
+        if (root.isOpen && root.currentView === "packages") {
+            root.close()
+        } else {
+            root.openPackages(initialQuery)
+        }
+    }
+
     function switchToView(viewName) {
         if (root.currentView === viewName) {
-            if (viewName === "shelf" || viewName === "clipboard") {
+            if (viewName === "shelf" || viewName === "clipboard" || viewName === "packages") {
                 root.close()
             }
             return
@@ -393,6 +428,8 @@ PanelWindow {
             root.openShelf()
         } else if (viewName === "clipboard") {
             root.openClipboard()
+        } else if (viewName === "packages") {
+            root.openPackages("")
         }
     }
 
@@ -805,6 +842,15 @@ PanelWindow {
         }
     }
 
+    // 5. Package Manager IPC (qdeck-pkg / qdeck pkg)
+    IpcHandler {
+        target: "packages"
+        function open(): string { root.openPackages(""); return "ok" }
+        function search(query: string): string { root.openPackages(query); return "ok" }
+        function close(): string { root.close(); return "ok" }
+        function toggle(): string { root.togglePackages(""); return (root.isOpen && root.currentView === "packages") ? "open" : "closed" }
+    }
+
     // Backdrop Scrim (Active only on apps, power, theme, wallpaper - completely disabled on shelf)
     Rectangle {
         anchors.fill: parent
@@ -979,8 +1025,8 @@ PanelWindow {
         }
 
         color: Theme.withAlpha(Theme.darker_background, Theme.baseOpacity)
-        border.color: Theme.withAlpha(Theme.border, 0.28)
-        border.width: 1
+        border.color: root.currentView === "packages" ? "transparent" : Theme.withAlpha(Theme.border, 0.28)
+        border.width: root.currentView === "packages" ? 0 : 1
         clip: true
 
         // M3 Shared Axis Y (Translate) + Z (Scale)
@@ -995,6 +1041,8 @@ PanelWindow {
             onClicked: {
                 if (root.currentView === "apps") {
                     searchInput.forceActiveFocus()
+                } else if (root.currentView === "packages") {
+                    if (packageView) packageView.focusSearch()
                 } else {
                     keyCatcher.forceActiveFocus()
                 }
@@ -2027,6 +2075,16 @@ PanelWindow {
             anchors.fill: parent
             visible: root.currentView === "clipboard"
             clipboardService: root.clipboardService
+            onRequestClose: root.close()
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // VIEW 7: Native Package Manager View
+        // ─────────────────────────────────────────────────────────────────────
+        PackageView {
+            id: packageView
+            anchors.fill: parent
+            visible: root.currentView === "packages"
             onRequestClose: root.close()
         }
     }
