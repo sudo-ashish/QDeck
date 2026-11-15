@@ -120,6 +120,11 @@ if os.path.exists(p):
 " "$INDEX" 2>/dev/null || echo "ok"
     fi
     ;;
+  pin)
+    shift
+    INDEX="${1:-0}"
+    invoke_clipboard pin "$INDEX" || true
+    ;;
   help|-h|--help)
     cat <<EOF
 Usage: qdeck-clipboard [command]
@@ -133,6 +138,7 @@ Commands:
   count           Print number of history entries
   copy <index>    Copy item at <index> to Wayland clipboard
   remove <index>  Remove item at <index> from history
+  pin <index>     Toggle pin state for item at <index>
 EOF
     ;;
   *)

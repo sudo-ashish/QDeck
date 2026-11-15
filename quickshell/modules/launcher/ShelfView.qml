@@ -20,6 +20,36 @@ Item {
     property string badgeIconName: "folder"
     property int badgeCount: 1
 
+    property string filterText: ""
+    readonly property bool isSearching: filterText.trim().length > 0
+
+    readonly property var filteredIndices: {
+        var res = []
+        if (!shelfService || !shelfService.items) return res
+        var count = shelfService.items.count
+        var q = root.filterText.trim().toLowerCase()
+        for (var i = 0; i < count; i++) {
+            var item = shelfService.items.get(i)
+            if (!item) continue
+            var name = (item.fileName || "").toLowerCase()
+            var path = (item.filePath || "").toLowerCase()
+            if (!q || name.indexOf(q) !== -1 || path.indexOf(q) !== -1) {
+                res.push(i)
+            }
+        }
+        return res
+    }
+
+    readonly property int filteredCount: filteredIndices ? filteredIndices.length : 0
+
+    function focusSearch() {
+        if (searchInput) {
+            searchInput.text = ""
+            root.filterText = ""
+            searchInput.forceActiveFocus()
+        }
+    }
+
     function getDragUris(index) {
         if (!shelfService || index < 0 || index >= shelfService.items.count) return []
         var item = shelfService.items.get(index)
@@ -444,7 +474,7 @@ Item {
         id: shelfListView
         anchors {
             top: shelfHeader.bottom
-            bottom: parent.bottom
+            bottom: searchContainer.top
             left: parent.left
             right: parent.right
             topMargin: 6
@@ -454,13 +484,18 @@ Item {
         }
         clip: true
         spacing: 6
-        model: root.shelfService ? root.shelfService.items : null
+        model: root.filteredIndices
 
         delegate: Item {
             id: delegateRoot
-            required property var model
+            required property int modelData
             required property int index
-            readonly property bool isSelected: !!(delegateRoot.model && delegateRoot.model.selected)
+
+            readonly property int realIndex: delegateRoot.modelData
+            readonly property var itemData: (root.shelfService && root.shelfService.items)
+                ? root.shelfService.items.get(realIndex)
+                : null
+            readonly property bool isSelected: !!(itemData && itemData.selected)
 
             width: ListView.view.width
             height: 56
@@ -473,7 +508,7 @@ Item {
                 Drag.dragType: Drag.Automatic
                 Drag.supportedActions: Qt.CopyAction
                 Drag.mimeData: ({
-                    "text/uri-list": root.getDragUris(delegateRoot.index).join("\r\n") + "\r\n"
+                    "text/uri-list": root.getDragUris(delegateRoot.realIndex).join("\r\n") + "\r\n"
                 })
                 Drag.hotSpot: Qt.point(dragBadgeProxy.width / 2, dragBadgeProxy.height / 2)
                 Drag.imageSource: root.dragBadgeImageSource
@@ -484,7 +519,7 @@ Item {
                 anchors.fill: parent
                 radius: Appearance.launcherItemRadius
 
-                opacity: (root.isDraggingItem && (delegateRoot.isSelected || root.activeDragIndex === delegateRoot.index))
+                opacity: (root.isDraggingItem && (delegateRoot.isSelected || root.activeDragIndex === delegateRoot.realIndex))
                     ? 0.50
                     : 1.0
 
@@ -529,19 +564,19 @@ Item {
                     readonly property bool isDragging: drag.active
                     onIsDraggingChanged: {
                         if (isDragging) {
-                            root.onItemDragStarted(delegateRoot.index)
+                            root.onItemDragStarted(delegateRoot.realIndex)
                         } else {
-                            root.onItemDragEnded(delegateRoot.index)
+                            root.onItemDragEnded(delegateRoot.realIndex)
                         }
                     }
 
                     onPressed: function(mouse) {
-                        root.updateDragBadge(delegateRoot.index)
+                        root.updateDragBadge(delegateRoot.realIndex)
                     }
 
                     onClicked: function(mouse) {
                         if (root.shelfService) {
-                            root.shelfService.toggleSelection(delegateRoot.index, mouse.modifiers)
+                            root.shelfService.toggleSelection(delegateRoot.realIndex, mouse.modifiers)
                         }
                     }
 
@@ -618,7 +653,7 @@ Item {
                         onClicked: function(mouse) {
                             mouse.accepted = true
                             if (root.shelfService) {
-                                root.shelfService.toggleItem(delegateRoot.index)
+                                root.shelfService.toggleItem(delegateRoot.realIndex)
                             }
                         }
                     }
@@ -662,9 +697,9 @@ Item {
                         // Image Thumbnail (when item is an image)
                         Image {
                             id: thumbImg
-                            visible: delegateRoot.model.isImage
+                            visible: delegateRoot.itemData ? delegateRoot.itemData.isImage : false
                             anchors.fill: parent
-                            source: delegateRoot.model.isImage ? delegateRoot.model.filePath : ""
+                            source: (delegateRoot.itemData && delegateRoot.itemData.isImage) ? delegateRoot.itemData.filePath : ""
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             cache: false
@@ -680,9 +715,9 @@ Item {
                         // Native XDG MIME-type icon (matching Nautilus / GNOME)
                         Image {
                             id: mimeIconImg
-                            visible: !delegateRoot.model.isImage || thumbImg.status === Image.Error
+                            visible: !delegateRoot.itemData || !delegateRoot.itemData.isImage || thumbImg.status === Image.Error
                             anchors.centerIn: parent
-                            source: Quickshell.iconPath(delegateRoot.model.iconName || "text-x-generic", "text-x-generic")
+                            source: Quickshell.iconPath((delegateRoot.itemData && delegateRoot.itemData.iconName) ? delegateRoot.itemData.iconName : "text-x-generic", "text-x-generic")
                             sourceSize: Qt.size(64, 64)
                             width: 26
                             height: 26
@@ -700,7 +735,7 @@ Item {
 
                         Text {
                             width: parent.width
-                            text: delegateRoot.model.fileName || ""
+                            text: delegateRoot.itemData ? (delegateRoot.itemData.fileName || "") : ""
                             font.family: root.fontFamily
                             font.pixelSize: 13
                             font.weight: Fonts.weightMedium
@@ -711,7 +746,7 @@ Item {
                         Text {
                             width: parent.width
                             text: {
-                                var p = (delegateRoot.model.filePath || "").replace(/^file:\/\//, "")
+                                var p = (delegateRoot.itemData && delegateRoot.itemData.filePath) ? delegateRoot.itemData.filePath.replace(/^file:\/\//, "") : ""
                                 var parts = p.split("/")
                                 return parts.length > 2 ? (".../" + parts.slice(-2).join("/")) : p
                             }
@@ -754,9 +789,117 @@ Item {
                             preventStealing: true
                             onClicked: function(mouse) {
                                 mouse.accepted = true
-                                if (root.shelfService) root.shelfService.removeAt(delegateRoot.index)
+                                if (root.shelfService) root.shelfService.removeAt(delegateRoot.realIndex)
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Bottom: Search Input Field
+    // ─────────────────────────────────────────────────────────────────────────
+    Rectangle {
+        id: searchContainer
+        anchors {
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+            leftMargin: 4
+            rightMargin: 4
+            bottomMargin: 4
+        }
+        height: 52
+        radius: 14
+        color: Theme.withAlpha(Theme.dark_background, 0.95)
+        border.width: 0
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 16
+            anchors.rightMargin: 14
+            spacing: 12
+
+            Text {
+                text: Icons.search || ""
+                font.family: Icons.effectiveFont(text)
+                font.pixelSize: 18
+                color: Theme.muted
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                Text {
+                    anchors.fill: parent
+                    verticalAlignment: Text.AlignVCenter
+                    text: "Filter staged files..."
+                    font.family: root.fontFamily
+                    font.pixelSize: 14
+                    color: Theme.muted
+                    visible: searchInput.text.length === 0
+                    elide: Text.ElideRight
+                }
+
+                TextInput {
+                    id: searchInput
+                    anchors.fill: parent
+                    verticalAlignment: TextInput.AlignVCenter
+                    font.family: root.fontFamily
+                    font.pixelSize: 14
+                    color: Theme.foreground
+                    selectionColor: Theme.selection
+                    selectedTextColor: Theme.bright_foreground
+                    clip: true
+                    focus: true
+
+                    onTextChanged: {
+                        root.filterText = text
+                    }
+
+                    Keys.onEscapePressed: {
+                        if (text.length > 0) {
+                            text = ""
+                            root.filterText = ""
+                        } else {
+                            if (root.shelfService) root.shelfService.close()
+                        }
+                    }
+                }
+            }
+
+            // Clear search query button (✕)
+            Rectangle {
+                visible: searchInput.text.length > 0
+                Layout.alignment: Qt.AlignVCenter
+                width: 22
+                height: 22
+                radius: 11
+                color: clearQueryMouse.containsMouse
+                    ? Theme.withAlpha(Theme.lighter_background, 0.45)
+                    : Theme.withAlpha(Theme.lighter_background, 0.25)
+
+                Text {
+                    anchors.centerIn: parent
+                    text: Icons.close || "󰅖"
+                    font.family: Icons.effectiveFont(text)
+                    font.pixelSize: 10
+                    color: Theme.muted
+                }
+
+                MouseArea {
+                    id: clearQueryMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        searchInput.text = ""
+                        root.filterText = ""
+                        searchInput.forceActiveFocus()
                     }
                 }
             }
@@ -769,7 +912,7 @@ Item {
     Column {
         anchors.centerIn: parent
         spacing: 12
-        visible: (root.shelfService ? root.shelfService.count === 0 : true) && (!dropArea.containsDrag || root.isDraggingItem)
+        visible: (root.filteredCount === 0) && (!dropArea.containsDrag || root.isDraggingItem)
 
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -791,16 +934,7 @@ Item {
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "QShelf is empty"
-            font.family: root.fontFamily
-            font.pixelSize: 14
-            font.weight: Fonts.weightBold
-            color: Theme.foreground
-        }
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "Drop files here to stage"
+            text: root.isSearching ? "No matching files found" : "Drop files here to stage"
             font.family: root.fontFamily
             font.pixelSize: 11
             color: Theme.muted

@@ -40,24 +40,81 @@ QtObject {
     function addItem(text, timestamp, lines, chars) {
         if (!text || !text.trim()) return
         var existingIdx = root.hasItem(text)
+        var wasPinned = false
         if (existingIdx !== -1) {
+            wasPinned = !!items.get(existingIdx).pinned
             items.remove(existingIdx)
         }
         var now = timestamp || Math.floor(Date.now() / 1000)
         var l = lines || text.split("\n").length
         var c = chars || text.length
 
-        items.insert(0, {
+        // Pinned items stay at the top. Unpinned items insert after pinned items.
+        var insertIdx = 0
+        if (!wasPinned) {
+            for (var p = 0; p < items.count; p++) {
+                if (!items.get(p).pinned) {
+                    insertIdx = p
+                    break
+                }
+                insertIdx = p + 1
+            }
+        }
+
+        items.insert(insertIdx, {
             id: String(Date.now()) + "_" + Math.floor(Math.random() * 1000),
             text: text,
             timestamp: now,
             lines: l,
-            chars: c
+            chars: c,
+            pinned: wasPinned
         })
 
         while (items.count > 100) {
-            items.remove(items.count - 1)
+            var removed = false
+            for (var k = items.count - 1; k >= 0; k--) {
+                if (!items.get(k).pinned) {
+                    items.remove(k)
+                    removed = true
+                    break
+                }
+            }
+            if (!removed) break
         }
+        saveTimer.restart()
+    }
+
+    function togglePin(index) {
+        if (index < 0 || index >= items.count) return false
+        var it = items.get(index)
+        if (!it) return false
+        var newPinned = !it.pinned
+
+        var itemData = {
+            id: it.id,
+            text: it.text,
+            timestamp: it.timestamp,
+            lines: it.lines,
+            chars: it.chars,
+            pinned: newPinned
+        }
+        items.remove(index)
+
+        if (newPinned) {
+            items.insert(0, itemData)
+        } else {
+            var targetIdx = 0
+            for (var p = 0; p < items.count; p++) {
+                if (!items.get(p).pinned) {
+                    targetIdx = p
+                    break
+                }
+                targetIdx = p + 1
+            }
+            items.insert(targetIdx, itemData)
+        }
+        saveTimer.restart()
+        return true
     }
 
     function copyItem(index) {
@@ -68,21 +125,33 @@ QtObject {
         copyProc.command = ["wl-copy", "--", it.text]
         copyProc.running = true
 
-        if (index > 0) {
-            var txt = it.text
-            var ts = Math.floor(Date.now() / 1000)
-            var lns = it.lines
-            var chs = it.chars
-            items.remove(index)
-            items.insert(0, {
-                id: String(Date.now()),
-                text: txt,
-                timestamp: ts,
-                lines: lns,
-                chars: chs
-            })
-            saveTimer.restart()
+        var wasPinned = !!it.pinned
+        var txt = it.text
+        var ts = Math.floor(Date.now() / 1000)
+        var lns = it.lines
+        var chs = it.chars
+        items.remove(index)
+
+        var insertIdx = 0
+        if (!wasPinned) {
+            for (var p = 0; p < items.count; p++) {
+                if (!items.get(p).pinned) {
+                    insertIdx = p
+                    break
+                }
+                insertIdx = p + 1
+            }
         }
+
+        items.insert(insertIdx, {
+            id: String(Date.now()),
+            text: txt,
+            timestamp: ts,
+            lines: lns,
+            chars: chs,
+            pinned: wasPinned
+        })
+        saveTimer.restart()
         return true
     }
 
@@ -94,14 +163,25 @@ QtObject {
     }
 
     function clear() {
-        items.clear()
-        saveStateProc.command = [
-            "python3", "-c",
-            "import os; r = os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'); p1 = os.path.join(r, 'quickshell', 'clipboard-history.json'); p2 = os.path.expanduser('~/.local/state/quickshell/clipboard-history.json'); [os.remove(p) for p in (p1, p2) if os.path.exists(p)]"
-        ]
-        saveStateProc.running = true
-        clearProc.command = ["wl-copy", "-c"]
-        clearProc.running = true
+        var p = 0
+        while (p < items.count) {
+            if (!items.get(p).pinned) {
+                items.remove(p)
+            } else {
+                p++
+            }
+        }
+        if (items.count === 0) {
+            saveStateProc.command = [
+                "python3", "-c",
+                "import os; r = os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'); p1 = os.path.join(r, 'quickshell', 'clipboard-history.json'); p2 = os.path.expanduser('~/.local/state/quickshell/clipboard-history.json'); [os.remove(p) for p in (p1, p2) if os.path.exists(p)]"
+            ]
+            saveStateProc.running = true
+            clearProc.command = ["wl-copy", "-c"]
+            clearProc.running = true
+        } else {
+            saveTimer.restart()
+        }
         return true
     }
 
@@ -113,7 +193,8 @@ QtObject {
                 text: it.text,
                 timestamp: it.timestamp,
                 lines: it.lines,
-                chars: it.chars
+                chars: it.chars,
+                pinned: !!it.pinned
             })
         }
         return JSON.stringify(arr)
@@ -187,6 +268,13 @@ QtObject {
             var ok = root.removeItem(idx)
             return ok ? "removed" : "failed"
         }
+
+        function pin(indexStr: string): string {
+            var idx = parseInt(indexStr, 10)
+            if (isNaN(idx)) return "error"
+            var ok = root.togglePin(idx)
+            return ok ? "pinned" : "failed"
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -216,7 +304,8 @@ QtObject {
                 text: it.text,
                 timestamp: it.timestamp,
                 lines: it.lines,
-                chars: it.chars
+                chars: it.chars,
+                pinned: !!it.pinned
             })
         }
         var jsonStr = JSON.stringify(arr)

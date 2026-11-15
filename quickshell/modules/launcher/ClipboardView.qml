@@ -47,7 +47,7 @@ Item {
     readonly property int filteredCount: filteredIndices ? filteredIndices.length : 0
 
     function focusSearch() {
-        if (searchInput) {
+        if (searchInput && searchContainer.visible) {
             searchInput.text = ""
             root.filterText = ""
             searchInput.forceActiveFocus()
@@ -102,155 +102,30 @@ Item {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Top Header: Squircle, Title, Count Badge, Clear All Action
-    // ─────────────────────────────────────────────────────────────────────────
-    RowLayout {
-        id: topHeader
-        anchors {
-            top: parent.top
-            left: parent.left
-            right: parent.right
-            topMargin: 14
-            leftMargin: 14
-            rightMargin: 14
-        }
-        height: 32
-        spacing: 10
-
-        // Left Icon Squircle (32x32)
-        Rectangle {
-            Layout.preferredWidth: 32
-            Layout.preferredHeight: 32
-            Layout.alignment: Qt.AlignVCenter
-            radius: 9
-            color: Theme.withAlpha(Theme.accent, 0.18)
-
-            Text {
-                anchors.centerIn: parent
-                text: Icons.clipboard || "󰅍"
-                font.family: Icons.effectiveFont(text)
-                font.pixelSize: 16
-                color: Theme.accent
-            }
-        }
-
-        // Header Title
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: "Clipboard"
-            font.family: root.fontFamily
-            font.pixelSize: 14
-            font.weight: Fonts.weightBold
-            color: Theme.foreground
-        }
-
-        Item { Layout.fillWidth: true }
-
-        // Clear All Action Button
-        Rectangle {
-            visible: root.clipboardService ? root.clipboardService.count > 0 : false
-            Layout.alignment: Qt.AlignVCenter
-            width: clearRow.implicitWidth + 16
-            height: 26
-            radius: 13
-            color: clearMouse.containsMouse
-                ? Theme.withAlpha(Theme.urgent, 0.28)
-                : Theme.withAlpha(Theme.lighter_background, 0.22)
-            border.width: 0
-
-            Behavior on color { ColorAnimation { duration: 120 } }
-
-            Row {
-                id: clearRow
-                anchors.centerIn: parent
-                spacing: 5
-
-                Text {
-                    text: Icons.close || "󰅖"
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: 11
-                    color: clearMouse.containsMouse ? Theme.urgent : Theme.muted
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                Text {
-                    text: "Clear All"
-                    font.family: root.fontFamily
-                    font.pixelSize: 11
-                    font.weight: Fonts.weightMedium
-                    color: clearMouse.containsMouse ? Theme.urgent : Theme.muted
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-
-            MouseArea {
-                id: clearMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (root.clipboardService) {
-                        root.clipboardService.clear()
-                    }
-                }
-            }
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
     // Main Content: Clipboard Items List
     // ─────────────────────────────────────────────────────────────────────────
     Item {
         id: listContainer
         anchors {
-            top: topHeader.bottom
-            bottom: searchContainer.top
+            top: parent.top
+            bottom: searchContainer.visible ? searchContainer.top : parent.bottom
             left: parent.left
             right: parent.right
-            topMargin: 10
-            bottomMargin: 10
+            topMargin: 14
+            bottomMargin: searchContainer.visible ? 10 : 14
             leftMargin: 14
             rightMargin: 14
         }
 
-        // Empty Placeholder
-        Column {
+        // Clean Empty State: Only "Nothing here" centered
+        Text {
             anchors.centerIn: parent
-            spacing: 6
             visible: root.filteredCount === 0
-
-            Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 40
-                height: 40
-                radius: 20
-                color: Theme.withAlpha(Theme.lighter_background, 0.30)
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root.isSearching ? (Icons.search || "") : (Icons.clipboard || "󰅍")
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: 18
-                    color: Theme.muted
-                }
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: root.isSearching ? "No matching clipboard entries" : "Clipboard is empty"
-                font.family: root.fontFamily
-                font.pixelSize: 13
-                font.weight: Fonts.weightBold
-                color: Theme.foreground
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: root.isSearching ? "Try a different search query" : "Copied text will appear here automatically"
-                font.family: root.fontFamily
-                font.pixelSize: 11
-                color: Theme.muted
-            }
+            text: "Nothing here"
+            font.family: root.fontFamily
+            font.pixelSize: 15
+            font.weight: Fonts.weightMedium
+            color: Theme.muted
         }
 
         // Items ListView
@@ -275,10 +150,11 @@ Item {
                     : null
                 readonly property string rawText: itemData ? String(itemData.text || "") : ""
                 readonly property int itemTs: itemData ? (itemData.timestamp || 0) : 0
+                readonly property bool isPinned: !!(itemData && itemData.pinned)
 
                 readonly property string category: root.detectCategory(rawText)
                 readonly property bool isSelected: clipboardListView.currentIndex === itemDelegate.index
-                readonly property bool isHovered: itemMouse.containsMouse
+                readonly property bool isHovered: itemMouse.containsMouse || pinBtnMouse.containsMouse || removeBtnMouse.containsMouse
                 readonly property bool isCopiedFlash: root.copiedFlashIndex === itemDelegate.index
 
                 width: clipboardListView.width
@@ -296,7 +172,7 @@ Item {
 
                 Behavior on color { ColorAnimation { duration: 120 } }
 
-                // Soft left accent pill indicator on selection
+                // Soft left accent pill indicator on selection or pinned
                 Rectangle {
                     anchors {
                         left: parent.left
@@ -304,11 +180,11 @@ Item {
                         leftMargin: 3
                     }
                     width: 3
-                    height: itemDelegate.isSelected ? 22 : 0
+                    height: (itemDelegate.isSelected || itemDelegate.isPinned) ? 22 : 0
                     radius: 1.5
-                    color: Theme.accent
+                    color: itemDelegate.isPinned ? Theme.accent : Theme.accent
                     visible: height > 0
-                    opacity: itemDelegate.isSelected ? 1.0 : 0.0
+                    opacity: itemDelegate.isSelected ? 1.0 : (itemDelegate.isPinned ? 0.65 : 0.0)
 
                     Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                     Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
@@ -339,28 +215,41 @@ Item {
                             elide: Text.ElideRight
                         }
 
-                        // Secondary Row: Time Ago
-                        Text {
-                            text: root.formatTimeAgo(itemDelegate.itemTs)
-                            font.family: root.fontFamily
-                            font.pixelSize: 10
-                            color: Theme.withAlpha(Theme.muted, 0.85)
+                        // Secondary Row: Time Ago & Pinned label
+                        RowLayout {
+                            spacing: 6
+
+                            Text {
+                                text: root.formatTimeAgo(itemDelegate.itemTs)
+                                font.family: root.fontFamily
+                                font.pixelSize: 10
+                                color: Theme.withAlpha(Theme.muted, 0.85)
+                            }
+
+                            Text {
+                                visible: itemDelegate.isPinned
+                                text: "• Pinned"
+                                font.family: root.fontFamily
+                                font.pixelSize: 10
+                                font.weight: Fonts.weightMedium
+                                color: Theme.accent
+                            }
                         }
                     }
 
-                    // Right Side: "Copied! ✓" Flash Feedback
-                    Item {
-                        Layout.preferredWidth: itemDelegate.isCopiedFlash ? 64 : 0
-                        Layout.preferredHeight: 32
+                    // Right Side Actions: Flash Copied / Pin / Remove
+                    RowLayout {
                         Layout.alignment: Qt.AlignVCenter
-                        visible: itemDelegate.isCopiedFlash
+                        spacing: 6
+                        z: 20
 
                         // Copied! Feedback Badge
                         Rectangle {
-                            anchors.centerIn: parent
+                            visible: itemDelegate.isCopiedFlash
+                            Layout.alignment: Qt.AlignVCenter
                             width: copiedRow.implicitWidth + 12
-                            height: 22
-                            radius: 11
+                            height: 24
+                            radius: 12
                             color: Theme.accent
 
                             Row {
@@ -383,6 +272,78 @@ Item {
                                     font.weight: Fonts.weightBold
                                     color: Theme.darker_background
                                     anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+
+                        // Pin Action Button
+                        Rectangle {
+                            visible: !itemDelegate.isCopiedFlash && (itemDelegate.isPinned || itemDelegate.isHovered)
+                            Layout.alignment: Qt.AlignVCenter
+                            width: 28
+                            height: 28
+                            radius: 14
+                            color: itemDelegate.isPinned
+                                ? (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.accent, 0.35) : Theme.withAlpha(Theme.accent, 0.20))
+                                : (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.40) : "transparent")
+
+                            Behavior on color { ColorAnimation { duration: 120 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: Icons.pin || "󰐃"
+                                font.family: Icons.effectiveFont(text)
+                                font.pixelSize: 13
+                                color: itemDelegate.isPinned ? Theme.accent : (pinBtnMouse.containsMouse ? Theme.bright_foreground : Theme.muted)
+                            }
+
+                            MouseArea {
+                                id: pinBtnMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                preventStealing: true
+                                onClicked: function(mouse) {
+                                    mouse.accepted = true
+                                    if (root.clipboardService) {
+                                        root.clipboardService.togglePin(itemDelegate.realIndex)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Remove Action Button
+                        Rectangle {
+                            visible: !itemDelegate.isCopiedFlash && itemDelegate.isHovered
+                            Layout.alignment: Qt.AlignVCenter
+                            width: 28
+                            height: 28
+                            radius: 14
+                            color: removeBtnMouse.containsMouse
+                                ? Theme.withAlpha(Theme.urgent, 0.22)
+                                : "transparent"
+
+                            Behavior on color { ColorAnimation { duration: 120 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: Icons.close || "󰅖"
+                                font.family: Icons.effectiveFont(text)
+                                font.pixelSize: 12
+                                color: removeBtnMouse.containsMouse ? Theme.urgent : Theme.muted
+                            }
+
+                            MouseArea {
+                                id: removeBtnMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                preventStealing: true
+                                onClicked: function(mouse) {
+                                    mouse.accepted = true
+                                    if (root.clipboardService) {
+                                        root.clipboardService.removeItem(itemDelegate.realIndex)
+                                    }
                                 }
                             }
                         }
@@ -418,9 +379,11 @@ Item {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Bottom: Search Input Field (Matching AppLauncher search box)
+    // Hidden when clipboard history has 0 items
     // ─────────────────────────────────────────────────────────────────────────
     Rectangle {
         id: searchContainer
+        visible: root.clipboardService ? root.clipboardService.count > 0 : false
         anchors {
             left: parent.left
             right: parent.right
@@ -556,6 +519,55 @@ Item {
                         searchInput.text = ""
                         root.filterText = ""
                         searchInput.forceActiveFocus()
+                    }
+                }
+            }
+
+            // Clear all unpinned items button (visible when not actively typing query)
+            Rectangle {
+                visible: searchInput.text.length === 0 && (root.clipboardService ? root.clipboardService.count > 0 : false)
+                Layout.alignment: Qt.AlignVCenter
+                width: clearAllRow.implicitWidth + 14
+                height: 22
+                radius: 6
+                color: clearAllMouse.containsMouse
+                    ? Theme.withAlpha(Theme.urgent, 0.22)
+                    : Theme.withAlpha(Theme.lighter_background, 0.20)
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+
+                Row {
+                    id: clearAllRow
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    Text {
+                        text: Icons.close || "󰅖"
+                        font.family: Icons.effectiveFont(text)
+                        font.pixelSize: 10
+                        color: clearAllMouse.containsMouse ? Theme.urgent : Theme.muted
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text: "Clear"
+                        font.family: root.fontFamily
+                        font.pixelSize: 10
+                        font.weight: Fonts.weightMedium
+                        color: clearAllMouse.containsMouse ? Theme.urgent : Theme.muted
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
+                    id: clearAllMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (root.clipboardService) {
+                            root.clipboardService.clear()
+                        }
                     }
                 }
             }

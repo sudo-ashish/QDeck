@@ -120,17 +120,21 @@ PanelWindow {
             return Math.min(Appearance.launcherHeight, totalH)
         }
         if (root.currentView === "clipboard") {
-            var clipCount = clipboardView ? clipboardView.filteredCount : (root.clipboardService ? root.clipboardService.items.count : 0)
+            var totalCount = (root.clipboardService && root.clipboardService.items) ? root.clipboardService.items.count : 0
+            var clipCount = clipboardView ? clipboardView.filteredCount : totalCount
+            if (totalCount <= 0) {
+                return 96
+            }
             var isClipSearching = clipboardView && clipboardView.isSearching
             if (clipCount <= 0) {
-                return isClipSearching ? 210 : 230
+                return 150
             }
             // Dynamic height based on number of items:
-            // Fixed vertical chrome: 136px (top margin 14 + header 32 + topMargin 10 + bottomMargin 10 + search box 56 + outer bottom 14)
+            // Top margin 14 + search box 56 + bottom margin 14 + spacing 10 = 94px
             // Each item: 56px height + 4px spacing
             var clipContentH = (clipCount * 56) + (Math.max(0, clipCount - 1) * 4)
-            var totalClipH = 136 + clipContentH
-            return Math.min(Appearance.launcherHeight, totalClipH)
+            var totalClipH = 94 + clipContentH
+            return Math.min(Appearance.launcherHeight, Math.max(160, totalClipH))
         }
         if (root.currentView === "shelf") return Appearance.launcherHeight
         if (root.currentView === "power") return 130
@@ -346,7 +350,10 @@ PanelWindow {
         if (!wasOpen || root.animProgress < 1.0) {
             openAnim.restart()
         }
-        Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+        Qt.callLater(function() {
+            if (shelfView) shelfView.focusSearch()
+            else keyCatcher.forceActiveFocus()
+        })
     }
 
     function toggleShelf() {
@@ -755,6 +762,10 @@ PanelWindow {
                 Qt.callLater(function() { searchInput.forceActiveFocus() })
             } else if (root.currentView === "clipboard") {
                 Qt.callLater(function() { if (clipboardView) clipboardView.focusSearch() })
+            } else if (root.currentView === "shelf") {
+                Qt.callLater(function() { if (shelfView) shelfView.focusSearch() })
+            } else if (root.currentView === "packages") {
+                Qt.callLater(function() { if (packageView) packageView.focusSearch() })
             } else {
                 Qt.callLater(function() { keyCatcher.forceActiveFocus() })
             }
@@ -1053,6 +1064,10 @@ PanelWindow {
                     searchInput.forceActiveFocus()
                 } else if (root.currentView === "packages") {
                     if (packageView) packageView.focusSearch()
+                } else if (root.currentView === "clipboard") {
+                    if (clipboardView) clipboardView.focusSearch()
+                } else if (root.currentView === "shelf") {
+                    if (shelfView) shelfView.focusSearch()
                 } else {
                     keyCatcher.forceActiveFocus()
                 }
