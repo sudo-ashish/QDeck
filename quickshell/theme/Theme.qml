@@ -53,10 +53,14 @@ QtObject {
     readonly property color urgent: root.red
     readonly property color yellow: _c.yellow || _c.color3 || "#e0af68"
     readonly property color orange: _c.orange || _c.color3 || "#eb927b"
+    readonly property color peach: root.orange
     readonly property color green: _c.green || _c.color2 || "#9ece6a"
     readonly property color cyan: _c.cyan || _c.color6 || "#449dab"
+    readonly property color sky: root.cyan
     readonly property color blue: _c.blue || _c.color4 || root.accent
     readonly property color magenta: _c.magenta || _c.color5 || "#ad8ee6"
+    readonly property color purple: root.magenta
+    readonly property color mauve: root.magenta
     readonly property color brown: _c.brown || Qt.darker(root.yellow, 1.4)
 
     // High-Vibrancy Variants
