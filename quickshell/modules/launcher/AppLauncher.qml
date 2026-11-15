@@ -98,10 +98,10 @@ PanelWindow {
             }
             var pkgCount = packageView ? packageView.resultCount : 0
             if (pkgCount <= 0) {
-                return 138
+                return 84
             }
             var pkgContentH = (pkgCount * 56) + (Math.max(0, pkgCount - 1) * 4)
-            var totalPkgH = 138 + pkgContentH
+            var totalPkgH = 94 + pkgContentH
             return Math.min(590, totalPkgH)
         }
         if (root.currentView === "apps") {

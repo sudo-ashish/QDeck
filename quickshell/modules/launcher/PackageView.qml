@@ -240,80 +240,16 @@ Item {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Header Bar (Search summary & Quick Cancel)
-    // ─────────────────────────────────────────────────────────────────────────
-    Item {
-        id: headerBar
-        anchors {
-            top: parent.top
-            left: parent.left
-            right: parent.right
-            topMargin: 14
-            leftMargin: 16
-            rightMargin: 16
-        }
-        height: 34
-
-        RowLayout {
-            anchors.fill: parent
-            spacing: 10
-
-            // Icon & Title
-            RowLayout {
-                spacing: 8
-                Layout.alignment: Qt.AlignVCenter
-
-                Text {
-                    text: "󰏖"
-                    font.family: root.fontFamily
-                    font.pixelSize: 18
-                    color: Theme.accent
-                }
-
-                Text {
-                    text: root.isInstalling ? ("Installing " + root.activePackage) : "Package Manager"
-                    font.family: root.fontFamily
-                    font.pixelSize: 15
-                    font.bold: true
-                    color: Theme.bright_foreground
-                }
-
-                // Status indicator (only show Searching... during active search)
-                Rectangle {
-                    visible: !root.isInstalling && root.isSearching
-                    radius: 8
-                    border.width: 0
-                    color: Theme.withAlpha(Theme.surfaceContainerHighest, 0.7)
-                    implicitWidth: countText.implicitWidth + 14
-                    implicitHeight: 22
-
-                    Text {
-                        id: countText
-                        anchors.centerIn: parent
-                        text: "Searching..."
-                        font.family: root.fontFamily
-                        font.pixelSize: 11
-                        font.bold: true
-                        color: Theme.accent
-                    }
-                }
-            }
-
-            Item { Layout.fillWidth: true }
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
     // Main Body Area: Results List OR Live Install Console
     // ─────────────────────────────────────────────────────────────────────────
     Item {
         id: contentArea
         anchors {
-            top: headerBar.bottom
+            top: parent.top
             bottom: searchContainer.top
             left: parent.left
             right: parent.right
-            topMargin: 10
+            topMargin: 14
             bottomMargin: 10
             leftMargin: 14
             rightMargin: 14
@@ -708,6 +644,27 @@ Item {
                             root.requestClose()
                         }
                     }
+                }
+            }
+
+            // Searching indicator badge
+            Rectangle {
+                visible: !root.isInstalling && root.isSearching
+                radius: 8
+                border.width: 0
+                color: Theme.withAlpha(Theme.surfaceContainerHighest, 0.7)
+                implicitWidth: searchBadgeText.implicitWidth + 14
+                implicitHeight: 24
+                Layout.alignment: Qt.AlignVCenter
+
+                Text {
+                    id: searchBadgeText
+                    anchors.centerIn: parent
+                    text: "Searching..."
+                    font.family: root.fontFamily
+                    font.pixelSize: 11
+                    font.bold: true
+                    color: Theme.accent
                 }
             }
 

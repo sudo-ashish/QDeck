@@ -44,7 +44,7 @@ QtObject {
 
     // Individual bar widget icon sizes (px) - adaptively scaled with global text size
     property int barIconSize: Icons.barIconSize
-    property int batteryIconSize: Math.max(18, Math.round(Fonts.baseTextSize * (26 / 12.0)))
+    property int batteryIconSize: Math.max(18, Math.round(Fonts.baseTextSize * (23 / 12.0)))
     property int audioIconSize: root.barIconSize
     property int bluetoothIconSize: root.barIconSize
     property int networkIconSize: root.barIconSize
