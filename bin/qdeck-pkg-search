@@ -1,165 +1,30 @@
 #!/usr/bin/env python3
 """
-QDeck: High-Performance Package Search Engine (Arch Linux Official + AUR)
-Features:
-- Dual-threaded parallel discovery (Pacman + AUR RPC v5 / Yay fallback)
-- Multi-word and leading-hyphen query resilience
-- Global relevance ranking (prevents AUR queue starvation)
-- Sub-millisecond AppStream / Desktop icon resolution with atomic persistent cache
-- Generation ID tagging for zero-race Qt event loops
+QDeck: Fast Package Search Engine (Arch Linux Official + AUR)
+Streams ranked JSON lines to stdout:
+{"gen": 1, "rank": 0, "name": "...", "version": "...", "description": "...", "source": "official"|"aur", "repo": "...", "installed": true|false}
 """
 
 import sys
-import os
-import glob
-import gzip
-import json
 import re
+import json
 import urllib.request
 import urllib.parse
 import subprocess
 import threading
-import xml.etree.ElementTree as ET
+import queue
+import socket
 
-# ── Icon Cache Resolution ───────────────────────────────────────────────────
-
-CACHE_DIR = os.path.expanduser("~/.cache/qdeck")
-ICON_CACHE_FILE = os.path.join(CACHE_DIR, "pkg-icons-v1.json")
-COMMON_SUFFIXES = [
-    "-bin", "-git", "-nightly", "-aur", "-wayland",
-    "-qt", "-gtk", "-electron", "-desktop"
-]
-
-def load_or_build_icon_map():
-    # 1. Fast Path: Cache validation (< 1ms)
-    watched_dirs = [
-        "/usr/share/applications",
-        os.path.expanduser("~/.local/share/applications"),
-        "/usr/share/swcatalog/xml",
-        "/usr/share/app-info/xmls"
-    ]
-
-    cache_mtime = 0
-    if os.path.isfile(ICON_CACHE_FILE):
-        try:
-            cache_mtime = os.path.getmtime(ICON_CACHE_FILE)
-            is_valid = True
-            for d in watched_dirs:
-                if os.path.isdir(d) and os.path.getmtime(d) > cache_mtime:
-                    is_valid = False
-                    break
-            if is_valid:
-                with open(ICON_CACHE_FILE, "r", encoding="utf-8") as fp:
-                    return json.load(fp)
-        except Exception:
-            pass
-
-    # 2. Builder Path (Runs only on cache invalidation or first run)
-    icon_map = {}
-
-    # Source A: AppStream Catalogs
-    sw_dirs = ["/usr/share/swcatalog/xml", "/usr/share/app-info/xmls"]
-    for sw_dir in sw_dirs:
-        if not os.path.isdir(sw_dir):
-            continue
-        for gz_file in glob.glob(os.path.join(sw_dir, "*.xml.gz")):
-            try:
-                with gzip.open(gz_file, "rb") as f:
-                    tree = ET.parse(f)
-                    root = tree.getroot()
-                    for comp in root.findall("component"):
-                        pkg_elem = comp.find("pkgname")
-                        if pkg_elem is None or not pkg_elem.text:
-                            continue
-                        pkgname = pkg_elem.text.strip().lower()
-
-                        icon_val = None
-                        for icon_elem in comp.findall("icon"):
-                            itype = icon_elem.attrib.get("type")
-                            itext = (icon_elem.text or "").strip()
-                            if itype == "cached" and itext:
-                                for size in ["64x64", "128x128"]:
-                                    test_path = f"/usr/share/swcatalog/icons/archlinux/{size}/{itext}"
-                                    if os.path.isfile(test_path):
-                                        icon_val = test_path
-                                        break
-                                if not icon_val:
-                                    icon_val = itext
-                            elif itype == "stock" and itext and not icon_val:
-                                icon_val = itext
-
-                        if icon_val:
-                            icon_map[pkgname] = icon_val
-            except Exception:
-                pass
-
-    # Source B: Local .desktop files
-    desktop_dirs = ["/usr/share/applications", os.path.expanduser("~/.local/share/applications")]
-    for d in desktop_dirs:
-        if not os.path.isdir(d):
-            continue
-        for f in glob.glob(os.path.join(d, "*.desktop")):
-            try:
-                stem = os.path.splitext(os.path.basename(f))[0].lower()
-                icon = None
-                exec_bin = None
-                with open(f, "r", encoding="utf-8", errors="ignore") as fp:
-                    for line in fp:
-                        line = line.strip()
-                        if line.startswith("Icon=") and not icon:
-                            icon = line.split("=", 1)[1].strip()
-                        elif line.startswith("Exec=") and not exec_bin:
-                            cmd_parts = line.split("=", 1)[1].strip().split()
-                            if cmd_parts:
-                                exec_bin = os.path.basename(cmd_parts[0]).lower()
-                if icon:
-                    icon_map[stem] = icon
-                    if "." in stem:
-                        last_part = stem.split(".")[-1]
-                        if len(last_part) >= 3 and last_part not in icon_map:
-                            icon_map[last_part] = icon
-                    if exec_bin and exec_bin not in icon_map:
-                        icon_map[exec_bin] = icon
-            except Exception:
-                pass
-
-    # Save cache atomically
+# Force IPv4 for getaddrinfo to eliminate 5s DNS timeout delays on Arch Linux
+_orig_getaddrinfo = socket.getaddrinfo
+def _ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
     try:
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        tmp_file = ICON_CACHE_FILE + ".tmp"
-        with open(tmp_file, "w", encoding="utf-8") as fp:
-            json.dump(icon_map, fp, indent=None)
-        os.replace(tmp_file, ICON_CACHE_FILE)
+        return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
     except Exception:
-        pass
+        return _orig_getaddrinfo(host, port, family, type, proto, flags)
+socket.getaddrinfo = _ipv4_getaddrinfo
 
-    return icon_map
-
-def resolve_icon_heuristic(pkg_name, icon_map):
-    p = pkg_name.lower()
-    # 1. Exact match
-    if p in icon_map:
-        return icon_map[p], p
-
-    # 2. Strip common packaging suffixes
-    base = p
-    for sfx in COMMON_SUFFIXES:
-        if base.endswith(sfx):
-            base = base[:-len(sfx)]
-            break
-
-    if base in icon_map:
-        return icon_map[base], base
-
-    # 3. Base name prefix before first hyphen
-    if "-" in base:
-        first_segment = base.split("-", 1)[0]
-        if len(first_segment) >= 3 and first_segment in icon_map:
-            return icon_map[first_segment], first_segment
-
-    return "", base
-
-# ── Query & Relevance Calculation ────────────────────────────────────────────
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
 def get_installed_set():
     try:
@@ -168,223 +33,222 @@ def get_installed_set():
     except Exception:
         return set()
 
-def calc_rank_tier(name, query):
+def calc_rank(name, query, is_aur=False):
     n = name.lower()
-    q = query.lower()
+    q = query.lower().strip()
+    tokens = [t for t in q.split() if t]
+    penalty = 1 if is_aur else 0
+
     if n == q:
-        return 0  # Exact match
+        return (0 + penalty, len(n), n)
     if n.startswith(q):
-        return 1  # Prefix match
-    if q in n:
-        return 2  # Substring in name
-    return 3      # Description match
+        return (2 + penalty, len(n), n)
+    if q in n or (tokens and all(t in n for t in tokens)):
+        return (4 + penalty, len(n), n)
+    return (6 + penalty, len(n), n)
 
-# ── Discovery Workers ────────────────────────────────────────────────────────
+def matches_all_tokens(name, desc, tokens):
+    haystack = f"{name} {desc}".lower()
+    return all(t in haystack for t in tokens)
 
-def search_official_worker(query, installed_set, out_list):
+def fetch_aur_rpc(rpc_term):
+    encoded_q = urllib.parse.quote(rpc_term)
+    url = f"https://aur.archlinux.org/rpc/v5/search/{encoded_q}?by=name-desc"
+    # Fast path: curl with IPv4 (avoids Python getaddrinfo IPv6 resolution delay)
     try:
-        # Pass query tokens as separate arguments to pacman with "--" to prevent flag injection
-        tokens = query.split()
-        if not tokens:
-            return
-        cmd = ["pacman", "-Ss", "--"] + tokens
-        out = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL)
-        lines = out.splitlines()
-
-        i = 0
-        while i < len(lines):
-            line = lines[i].strip()
-            if not line:
-                i += 1
-                continue
-            parts = line.split()
-            if len(parts) >= 2:
-                repo_name = parts[0]
-                version = parts[1]
-                if "/" in repo_name:
-                    repo, name = repo_name.split("/", 1)
-                else:
-                    repo, name = "official", repo_name
-                desc = ""
-                if i + 1 < len(lines) and lines[i + 1].startswith("    "):
-                    desc = lines[i + 1].strip()
-                    i += 1
-                out_list.append({
-                    "name": name,
-                    "version": version,
-                    "description": desc,
-                    "source": "official",
-                    "repo": repo,
-                    "installed": name in installed_set
-                })
-            i += 1
+        proc = subprocess.run(
+            ["curl", "-s", "-4", "--connect-timeout", "4", "--max-time", "6.5", "-H", "User-Agent: qdeck-pkg/1.0 (Arch Linux)", url],
+            capture_output=True,
+            text=True,
+            timeout=7.0
+        )
+        if proc.returncode == 0 and proc.stdout:
+            data = json.loads(proc.stdout)
+            if data.get("type") != "error":
+                return data
     except Exception:
         pass
 
-def search_aur_worker(query, installed_set, out_list):
-    tokens = [t for t in query.lower().split() if len(t) >= 1]
-    valid_tokens = [t for t in tokens if len(t) >= 2]
-
-    if not valid_tokens and not tokens:
-        return
-
-    # Prefer hyphenated or specific token; default to first valid token, then longest
-    hyphen_tokens = [t for t in valid_tokens if "-" in t]
-    if hyphen_tokens:
-        primary_token = max(hyphen_tokens, key=len)
-    elif valid_tokens:
-        primary_token = valid_tokens[0]
-    else:
-        primary_token = tokens[0]
-
-    # Attempt AUR RPC v5
-    rpc_success = False
+    # Fallback to urllib
     try:
-        encoded_term = urllib.parse.quote(primary_token)
-        url = f"https://aur.archlinux.org/rpc/v5/search/{encoded_term}?by=name-desc"
         req = urllib.request.Request(
             url,
             headers={"User-Agent": "qdeck-pkg/1.0 (Arch Linux)"}
         )
-        with urllib.request.urlopen(req, timeout=3.0) as response:
+        with urllib.request.urlopen(req, timeout=6.0) as response:
             data = json.loads(response.read().decode("utf-8"))
-            results = data.get("results", [])
-            for r in results:
-                name = r.get("Name", "")
-                if not name:
-                    continue
-                name_l = name.lower()
-                desc = r.get("Description", "") or ""
-                desc_l = desc.lower()
-
-                # Multi-word query filter: all tokens must appear in name or description
-                if tokens and not all(t in name_l or t in desc_l for t in tokens):
-                    continue
-
-                out_list.append({
-                    "name": name,
-                    "version": r.get("Version", "") or "",
-                    "description": desc,
-                    "source": "aur",
-                    "repo": "aur",
-                    "installed": name in installed_set
-                })
-            rpc_success = True
+            if data.get("type") != "error":
+                return data
     except Exception:
         pass
+    return None
 
-    # Fallback to yay if RPC failed or returned 0 results
-    if not rpc_success or len(out_list) == 0:
+def search_official(query, gen_id, installed_set, out_queue):
+    try:
+        items = []
+        tokens = [t.lower() for t in query.split() if t]
         try:
-            cmd = ["yay", "-Ss", "--aur", "--color", "never", "--"] + query.split()
-            out = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL, timeout=2.5)
-            lines = out.splitlines()
+            cmd = ["pacman", "-Ss", "--"] + (tokens if tokens else [query])
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True
+            )
+            lines = [line.rstrip("\n") for line in proc.stdout]
+            proc.wait()
+
             i = 0
             while i < len(lines):
                 line = lines[i].strip()
-                if not line:
+                if not line or line.startswith(" "):
                     i += 1
                     continue
-                # Strip any residual ANSI codes
-                clean_line = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', line)
-                parts = clean_line.split()
-                if len(parts) >= 2 and parts[0].startswith("aur/"):
-                    name = parts[0].replace("aur/", "")
+                parts = line.split()
+                if len(parts) >= 2 and "/" in parts[0]:
+                    repo, name = parts[0].split("/", 1)
                     version = parts[1]
                     desc = ""
                     if i + 1 < len(lines) and lines[i + 1].startswith("    "):
-                        desc = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', lines[i + 1]).strip()
+                        desc = lines[i + 1].strip()
                         i += 1
-                    out_list.append({
+                    rank_tuple = calc_rank(name, query, is_aur=False)
+                    items.append((rank_tuple, {
+                        "gen": gen_id,
+                        "rank": rank_tuple[0],
                         "name": name,
                         "version": version,
                         "description": desc,
-                        "source": "aur",
-                        "repo": "aur",
+                        "source": "official",
+                        "repo": repo,
                         "installed": name in installed_set
-                    })
+                    }))
                 i += 1
         except Exception:
             pass
 
-# ── Main Entry Point ─────────────────────────────────────────────────────────
+        items.sort(key=lambda x: x[0])
+        for _, item in items[:50]:
+            out_queue.put(item)
+    finally:
+        out_queue.put({"_done": "official"})
+
+def search_aur(query, gen_id, installed_set, out_queue):
+    try:
+        items = []
+        tokens = [t.lower() for t in query.split() if t]
+        # Keep internal hyphens intact; only strip leading/trailing hyphens for RPC query
+        rpc_candidates = [t.strip("-_") for t in tokens if len(t.strip("-_")) >= 2]
+        rpc_term = max(rpc_candidates, key=len) if rpc_candidates else ""
+
+        rpc_succeeded = False
+        if len(rpc_term) >= 2:
+            data = fetch_aur_rpc(rpc_term)
+            if data and data.get("type") != "error":
+                rpc_succeeded = True
+                for r in data.get("results", []):
+                    name = r.get("Name", "")
+                    desc = r.get("Description", "") or ""
+                    if not name or not matches_all_tokens(name, desc, tokens):
+                        continue
+                    rank_tuple = calc_rank(name, query, is_aur=True)
+                    items.append((rank_tuple, {
+                        "gen": gen_id,
+                        "rank": rank_tuple[0],
+                        "name": name,
+                        "version": r.get("Version", ""),
+                        "description": desc,
+                        "source": "aur",
+                        "repo": "aur",
+                        "installed": name in installed_set
+                    }))
+
+        if not rpc_succeeded and tokens:
+            try:
+                cmd = ["yay", "-Ss", "--aur", "--color", "never", "--"] + tokens
+                out = subprocess.check_output(
+                    cmd,
+                    text=True,
+                    stderr=subprocess.DEVNULL,
+                    timeout=6.0
+                )
+                lines = out.splitlines()
+                i = 0
+                while i < len(lines):
+                    line = ANSI_RE.sub("", lines[i]).strip()
+                    if not line:
+                        i += 1
+                        continue
+                    parts = line.split()
+                    if len(parts) >= 2 and parts[0].startswith("aur/"):
+                        name = parts[0].split("/", 1)[1]
+                        version = parts[1]
+                        desc = ""
+                        if i + 1 < len(lines) and lines[i + 1].startswith("    "):
+                            desc = ANSI_RE.sub("", lines[i + 1]).strip()
+                            i += 1
+                        if matches_all_tokens(name, desc, tokens):
+                            rank_tuple = calc_rank(name, query, is_aur=True)
+                            items.append((rank_tuple, {
+                                "gen": gen_id,
+                                "rank": rank_tuple[0],
+                                "name": name,
+                                "version": version,
+                                "description": desc,
+                                "source": "aur",
+                                "repo": "aur",
+                                "installed": name in installed_set
+                            }))
+                    i += 1
+            except Exception:
+                pass
+
+        items.sort(key=lambda x: x[0])
+        for _, item in items[:50]:
+            out_queue.put(item)
+    finally:
+        out_queue.put({"_done": "aur"})
 
 def main():
-    gen_id = 0
     args = sys.argv[1:]
-
-    # Parse optional --gen flag
+    gen_id = 0
     if len(args) >= 2 and args[0] == "--gen":
         try:
             gen_id = int(args[1])
         except ValueError:
-            pass
+            gen_id = 0
         args = args[2:]
-    elif len(args) >= 1 and args[0].startswith("--gen="):
-        try:
-            gen_id = int(args[0].split("=", 1)[1])
-        except ValueError:
-            pass
-        args = args[1:]
 
-    # Strip "--" delimiter if provided
-    if args and args[0] == "--":
-        args = args[1:]
-
+    if not args:
+        sys.exit(0)
     query = " ".join(args).strip()
     if not query:
         sys.exit(0)
 
-    # 1. Load icon map and installed set in parallel with query startup
     installed_set = get_installed_set()
-    icon_map = load_or_build_icon_map()
+    out_queue = queue.Queue()
 
-    # 2. Parallel discovery threads
-    official_results = []
-    aur_results = []
-
-    t_off = threading.Thread(target=search_official_worker, args=(query, installed_set, official_results), daemon=True)
-    t_aur = threading.Thread(target=search_aur_worker, args=(query, installed_set, aur_results), daemon=True)
+    t_off = threading.Thread(target=search_official, args=(query, gen_id, installed_set, out_queue), daemon=True)
+    t_aur = threading.Thread(target=search_aur, args=(query, gen_id, installed_set, out_queue), daemon=True)
 
     t_off.start()
     t_aur.start()
 
-    # Wait up to 3.5 seconds for discovery
-    import time
-    deadline = time.time() + 3.5
-    t_off.join(1.0)
-    t_aur.join(max(0.5, deadline - time.time()))
+    seen_names = set()
+    done_count = 0
 
-    # Cap candidates per source to prevent unbounded sorting cost
-    official_capped = sorted(official_results, key=lambda x: (calc_rank_tier(x["name"], query), len(x["name"])))[:50]
-    aur_capped = sorted(aur_results, key=lambda x: (calc_rank_tier(x["name"], query), len(x["name"])))[:50]
-
-    # Merge and deduplicate (official repository packages take precedence)
-    merged = {}
-    for item in official_capped:
-        merged[item["name"]] = item
-    for item in aur_capped:
-        if item["name"] not in merged:
-            merged[item["name"]] = item
-
-    # 3. Global Relevance Ranking
-    # Sort tuple: (rank_tier, is_aur_penalty, len(name), name)
-    # - rank_tier: 0 (exact), 1 (prefix), 2 (substring in name), 3 (description)
-    # - is_aur_penalty: 0 for official, 1 for AUR (exact/prefix AUR matches outrank weak official description matches)
-    def global_rank(item):
-        tier = calc_rank_tier(item["name"], query)
-        is_aur = 1 if item.get("source") == "aur" else 0
-        return (tier, is_aur, len(item["name"]), item["name"].lower())
-
-    ranked_items = sorted(merged.values(), key=global_rank)[:80]
-
-    # 4. Stream results with resolved icon metadata and generation ID
-    for item in ranked_items:
-        icon_path, icon_guess = resolve_icon_heuristic(item["name"], icon_map)
-        item["gen"] = gen_id
-        item["icon"] = icon_path
-        item["icon_guess"] = icon_guess
-        print(json.dumps(item), flush=True)
+    while done_count < 2:
+        try:
+            item = out_queue.get(timeout=8.5)
+            if "_done" in item:
+                done_count += 1
+                continue
+            name = item.get("name")
+            if name and name not in seen_names:
+                seen_names.add(name)
+                print(json.dumps(item), flush=True)
+        except queue.Empty:
+            break
 
 if __name__ == "__main__":
     try:

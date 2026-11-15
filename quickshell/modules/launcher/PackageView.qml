@@ -20,6 +20,8 @@ Item {
     property string activePackage: ""
     property int activeExitCode: 0
     property int searchGen: 0
+    property bool pendingSearchRestart: false
+    property string pendingSearchQuery: ""
 
     property int selectedIndex: 0
 
@@ -55,6 +57,9 @@ Item {
         if (searchProc.running) {
             searchProc.running = false
         }
+        pendingSearchRestart = false
+        pendingSearchQuery = ""
+        isSearching = false
         isInstalling = false
         installSuccess = false
         installFailed = false
@@ -63,27 +68,48 @@ Item {
         logModel.clear()
     }
 
+    function insertRankedResult(item) {
+        var newRank = (item.rank !== undefined) ? item.rank : 99
+        var newLen = item.name.length
+        for (var i = 0; i < resultsModel.count; i++) {
+            var cur = resultsModel.get(i)
+            if (cur.name === item.name) return // deduplicate
+            var curRank = (cur.rank !== undefined) ? cur.rank : 99
+            if (newRank < curRank || (newRank === curRank && newLen < cur.name.length)) {
+                resultsModel.insert(i, item)
+                return
+            }
+        }
+        resultsModel.append(item)
+    }
+
     function triggerSearch() {
         var q = root.filterText.trim()
-        if (searchProc.running) {
-            searchProc.running = false
-        }
+        root.searchGen += 1
         resultsModel.clear()
         root.selectedIndex = 0
 
         if (q.length === 0) {
+            root.pendingSearchRestart = false
+            root.pendingSearchQuery = ""
             root.isSearching = false
+            if (searchProc.running) {
+                searchProc.running = false
+            }
             return
         }
 
         root.isSearching = true
-        root.searchGen++
-        var currentGen = root.searchGen
-        Qt.callLater(function() {
-            if (!root.isSearching) return
-            searchProc.command = ["qdeck-pkg-search", "--gen", String(currentGen), q]
+        if (searchProc.running) {
+            // Wait for onExited before spawning the next process
+            root.pendingSearchQuery = q
+            root.pendingSearchRestart = true
+            searchProc.running = false
+        } else {
+            root.pendingSearchRestart = false
+            searchProc.command = ["qdeck-pkg-search", "--gen", String(root.searchGen), q]
             searchProc.running = true
-        })
+        }
     }
 
     function installPackage(pkgName) {
@@ -142,14 +168,23 @@ Item {
                 if (!clean) return
                 try {
                     var item = JSON.parse(clean)
-                    if (item && item.name && (item.gen === undefined || item.gen === root.searchGen)) {
-                        resultsModel.append(item)
-                    }
+                    if (!item || !item.name) return
+                    if (item.gen !== undefined && item.gen !== root.searchGen) return
+                    root.insertRankedResult(item)
                 } catch (e) {}
             }
         }
         onExited: function(exitCode, exitStatus) {
-            root.isSearching = false
+            if (root.pendingSearchRestart && root.pendingSearchQuery.length > 0) {
+                var nextQ = root.pendingSearchQuery
+                root.pendingSearchRestart = false
+                root.pendingSearchQuery = ""
+                root.isSearching = true
+                searchProc.command = ["qdeck-pkg-search", "--gen", String(root.searchGen), nextQ]
+                searchProc.running = true
+            } else {
+                root.isSearching = false
+            }
         }
     }
 
@@ -371,19 +406,6 @@ Item {
                     readonly property bool isHovered: itemMouse.hovered
                     readonly property bool isOfficial: model.source === "official"
 
-                    readonly property string resolvedIconPath: {
-                        if (model.icon && model.icon.indexOf("/") === 0) return "file://" + model.icon
-                        if (model.icon) {
-                            var p1 = Quickshell.iconPath(model.icon, true)
-                            if (p1 !== "") return p1
-                        }
-                        if (model.icon_guess) {
-                            var p2 = Quickshell.iconPath(model.icon_guess, true)
-                            if (p2 !== "") return p2
-                        }
-                        return ""
-                    }
-
                     color: isSelected
                         ? Theme.withAlpha(Theme.accent, 0.18)
                         : (isHovered ? Theme.withAlpha(Theme.surfaceContainerHighest, 0.6) : Theme.surfaceContainer)
@@ -397,40 +419,6 @@ Item {
                         anchors.leftMargin: 14
                         anchors.rightMargin: 14
                         spacing: 12
-
-                        // Icon container with real icon + Nerd Font fallback
-                        Rectangle {
-                            radius: 10
-                            border.width: 0
-                            color: isOfficial
-                                ? Theme.withAlpha(Theme.accent, 0.15)
-                                : Theme.withAlpha(Theme.yellow, 0.15)
-                            implicitWidth: 36
-                            implicitHeight: 36
-                            Layout.alignment: Qt.AlignVCenter
-
-                            Image {
-                                id: pkgIcon
-                                anchors.centerIn: parent
-                                width: 24
-                                height: 24
-                                source: delegateRoot.resolvedIconPath
-                                asynchronous: true
-                                smooth: true
-                                mipmap: true
-                                sourceSize: Qt.size(24, 24)
-                                visible: delegateRoot.resolvedIconPath !== "" && status === Image.Ready
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: isOfficial ? "󰏔" : "󰮣"
-                                font.family: root.fontFamily
-                                font.pixelSize: 17
-                                color: isOfficial ? Theme.accent : Theme.yellow
-                                visible: !pkgIcon.visible
-                            }
-                        }
 
                         // Info column
                         ColumnLayout {
