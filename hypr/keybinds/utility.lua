@@ -12,9 +12,9 @@ hl.bind("SHIFT + PRINT", hl.dsp.exec_cmd("qdeck screenshot clipboard region"))
 ---- QDECK CONTROLS ----
 hl.bind("SUPER + B", hl.dsp.exec_cmd("qdeck bar toggle"))
 hl.bind("SUPER + ALT + B", hl.dsp.exec_cmd("qdeck-blur"))
+hl.bind("SUPER + SHIFT + B", hl.dsp.exec_cmd("qdeck-sysmon"))
 
 ---- APPS ----
-hl.bind("SUPER + SHIFT + B", hl.dsp.exec_cmd("default-browser"))
 hl.bind("SUPER + I", hl.dsp.exec_cmd("qdeck-pkg"))
 hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("tui-launch webapp-create"))
 hl.bind("XF86Calculator", hl.dsp.exec_cmd("gnome-calculator"))

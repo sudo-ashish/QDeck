@@ -279,13 +279,6 @@ PanelWindow {
                     service: root.brightnessService
                 }
 
-                SysmonWidget {
-                    id: sysmonWidget
-                    service: root.sysmonService
-                    open: root.sysmonOpen
-                    onClicked: root.toggleSysmon()
-                }
-
                 BatteryWidget {
                     id: batteryWidget
                     batteryService: root.batteryService
