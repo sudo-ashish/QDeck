@@ -123,11 +123,11 @@ PanelWindow {
             var totalCount = (root.clipboardService && root.clipboardService.items) ? root.clipboardService.items.count : 0
             var clipCount = clipboardView ? clipboardView.filteredCount : totalCount
             if (totalCount <= 0) {
-                return 96
+                return 150
             }
             var isClipSearching = clipboardView && clipboardView.isSearching
             if (clipCount <= 0) {
-                return 150
+                return 210
             }
             // Dynamic height based on number of items:
             // Top margin 14 + search box 56 + bottom margin 14 + spacing 10 = 94px
@@ -1046,8 +1046,8 @@ PanelWindow {
         }
 
         color: Theme.withAlpha(Theme.darker_background, Theme.baseOpacity)
-        border.color: root.currentView === "packages" ? "transparent" : Theme.withAlpha(Theme.border, 0.28)
-        border.width: root.currentView === "packages" ? 0 : 1
+        border.color: (root.currentView === "packages" || root.currentView === "clipboard") ? "transparent" : Theme.withAlpha(Theme.border, 0.28)
+        border.width: (root.currentView === "packages" || root.currentView === "clipboard") ? 0 : 1
         clip: true
 
         // M3 Shared Axis Y (Translate) + Z (Scale)

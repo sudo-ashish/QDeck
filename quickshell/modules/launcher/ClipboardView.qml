@@ -117,15 +117,57 @@ Item {
             rightMargin: 14
         }
 
-        // Clean Empty State: Only "Nothing here" centered
-        Text {
+        // Clean Minimal Zero-Border M3 Expressive Empty State
+        ColumnLayout {
+            id: emptyStateLayout
             anchors.centerIn: parent
+            spacing: 8
             visible: root.filteredCount === 0
-            text: "Nothing here"
-            font.family: root.fontFamily
-            font.pixelSize: 15
-            font.weight: Fonts.weightMedium
-            color: Theme.muted
+            opacity: visible ? 1.0 : 0.0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+            }
+
+            // 1. Tonal Icon Pill (Focal Anchor)
+            Rectangle {
+                Layout.alignment: Qt.AlignHCenter
+                implicitWidth: 42
+                implicitHeight: 42
+                radius: 12
+                border.width: 0
+                color: Theme.withAlpha(Theme.accent, 0.12)
+
+                Text {
+                    id: emptyIconText
+                    anchors.centerIn: parent
+                    text: root.isSearching ? (Icons.search || "") : (Icons.clipboard || "󰅍")
+                    font.family: Icons.effectiveFont(text)
+                    font.pixelSize: 20
+                    color: Theme.accent
+                }
+            }
+
+            // 2. Primary Title
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: root.isSearching ? "No matching clips" : "Clipboard is empty"
+                font.family: root.fontFamily
+                font.pixelSize: 14
+                font.bold: true
+                color: Theme.bright_foreground
+            }
+
+            // 3. Subtle Actionable Hint (Single Line)
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: root.isSearching
+                    ? "Try a different search term or press Esc to clear"
+                    : "Copy text or images to see your history here"
+                font.family: root.fontFamily
+                font.pixelSize: 11
+                color: Theme.withAlpha(Theme.muted, 0.85)
+            }
         }
 
         // Items ListView
@@ -191,10 +233,11 @@ Item {
                 }
 
                 RowLayout {
+                    id: itemContentRow
                     anchors.fill: parent
                     anchors.leftMargin: 14
-                    anchors.rightMargin: 14
-                    spacing: 12
+                    anchors.rightMargin: 10
+                    spacing: 10
 
                     // Text Preview & Metadata Subtitle
                     ColumnLayout {
@@ -239,28 +282,30 @@ Item {
 
                     // Right Side Actions: Flash Copied / Pin / Remove
                     RowLayout {
+                        id: actionsRowContainer
                         Layout.alignment: Qt.AlignVCenter
                         spacing: 6
-                        z: 20
+                        z: 50
 
                         // Copied! Feedback Badge
                         Rectangle {
                             visible: itemDelegate.isCopiedFlash
                             Layout.alignment: Qt.AlignVCenter
-                            width: copiedRow.implicitWidth + 12
-                            height: 24
-                            radius: 12
+                            width: copiedRow.implicitWidth + 14
+                            height: 28
+                            radius: 14
                             color: Theme.accent
+                            border.width: 0
 
                             Row {
                                 id: copiedRow
                                 anchors.centerIn: parent
-                                spacing: 3
+                                spacing: 4
 
                                 Text {
                                     text: Icons.check || "✓"
                                     font.family: Icons.effectiveFont(text)
-                                    font.pixelSize: 10
+                                    font.pixelSize: 11
                                     color: Theme.darker_background
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
@@ -268,7 +313,7 @@ Item {
                                 Text {
                                     text: "Copied"
                                     font.family: root.fontFamily
-                                    font.pixelSize: 10
+                                    font.pixelSize: 11
                                     font.weight: Fonts.weightBold
                                     color: Theme.darker_background
                                     anchors.verticalCenter: parent.verticalCenter
@@ -276,16 +321,18 @@ Item {
                             }
                         }
 
-                        // Pin Action Button
+                        // Pin Action Button (34x34)
                         Rectangle {
+                            id: pinBtn
                             visible: !itemDelegate.isCopiedFlash && (itemDelegate.isPinned || itemDelegate.isHovered)
                             Layout.alignment: Qt.AlignVCenter
-                            width: 28
-                            height: 28
-                            radius: 14
+                            width: 34
+                            height: 34
+                            radius: 17
                             color: itemDelegate.isPinned
-                                ? (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.accent, 0.35) : Theme.withAlpha(Theme.accent, 0.20))
+                                ? (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.accent, 0.35) : Theme.withAlpha(Theme.accent, 0.18))
                                 : (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.40) : "transparent")
+                            border.width: 0
 
                             Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -293,7 +340,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: Icons.pin || "󰐃"
                                 font.family: Icons.effectiveFont(text)
-                                font.pixelSize: 13
+                                font.pixelSize: 16
                                 color: itemDelegate.isPinned ? Theme.accent : (pinBtnMouse.containsMouse ? Theme.bright_foreground : Theme.muted)
                             }
 
@@ -303,6 +350,7 @@ Item {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 preventStealing: true
+                                propagateComposedEvents: false
                                 onClicked: function(mouse) {
                                     mouse.accepted = true
                                     if (root.clipboardService) {
@@ -312,16 +360,18 @@ Item {
                             }
                         }
 
-                        // Remove Action Button
+                        // Remove Action Button (34x34)
                         Rectangle {
+                            id: removeBtn
                             visible: !itemDelegate.isCopiedFlash && itemDelegate.isHovered
                             Layout.alignment: Qt.AlignVCenter
-                            width: 28
-                            height: 28
-                            radius: 14
+                            width: 34
+                            height: 34
+                            radius: 17
                             color: removeBtnMouse.containsMouse
                                 ? Theme.withAlpha(Theme.urgent, 0.22)
                                 : "transparent"
+                            border.width: 0
 
                             Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -329,7 +379,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: Icons.close || "󰅖"
                                 font.family: Icons.effectiveFont(text)
-                                font.pixelSize: 12
+                                font.pixelSize: 15
                                 color: removeBtnMouse.containsMouse ? Theme.urgent : Theme.muted
                             }
 
@@ -339,6 +389,7 @@ Item {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 preventStealing: true
+                                propagateComposedEvents: false
                                 onClicked: function(mouse) {
                                     mouse.accepted = true
                                     if (root.clipboardService) {
@@ -350,9 +401,17 @@ Item {
                     }
                 }
 
+                // Dedicated Item Selection Click Area:
+                // Only covers the text preview area and stops before the action buttons
                 MouseArea {
                     id: itemMouse
-                    anchors.fill: parent
+                    anchors {
+                        left: parent.left
+                        top: parent.top
+                        bottom: parent.bottom
+                        right: actionsRowContainer.left
+                        rightMargin: 6
+                    }
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
