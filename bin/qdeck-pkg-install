@@ -1,49 +1,91 @@
 #!/usr/bin/env bash
-# QDeck: Non-interactive package installer helper
-# Runs yay with live line-buffered output and predetermined non-interactive answers.
-
+# ==============================================================================
+# QDeck: Non-Interactive Package Installer Helper
+# Handles non-interactive yay/pacman execution, clean cancellation with process
+# group termination, pre-flight lock checks, askpass elevation, and output sanitization.
+# ==============================================================================
 set -euo pipefail
+
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/qdeck-pkg-install.pid"
+
+# ── Handle --cancel request ──────────────────────────────────────────────────
+if [[ "${1:-}" == "--cancel" ]]; then
+  if [[ -f "$PID_FILE" ]]; then
+    TARGET_PGID="$(cat "$PID_FILE" 2>/dev/null | tr -d '[:space:]' || true)"
+    if [[ -n "$TARGET_PGID" && "$TARGET_PGID" =~ ^[0-9]+$ ]]; then
+      echo "==> Cancelling installation (PGID: $TARGET_PGID)..."
+      kill -INT -- "-$TARGET_PGID" 2>/dev/null || true
+      sleep 0.5
+      kill -TERM -- "-$TARGET_PGID" 2>/dev/null || true
+    fi
+    rm -f "$PID_FILE" 2>/dev/null || true
+  fi
+  # Extra safety: kill any orphaned makepkg or pacman processes spawned recently
+  pkill -TERM -f "yay.*-S" 2>/dev/null || true
+  exit 0
+fi
 
 if [[ $# -eq 0 ]]; then
   echo "Usage: qdeck-pkg-install <package-name>" >&2
+  echo "       qdeck-pkg-install --cancel" >&2
   exit 1
 fi
 
 PKG="$1"
-echo "==> Starting installation of: $PKG"
 
-# Trap interrupt to cleanly terminate any background child processes
-cleanup() {
-  local pids
-  pids=$(jobs -p 2>/dev/null || true)
-  if [[ -n "$pids" ]]; then
-    kill -TERM $pids 2>/dev/null || true
+# ── Pre-flight check: stale pacman lock ──────────────────────────────────────
+if [[ -f /var/lib/pacman/db.lck ]]; then
+  if ! pgrep -x pacman &>/dev/null; then
+    echo "==> ERROR: Stale pacman database lock found at /var/lib/pacman/db.lck (no running pacman process). Remove it to proceed." >&2
+    exit 1
   fi
-}
-trap cleanup EXIT INT TERM
+fi
 
 # Ensure yay is present
 if ! command -v yay &>/dev/null; then
-  echo "Error: 'yay' is not installed." >&2
+  echo "==> ERROR: 'yay' package manager is not installed on this system." >&2
   exit 127
 fi
 
-# Run yay non-interactively with line buffering
+# ── Process Group Setup & PID Tracking ───────────────────────────────────────
+# Record our PGID so --cancel can terminate the entire tree cleanly
+MY_PGID="$(ps -o pgid= -p "$$" 2>/dev/null | tr -d '[:space:]' || echo "$$")"
+echo "$MY_PGID" > "$PID_FILE"
+
+cleanup() {
+  rm -f "$PID_FILE" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
+
+echo "==> Starting installation of: $PKG"
+
 export PYTHONUNBUFFERED=1
 export LC_ALL=C
 
-if command -v stdbuf &>/dev/null; then
-  exec stdbuf -oL -eL yay -S --needed --noconfirm \
-    --answerclean None \
-    --answerdiff None \
-    --answeredit None \
-    --answerupgrade None \
-    -- "$PKG" 2>&1
-else
-  exec yay -S --needed --noconfirm \
-    --answerclean None \
-    --answerdiff None \
-    --answeredit None \
-    --answerupgrade None \
-    -- "$PKG" 2>&1
+# ── Sudo / Polkit Elevation Setup ────────────────────────────────────────────
+YAY_SUDO_ARGS=()
+if ! sudo -n true 2>/dev/null; then
+  # Sudo requires authentication. Check for SUDO_ASKPASS or fallback to pkexec
+  if [[ -n "${SUDO_ASKPASS:-}" && -x "${SUDO_ASKPASS:-}" ]]; then
+    export SUDO_ASKPASS
+    YAY_SUDO_ARGS+=(--sudoflags "-A")
+  elif command -v pkexec &>/dev/null; then
+    # QDeck's native Polkit agent handles authentication via pkexec
+    YAY_SUDO_ARGS+=(--sudo pkexec)
+  fi
 fi
+
+# ── Execute yay with predetermined non-interactive answers ───────────────────
+# Strip ANSI sequences and normalize \r carriage returns for clean QML Text rendering
+yay -S --needed --noconfirm \
+  --color never \
+  --cleanmenu=false \
+  --diffmenu=false \
+  --editmenu=false \
+  --noremovemake \
+  --answerclean None \
+  --answerdiff None \
+  --answeredit None \
+  --answerupgrade None \
+  "${YAY_SUDO_ARGS[@]}" \
+  -- "$PKG" </dev/null 2>&1 | sed -u 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\r/\n/g'

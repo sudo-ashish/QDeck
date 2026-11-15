@@ -19,6 +19,7 @@ Item {
     property bool installFailed: false
     property string activePackage: ""
     property int activeExitCode: 0
+    property int searchGen: 0
 
     property int selectedIndex: 0
 
@@ -76,9 +77,11 @@ Item {
         }
 
         root.isSearching = true
+        root.searchGen++
+        var currentGen = root.searchGen
         Qt.callLater(function() {
             if (!root.isSearching) return
-            searchProc.command = ["qdeck-pkg-search", q]
+            searchProc.command = ["qdeck-pkg-search", "--gen", String(currentGen), q]
             searchProc.running = true
         })
     }
@@ -99,15 +102,28 @@ Item {
     }
 
     function cancelInstall() {
+        Quickshell.execDetached(["qdeck-pkg-install", "--cancel"])
         if (installProc.running) {
             installProc.running = false
-            Quickshell.execDetached(["pkill", "-TERM", "-f", "qdeck-pkg-install"])
-            Quickshell.execDetached(["pkill", "-TERM", "-f", "yay.*" + root.activePackage])
         }
         logModel.append({ text: "==> Installation cancelled by user." })
         root.isInstalling = false
         root.installSuccess = false
         root.installFailed = false
+    }
+
+    function handleConfirmKey() {
+        if (root.isInstalling) return
+        if (root.installSuccess || root.installFailed) {
+            root.resetState()
+            return
+        }
+        if (resultsModel.count > 0 && root.selectedIndex >= 0 && root.selectedIndex < resultsModel.count) {
+            var item = resultsModel.get(root.selectedIndex)
+            if (item && item.name) {
+                root.installPackage(item.name)
+            }
+        }
     }
 
     Timer {
@@ -126,7 +142,7 @@ Item {
                 if (!clean) return
                 try {
                     var item = JSON.parse(clean)
-                    if (item && item.name) {
+                    if (item && item.name && (item.gen === undefined || item.gen === root.searchGen)) {
                         resultsModel.append(item)
                     }
                 } catch (e) {}
@@ -143,6 +159,9 @@ Item {
         stdout: SplitParser {
             onRead: function(line) {
                 if (line && line.length > 0) {
+                    if (logModel.count >= 400) {
+                        logModel.remove(0, 50)
+                    }
                     logModel.append({ text: line })
                     if (logListView.count > 0) {
                         logListView.positionViewAtEnd()
@@ -352,6 +371,19 @@ Item {
                     readonly property bool isHovered: itemMouse.hovered
                     readonly property bool isOfficial: model.source === "official"
 
+                    readonly property string resolvedIconPath: {
+                        if (model.icon && model.icon.indexOf("/") === 0) return "file://" + model.icon
+                        if (model.icon) {
+                            var p1 = Quickshell.iconPath(model.icon, true)
+                            if (p1 !== "") return p1
+                        }
+                        if (model.icon_guess) {
+                            var p2 = Quickshell.iconPath(model.icon_guess, true)
+                            if (p2 !== "") return p2
+                        }
+                        return ""
+                    }
+
                     color: isSelected
                         ? Theme.withAlpha(Theme.accent, 0.18)
                         : (isHovered ? Theme.withAlpha(Theme.surfaceContainerHighest, 0.6) : Theme.surfaceContainer)
@@ -366,7 +398,7 @@ Item {
                         anchors.rightMargin: 14
                         spacing: 12
 
-                        // Icon container
+                        // Icon container with real icon + Nerd Font fallback
                         Rectangle {
                             radius: 10
                             border.width: 0
@@ -377,12 +409,26 @@ Item {
                             implicitHeight: 36
                             Layout.alignment: Qt.AlignVCenter
 
+                            Image {
+                                id: pkgIcon
+                                anchors.centerIn: parent
+                                width: 24
+                                height: 24
+                                source: delegateRoot.resolvedIconPath
+                                asynchronous: true
+                                smooth: true
+                                mipmap: true
+                                sourceSize: Qt.size(24, 24)
+                                visible: delegateRoot.resolvedIconPath !== "" && status === Image.Ready
+                            }
+
                             Text {
                                 anchors.centerIn: parent
                                 text: isOfficial ? "󰏔" : "󰮣"
                                 font.family: root.fontFamily
                                 font.pixelSize: 17
                                 color: isOfficial ? Theme.accent : Theme.yellow
+                                visible: !pkgIcon.visible
                             }
                         }
 
@@ -622,9 +668,10 @@ Item {
                             text: model.text || ""
                             font.family: root.monoFont
                             font.pixelSize: 12
-                            color: (text.indexOf("error:") !== -1 || text.indexOf("Error:") !== -1 || text.indexOf("failed") !== -1)
-                                ? Theme.red
-                                : ((text.indexOf("==>") !== -1 || text.indexOf("->") !== -1) ? Theme.accent : Theme.foreground)
+                            readonly property bool isErrorLine: /^(error:|==> ERROR:|:: error|fatal:|Failed to )/i.test(text.trim())
+                            readonly property bool isHeaderLine: /^(==>|->)/.test(text.trim())
+
+                            color: isErrorLine ? Theme.red : (isHeaderLine ? Theme.accent : Theme.foreground)
                             wrapMode: Text.WrapAnywhere
                         }
                     }
@@ -709,33 +756,8 @@ Item {
                         }
                     }
 
-                    Keys.onReturnPressed: {
-                        if (root.isInstalling) return
-                        if (root.installSuccess || root.installFailed) {
-                            root.resetState()
-                            return
-                        }
-                        if (resultsModel.count > 0 && root.selectedIndex >= 0 && root.selectedIndex < resultsModel.count) {
-                            var item = resultsModel.get(root.selectedIndex)
-                            if (item && item.name) {
-                                root.installPackage(item.name)
-                            }
-                        }
-                    }
-
-                    Keys.onEnterPressed: {
-                        if (root.isInstalling) return
-                        if (root.installSuccess || root.installFailed) {
-                            root.resetState()
-                            return
-                        }
-                        if (resultsModel.count > 0 && root.selectedIndex >= 0 && root.selectedIndex < resultsModel.count) {
-                            var item = resultsModel.get(root.selectedIndex)
-                            if (item && item.name) {
-                                root.installPackage(item.name)
-                            }
-                        }
-                    }
+                    Keys.onReturnPressed: root.handleConfirmKey()
+                    Keys.onEnterPressed: root.handleConfirmKey()
 
                     Keys.onEscapePressed: {
                         if (root.isInstalling) {
