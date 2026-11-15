@@ -61,6 +61,10 @@ Item {
         pendingSearchRestart = false
         pendingSearchQuery = ""
         lastSearchedQuery = ""
+        filterText = ""
+        searchInput.text = ""
+        resultsModel.clear()
+        selectedIndex = 0
         isSearching = false
         isInstalling = false
         installSuccess = false
@@ -110,7 +114,7 @@ Item {
             searchProc.running = false
         } else {
             root.pendingSearchRestart = false
-            searchProc.command = ["qdeck-pkg-search", "--gen", String(root.searchGen), q]
+            searchProc.command = ["qdeck-pkg", "search", "--gen", String(root.searchGen), q]
             searchProc.running = true
         }
     }
@@ -126,12 +130,12 @@ Item {
         logModel.clear()
         logModel.append({ text: "==> Initiating installation of: " + name })
 
-        installProc.command = ["qdeck-pkg-install", name]
+        installProc.command = ["qdeck-pkg", "install", name]
         installProc.running = true
     }
 
     function cancelInstall() {
-        Quickshell.execDetached(["qdeck-pkg-install", "--cancel"])
+        Quickshell.execDetached(["qdeck-pkg", "cancel"])
         if (installProc.running) {
             installProc.running = false
         }
@@ -184,7 +188,7 @@ Item {
                 root.pendingSearchRestart = false
                 root.pendingSearchQuery = ""
                 root.isSearching = true
-                searchProc.command = ["qdeck-pkg-search", "--gen", String(root.searchGen), nextQ]
+                searchProc.command = ["qdeck-pkg", "search", "--gen", String(root.searchGen), nextQ]
                 searchProc.running = true
             } else {
                 root.isSearching = false
@@ -264,9 +268,9 @@ Item {
                     color: Theme.bright_foreground
                 }
 
-                // Status pill
+                // Status indicator (only show Searching... during active search)
                 Rectangle {
-                    visible: !root.isInstalling && (resultsModel.count > 0 || root.isSearching)
+                    visible: !root.isInstalling && root.isSearching
                     radius: 8
                     border.width: 0
                     color: Theme.withAlpha(Theme.surfaceContainerHighest, 0.7)
@@ -276,11 +280,11 @@ Item {
                     Text {
                         id: countText
                         anchors.centerIn: parent
-                        text: root.isSearching ? "Searching..." : (resultsModel.count + " packages")
+                        text: "Searching..."
                         font.family: root.fontFamily
                         font.pixelSize: 11
                         font.bold: true
-                        color: root.isSearching ? Theme.accent : Theme.muted
+                        color: Theme.accent
                     }
                 }
             }

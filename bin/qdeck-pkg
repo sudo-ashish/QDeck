@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# QDeck: Package Manager Launcher (Quickshell Launcher Integration)
-# Opens or toggles the package search and installation view in QDeck launcher.
+# QDeck: Unified Package Manager Helper & CLI (qdeck-pkg / qdeck pkg)
+# Multi-feature package manager tool:
+#   qdeck-pkg                            - Toggle package manager view in launcher
+#   qdeck-pkg open [<query>]             - Open package manager (optional query)
+#   qdeck-pkg toggle                     - Toggle package manager view
+#   qdeck-pkg close                      - Close package manager
+#   qdeck-pkg search [--gen N] <query>   - Run parallel Arch & AUR search engine (JSON stream)
+#   qdeck-pkg install <pkg>              - Run non-interactive yay package installation
+#   qdeck-pkg cancel                     - Terminate ongoing installation process group
 # ==============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/qdeck-pkg-install.pid"
 
 # Source shared IPC helper
 if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
@@ -16,12 +24,367 @@ elif command -v qdeck-ipc >/dev/null 2>&1; then
   source "$(command -v qdeck-ipc)"
 fi
 
+# ── Feature 1: Installation Cancellation ─────────────────────────────────────
+cancel_install() {
+  if [[ -f "$PID_FILE" ]]; then
+    TARGET_PGID="$(cat "$PID_FILE" 2>/dev/null | tr -d '[:space:]' || true)"
+    if [[ -n "$TARGET_PGID" && "$TARGET_PGID" =~ ^[0-9]+$ ]]; then
+      echo "==> Cancelling installation (PGID: $TARGET_PGID)..."
+      kill -INT -- "-$TARGET_PGID" 2>/dev/null || true
+      sleep 0.5
+      kill -TERM -- "-$TARGET_PGID" 2>/dev/null || true
+    fi
+    rm -f "$PID_FILE" 2>/dev/null || true
+  fi
+  pkill -TERM -f "yay.*-S" 2>/dev/null || true
+  exit 0
+}
+
+# ── Feature 2: Non-interactive Installation ──────────────────────────────────
+run_install() {
+  if [[ $# -eq 0 ]]; then
+    echo "Usage: qdeck-pkg install <package-name>" >&2
+    exit 1
+  fi
+  local PKG="$1"
+
+  # Pre-flight check: stale pacman lock
+  if [[ -f /var/lib/pacman/db.lck ]]; then
+    if ! pgrep -x pacman &>/dev/null; then
+      echo "==> ERROR: Stale pacman database lock found at /var/lib/pacman/db.lck (no running pacman process). Remove it to proceed." >&2
+      exit 1
+    fi
+  fi
+
+  if ! command -v yay &>/dev/null; then
+    echo "==> ERROR: 'yay' package manager is not installed on this system." >&2
+    exit 127
+  fi
+
+  # Record PGID so cancel can terminate cleanly
+  MY_PGID="$(ps -o pgid= -p "$$" 2>/dev/null | tr -d '[:space:]' || echo "$$")"
+  echo "$MY_PGID" > "$PID_FILE"
+  cleanup() {
+    rm -f "$PID_FILE" 2>/dev/null || true
+  }
+  trap cleanup EXIT INT TERM
+
+  echo "==> Starting installation of: $PKG"
+  export PYTHONUNBUFFERED=1
+  export LC_ALL=C
+
+  YAY_SUDO_ARGS=()
+  if ! sudo -n true 2>/dev/null; then
+    if [[ -n "${SUDO_ASKPASS:-}" && -x "${SUDO_ASKPASS:-}" ]]; then
+      export SUDO_ASKPASS
+      YAY_SUDO_ARGS+=(--sudoflags "-A")
+    elif command -v pkexec &>/dev/null; then
+      YAY_SUDO_ARGS+=(--sudo pkexec)
+    fi
+  fi
+
+  yay -S --needed --noconfirm \
+    --color never \
+    --cleanmenu=false \
+    --diffmenu=false \
+    --editmenu=false \
+    --noremovemake \
+    --answerclean None \
+    --answerdiff None \
+    --answeredit None \
+    --answerupgrade None \
+    "${YAY_SUDO_ARGS[@]}" \
+    -- "$PKG" </dev/null 2>&1 | sed -u 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\r/\n/g'
+}
+
+# ── Feature 3: Parallel Search Engine (Embedded Python) ──────────────────────
+run_search() {
+  exec python3 - "$@" << 'PYEOF'
+import sys
+import re
+import json
+import urllib.request
+import urllib.parse
+import subprocess
+import threading
+import queue
+import socket
+
+# Force IPv4 for getaddrinfo to eliminate 5s DNS timeout delays on Arch Linux
+_orig_getaddrinfo = socket.getaddrinfo
+def _ipv4_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    try:
+        return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+    except Exception:
+        return _orig_getaddrinfo(host, port, family, type, proto, flags)
+socket.getaddrinfo = _ipv4_getaddrinfo
+
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+
+def get_installed_set():
+    try:
+        out = subprocess.check_output(["pacman", "-Qq"], text=True, stderr=subprocess.DEVNULL)
+        return set(out.splitlines())
+    except Exception:
+        return set()
+
+def calc_rank(name, query, is_aur=False):
+    n = name.lower()
+    q = query.lower().strip()
+    tokens = [t for t in q.split() if t]
+    penalty = 1 if is_aur else 0
+
+    if n == q:
+        return (0 + penalty, len(n), n)
+    if n.startswith(q):
+        return (2 + penalty, len(n), n)
+    if q in n or (tokens and all(t in n for t in tokens)):
+        return (4 + penalty, len(n), n)
+    return (6 + penalty, len(n), n)
+
+def matches_all_tokens(name, desc, tokens):
+    haystack = f"{name} {desc}".lower()
+    return all(t in haystack for t in tokens)
+
+def fetch_aur_rpc(rpc_term):
+    encoded_q = urllib.parse.quote(rpc_term)
+    url = f"https://aur.archlinux.org/rpc/v5/search/{encoded_q}?by=name-desc"
+    try:
+        proc = subprocess.run(
+            ["curl", "-s", "-4", "--connect-timeout", "4", "--max-time", "6.5", "-H", "User-Agent: qdeck-pkg/1.0 (Arch Linux)", url],
+            capture_output=True,
+            text=True,
+            timeout=7.0
+        )
+        if proc.returncode == 0 and proc.stdout:
+            data = json.loads(proc.stdout)
+            if data.get("type") != "error":
+                return data
+    except Exception:
+        pass
+
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "qdeck-pkg/1.0 (Arch Linux)"}
+        )
+        with urllib.request.urlopen(req, timeout=6.0) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            if data.get("type") != "error":
+                return data
+    except Exception:
+        pass
+    return None
+
+def search_official(query, gen_id, installed_set, out_queue):
+    try:
+        items = []
+        tokens = [t.lower() for t in query.split() if t]
+        try:
+            cmd = ["pacman", "-Ss", "--"] + (tokens if tokens else [query])
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True
+            )
+            lines = [line.rstrip("\n") for line in proc.stdout]
+            proc.wait()
+
+            i = 0
+            while i < len(lines):
+                line = lines[i].strip()
+                if not line or line.startswith(" "):
+                    i += 1
+                    continue
+                parts = line.split()
+                if len(parts) >= 2 and "/" in parts[0]:
+                    repo, name = parts[0].split("/", 1)
+                    version = parts[1]
+                    desc = ""
+                    if i + 1 < len(lines) and lines[i + 1].startswith("    "):
+                        desc = lines[i + 1].strip()
+                        i += 1
+                    rank_tuple = calc_rank(name, query, is_aur=False)
+                    items.append((rank_tuple, {
+                        "gen": gen_id,
+                        "rank": rank_tuple[0],
+                        "name": name,
+                        "version": version,
+                        "description": desc,
+                        "source": "official",
+                        "repo": repo,
+                        "installed": name in installed_set
+                    }))
+                i += 1
+        except Exception:
+            pass
+
+        items.sort(key=lambda x: x[0])
+        for _, item in items[:50]:
+            out_queue.put(item)
+    finally:
+        out_queue.put({"_done": "official"})
+
+def search_aur(query, gen_id, installed_set, out_queue):
+    try:
+        items = []
+        tokens = [t.lower() for t in query.split() if t]
+        rpc_candidates = [t.strip("-_") for t in tokens if len(t.strip("-_")) >= 2]
+        rpc_term = max(rpc_candidates, key=len) if rpc_candidates else ""
+
+        rpc_succeeded = False
+        if len(rpc_term) >= 2:
+            data = fetch_aur_rpc(rpc_term)
+            if data and data.get("type") != "error":
+                rpc_succeeded = True
+                for r in data.get("results", []):
+                    name = r.get("Name", "")
+                    desc = r.get("Description", "") or ""
+                    if not name or not matches_all_tokens(name, desc, tokens):
+                        continue
+                    rank_tuple = calc_rank(name, query, is_aur=True)
+                    items.append((rank_tuple, {
+                        "gen": gen_id,
+                        "rank": rank_tuple[0],
+                        "name": name,
+                        "version": r.get("Version", ""),
+                        "description": desc,
+                        "source": "aur",
+                        "repo": "aur",
+                        "installed": name in installed_set
+                    }))
+
+        if not rpc_succeeded and tokens:
+            try:
+                cmd = ["yay", "-Ss", "--aur", "--color", "never", "--"] + tokens
+                out = subprocess.check_output(
+                    cmd,
+                    text=True,
+                    stderr=subprocess.DEVNULL,
+                    timeout=6.0
+                )
+                lines = out.splitlines()
+                i = 0
+                while i < len(lines):
+                    line = ANSI_RE.sub("", lines[i]).strip()
+                    if not line:
+                        i += 1
+                        continue
+                    parts = line.split()
+                    if len(parts) >= 2 and parts[0].startswith("aur/"):
+                        name = parts[0].split("/", 1)[1]
+                        version = parts[1]
+                        desc = ""
+                        if i + 1 < len(lines) and lines[i + 1].startswith("    "):
+                            desc = ANSI_RE.sub("", lines[i + 1]).strip()
+                            i += 1
+                        if matches_all_tokens(name, desc, tokens):
+                            rank_tuple = calc_rank(name, query, is_aur=True)
+                            items.append((rank_tuple, {
+                                "gen": gen_id,
+                                "rank": rank_tuple[0],
+                                "name": name,
+                                "version": version,
+                                "description": desc,
+                                "source": "aur",
+                                "repo": "aur",
+                                "installed": name in installed_set
+                            }))
+                    i += 1
+            except Exception:
+                pass
+
+        items.sort(key=lambda x: x[0])
+        for _, item in items[:50]:
+            out_queue.put(item)
+    finally:
+        out_queue.put({"_done": "aur"})
+
+def main():
+    args = sys.argv[1:]
+    gen_id = 0
+    if len(args) >= 2 and args[0] == "--gen":
+        try:
+            gen_id = int(args[1])
+        except ValueError:
+            gen_id = 0
+        args = args[2:]
+
+    if not args:
+        sys.exit(0)
+    query = " ".join(args).strip()
+    if not query:
+        sys.exit(0)
+
+    installed_set = get_installed_set()
+    out_queue = queue.Queue()
+
+    t_off = threading.Thread(target=search_official, args=(query, gen_id, installed_set, out_queue), daemon=True)
+    t_aur = threading.Thread(target=search_aur, args=(query, gen_id, installed_set, out_queue), daemon=True)
+
+    t_off.start()
+    t_aur.start()
+
+    seen_names = set()
+    done_count = 0
+
+    while done_count < 2:
+        try:
+            item = out_queue.get(timeout=8.5)
+            if "_done" in item:
+                done_count += 1
+                continue
+            name = item.get("name")
+            if name and name not in seen_names:
+                seen_names.add(name)
+                print(json.dumps(item), flush=True)
+        except queue.Empty:
+            break
+
+if __name__ == "__main__":
+    try:
+        main()
+    except BrokenPipeError:
+        try:
+            sys.stdout.close()
+        except Exception:
+            pass
+        sys.exit(0)
+PYEOF
+}
+
+# ── Dispatching ──────────────────────────────────────────────────────────────
+CALLER="$(basename "$0")"
+
+# Check if called as legacy script name
+if [[ "$CALLER" == "qdeck-pkg-search" ]]; then
+  run_search "$@"
+elif [[ "$CALLER" == "qdeck-pkg-install" ]]; then
+  if [[ "${1:-}" == "--cancel" ]]; then
+    cancel_install
+  else
+    run_install "$@"
+  fi
+fi
+
 if [[ $# -eq 0 ]]; then
   call_ipc packages toggle
   exit 0
 fi
 
 case "$1" in
+  search)
+    shift || true
+    run_search "$@"
+    ;;
+  install)
+    shift || true
+    run_install "$@"
+    ;;
+  cancel|--cancel)
+    cancel_install
+    ;;
   toggle)
     call_ipc packages toggle
     ;;
@@ -33,29 +396,26 @@ case "$1" in
       call_ipc packages open
     fi
     ;;
-  search)
-    shift || true
-    call_ipc packages search "$*"
-    ;;
   close)
     call_ipc packages close
     ;;
   --help|-h|help)
     cat <<EOF
-QDeck Package Manager (Launcher Integration)
+QDeck Package Manager (Unified CLI)
 
 Usage:
-  qdeck-pkg                  Toggle package manager view in launcher
-  qdeck-pkg <query>          Open package manager with search query
-  qdeck-pkg toggle           Toggle package manager
-  qdeck-pkg open             Open package manager
-  qdeck-pkg search <query>   Open package manager with search query
-  qdeck-pkg close            Close package manager
+  qdeck-pkg                            Toggle package manager view in launcher
+  qdeck-pkg open [<query>]             Open package manager (optional query)
+  qdeck-pkg toggle                     Toggle package manager
+  qdeck-pkg close                      Close package manager
+  qdeck-pkg search [--gen N] <query>   Run package search engine (JSON stream)
+  qdeck-pkg install <package>          Install package non-interactively
+  qdeck-pkg cancel                     Cancel active installation
 EOF
     exit 0
     ;;
   *)
-    # Treat arguments as search query
+    # Default fallback: open GUI with search query
     call_ipc packages search "$*"
     ;;
 esac
