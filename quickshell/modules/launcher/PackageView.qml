@@ -22,6 +22,7 @@ Item {
     property int searchGen: 0
     property bool pendingSearchRestart: false
     property string pendingSearchQuery: ""
+    property string lastSearchedQuery: ""
 
     property int selectedIndex: 0
 
@@ -43,7 +44,7 @@ Item {
         root.filterText = query
         searchInput.text = query
         if (query.length > 0) {
-            searchDebounce.restart()
+            root.triggerSearch()
         }
         Qt.callLater(function() {
             searchInput.forceActiveFocus()
@@ -59,6 +60,7 @@ Item {
         }
         pendingSearchRestart = false
         pendingSearchQuery = ""
+        lastSearchedQuery = ""
         isSearching = false
         isInstalling = false
         installSuccess = false
@@ -85,6 +87,7 @@ Item {
 
     function triggerSearch() {
         var q = root.filterText.trim()
+        root.lastSearchedQuery = q
         root.searchGen += 1
         resultsModel.clear()
         root.selectedIndex = 0
@@ -144,19 +147,20 @@ Item {
             root.resetState()
             return
         }
-        if (resultsModel.count > 0 && root.selectedIndex >= 0 && root.selectedIndex < resultsModel.count) {
+        var q = root.filterText.trim()
+        if (q.length === 0) return
+
+        // If results are already loaded for the current query and an item is selected, install it
+        if (resultsModel.count > 0 && q === root.lastSearchedQuery && root.selectedIndex >= 0 && root.selectedIndex < resultsModel.count) {
             var item = resultsModel.get(root.selectedIndex)
             if (item && item.name) {
                 root.installPackage(item.name)
             }
+            return
         }
-    }
 
-    Timer {
-        id: searchDebounce
-        interval: 260
-        repeat: false
-        onTriggered: root.triggerSearch()
+        // Otherwise, pressing Enter starts the search
+        root.triggerSearch()
     }
 
     Process {
@@ -282,53 +286,6 @@ Item {
             }
 
             Item { Layout.fillWidth: true }
-
-            // Simple Top Cancel / Close Button
-            Rectangle {
-                id: topCancelBtn
-                radius: 8
-                border.width: 0
-                color: topCancelMouse.hovered
-                    ? Theme.withAlpha(Theme.surfaceContainerHighest, 0.9)
-                    : Theme.withAlpha(Theme.surfaceContainerHigh, 0.6)
-                implicitWidth: topCancelLabel.implicitWidth + 18
-                implicitHeight: 28
-
-                RowLayout {
-                    anchors.centerIn: parent
-                    spacing: 6
-
-                    Text {
-                        text: "✕"
-                        font.family: root.fontFamily
-                        font.pixelSize: 11
-                        color: Theme.muted
-                    }
-
-                    Text {
-                        id: topCancelLabel
-                        text: root.isInstalling ? "Cancel Install" : "Close"
-                        font.family: root.fontFamily
-                        font.pixelSize: 12
-                        font.bold: true
-                        color: Theme.foreground
-                    }
-                }
-
-                MouseArea {
-                    id: topCancelMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (root.isInstalling) {
-                            root.cancelInstall()
-                        } else {
-                            root.requestClose()
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -371,7 +328,7 @@ Item {
                     Layout.alignment: Qt.AlignHCenter
                     text: root.filterText.trim().length > 0
                         ? "No packages found matching '" + root.filterText + "'"
-                        : "Type to search packages from Arch Linux and AUR"
+                        : "Type a package name and press Enter to search"
                     font.family: root.fontFamily
                     font.pixelSize: 14
                     color: Theme.muted
@@ -379,7 +336,7 @@ Item {
 
                 Text {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "Press Enter to install selected package • Esc to cancel"
+                    text: "Press Enter to search • Select and press Enter to install • Esc to cancel"
                     font.family: root.fontFamily
                     font.pixelSize: 12
                     color: Theme.withAlpha(Theme.muted, 0.7)
@@ -516,7 +473,7 @@ Item {
                             Text {
                                 id: actionText
                                 anchors.centerIn: parent
-                                text: model.installed ? "Reinstall ⏎" : "Install ⏎"
+                                text: model.installed ? "Reinstall" : "Install"
                                 font.family: root.fontFamily
                                 font.pixelSize: 11
                                 font.bold: true
@@ -705,7 +662,7 @@ Item {
                 Text {
                     anchors.fill: parent
                     verticalAlignment: Text.AlignVCenter
-                    text: "Search packages from Arch & AUR..."
+                    text: "Search packages from Arch & AUR (Press Enter)..."
                     font.family: root.fontFamily
                     font.pixelSize: 15
                     color: Theme.muted
@@ -727,7 +684,6 @@ Item {
 
                     onTextChanged: {
                         root.filterText = text
-                        searchDebounce.restart()
                     }
 
                     Keys.onDownPressed: {
