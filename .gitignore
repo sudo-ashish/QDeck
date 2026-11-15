@@ -7,4 +7,8 @@ themes/*/btop.theme
 themes/*/gtk-3.0.css
 themes/*/gtk-4.0.css
 
+# Local documentation & scratch text
+text/
+
+
 
