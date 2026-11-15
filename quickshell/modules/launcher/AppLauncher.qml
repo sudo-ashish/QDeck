@@ -93,7 +93,18 @@ PanelWindow {
     }
 
     readonly property real targetHeight: {
-        if (root.currentView === "packages") return 580
+        if (root.currentView === "packages") {
+            if (packageView && (packageView.isInstalling || packageView.installSuccess || packageView.installFailed)) {
+                return 560
+            }
+            var pkgCount = packageView ? packageView.resultCount : 0
+            if (pkgCount <= 0) {
+                return 138
+            }
+            var pkgContentH = (pkgCount * 56) + (Math.max(0, pkgCount - 1) * 4)
+            var totalPkgH = 138 + pkgContentH
+            return Math.min(590, totalPkgH)
+        }
         if (root.currentView === "apps") {
             var isSearching = searchInput && searchInput.text.trim().length > 0
             var count = root.filteredCount

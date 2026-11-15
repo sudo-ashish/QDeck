@@ -23,6 +23,7 @@ Item {
     property bool pendingSearchRestart: false
     property string pendingSearchQuery: ""
     property string lastSearchedQuery: ""
+    readonly property int resultCount: resultsModel.count
 
     property int selectedIndex: 0
 
@@ -152,7 +153,16 @@ Item {
             return
         }
         var q = root.filterText.trim()
-        if (q.length === 0) return
+        if (q.length === 0) {
+            resultsModel.clear()
+            root.lastSearchedQuery = ""
+            root.selectedIndex = 0
+            root.isSearching = false
+            if (searchProc.running) {
+                searchProc.running = false
+            }
+            return
+        }
 
         // If results are already loaded for the current query and an item is selected, install it
         if (resultsModel.count > 0 && q === root.lastSearchedQuery && root.selectedIndex >= 0 && root.selectedIndex < resultsModel.count) {
@@ -313,39 +323,6 @@ Item {
         Item {
             anchors.fill: parent
             visible: !root.isInstalling && !root.installSuccess && !root.installFailed
-
-            // Empty state hint
-            ColumnLayout {
-                anchors.centerIn: parent
-                spacing: 12
-                visible: resultsModel.count === 0 && !root.isSearching
-
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "󰏖"
-                    font.family: root.fontFamily
-                    font.pixelSize: 42
-                    color: Theme.withAlpha(Theme.muted, 0.5)
-                }
-
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: root.filterText.trim().length > 0
-                        ? "No packages found matching '" + root.filterText + "'"
-                        : "Type a package name and press Enter to search"
-                    font.family: root.fontFamily
-                    font.pixelSize: 14
-                    color: Theme.muted
-                }
-
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "Press Enter to search • Select and press Enter to install • Esc to cancel"
-                    font.family: root.fontFamily
-                    font.pixelSize: 12
-                    color: Theme.withAlpha(Theme.muted, 0.7)
-                }
-            }
 
             // Results List
             ListView {
@@ -688,6 +665,17 @@ Item {
 
                     onTextChanged: {
                         root.filterText = text
+                        if (text.trim().length === 0) {
+                            resultsModel.clear()
+                            root.lastSearchedQuery = ""
+                            root.selectedIndex = 0
+                            root.pendingSearchRestart = false
+                            root.pendingSearchQuery = ""
+                            root.isSearching = false
+                            if (searchProc.running) {
+                                searchProc.running = false
+                            }
+                        }
                     }
 
                     Keys.onDownPressed: {
