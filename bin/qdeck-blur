@@ -32,6 +32,36 @@ apply_hyprland_blur_and_opacity() {
   fi
 }
 
+apply_kitty_opacity() {
+  local state="$1"
+  local target_opacity="1.0"
+  if [[ "$state" == "on" ]]; then
+    target_opacity="0.8"
+  else
+    target_opacity="1.0"
+  fi
+
+  local conf_candidates=(
+    "$HOME/.config/kitty/kitty.conf"
+    "$SCRIPT_DIR/../kitty/kitty.conf"
+  )
+
+  for conf in "${conf_candidates[@]}"; do
+    if [[ -f "$conf" ]]; then
+      if grep -qE '^[[:space:]]*background_opacity[[:space:]]+' "$conf" 2>/dev/null; then
+        sed --follow-symlinks -i -E "s/^[[:space:]]*background_opacity[[:space:]]+.*/background_opacity $target_opacity/" "$conf"
+      else
+        printf '\nbackground_opacity %s\n' "$target_opacity" >> "$conf"
+      fi
+    fi
+  done
+
+  # Signal running kitty instances to reload config
+  if pgrep -u "$UID" -x kitty >/dev/null 2>&1; then
+    pkill -SIGUSR1 -u "$UID" -x kitty 2>/dev/null || true
+  fi
+}
+
 get_current_state() {
   local ipc_res
   if ipc_res="$(call_ipc theme getBlur 2>/dev/null)" && [[ -n "$ipc_res" ]]; then
@@ -59,6 +89,9 @@ set_state() {
 
   # 2. Update Hyprland compositor blur & window opacity
   apply_hyprland_blur_and_opacity "$target_state"
+
+  # 3. Update Kitty terminal background opacity
+  apply_kitty_opacity "$target_state"
 
   echo "Blur & opacity is now: $target_state"
 }

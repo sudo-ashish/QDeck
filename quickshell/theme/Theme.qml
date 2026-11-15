@@ -114,7 +114,9 @@ QtObject {
     function setBlurState(enabled) {
         root.blurEnabled = enabled
         var stateStr = enabled ? "on" : "off"
+        var kittyOpacity = enabled ? "0.8" : "1.0"
         var cmd = "mkdir -p \"$(dirname \"" + root.blurStatePath + "\")\" && printf '%s' \"" + stateStr + "\" > \"" + root.blurStatePath + "\""
+        cmd += " && sed -i -E 's/^[[:space:]]*background_opacity[[:space:]]+.*/background_opacity " + kittyOpacity + "/' ~/.config/kitty/kitty.conf 2>/dev/null && pkill -SIGUSR1 -u $(id -u) -x kitty 2>/dev/null || true"
         if (enabled) {
             cmd += " && hyprctl eval 'hl.layer_rule({ name = \"qdeck-blur\", match = { namespace = \"^quickshell-.*\" }, blur = true, blur_popups = true, ignore_alpha = 0.57 })' 2>/dev/null || true"
             cmd += " && hyprctl eval 'hl.config({ decoration = { blur = { enabled = true }, active_opacity = 0.95, inactive_opacity = 0.88 } })' 2>/dev/null || true"
