@@ -224,7 +224,7 @@ Item {
                     width: 3
                     height: (itemDelegate.isSelected || itemDelegate.isPinned) ? 22 : 0
                     radius: 1.5
-                    color: itemDelegate.isPinned ? Theme.accent : Theme.accent
+                    color: Theme.accent
                     visible: height > 0
                     opacity: itemDelegate.isSelected ? 1.0 : (itemDelegate.isPinned ? 0.65 : 0.0)
 
@@ -232,191 +232,194 @@ Item {
                     Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                 }
 
-                RowLayout {
-                    id: itemContentRow
-                    anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 10
-                    spacing: 10
-
-                    // Text Preview & Metadata Subtitle
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-                        spacing: 2
-
-                        // Primary Text Preview (1st non-empty line)
-                        Text {
-                            Layout.fillWidth: true
-                            text: root.formatPreview(itemDelegate.rawText)
-                            font.family: (itemDelegate.category === "code" || itemDelegate.category === "command" || itemDelegate.category === "url")
-                                ? root.monoFont
-                                : root.fontFamily
-                            font.pixelSize: 13
-                            font.weight: itemDelegate.isSelected ? Fonts.weightBold : Fonts.weightMedium
-                            color: itemDelegate.isSelected ? Theme.bright_foreground : Theme.foreground
-                            elide: Text.ElideRight
-                        }
-
-                        // Secondary Row: Time Ago & Pinned label
-                        RowLayout {
-                            spacing: 6
-
-                            Text {
-                                text: root.formatTimeAgo(itemDelegate.itemTs)
-                                font.family: root.fontFamily
-                                font.pixelSize: 10
-                                color: Theme.withAlpha(Theme.muted, 0.85)
-                            }
-
-                            Text {
-                                visible: itemDelegate.isPinned
-                                text: "• Pinned"
-                                font.family: root.fontFamily
-                                font.pixelSize: 10
-                                font.weight: Fonts.weightMedium
-                                color: Theme.accent
-                            }
-                        }
-                    }
-
-                    // Right Side Actions: Flash Copied / Pin / Remove
-                    RowLayout {
-                        id: actionsRowContainer
-                        Layout.alignment: Qt.AlignVCenter
-                        spacing: 6
-                        z: 50
-
-                        // Copied! Feedback Badge
-                        Rectangle {
-                            visible: itemDelegate.isCopiedFlash
-                            Layout.alignment: Qt.AlignVCenter
-                            width: copiedRow.implicitWidth + 14
-                            height: 28
-                            radius: 14
-                            color: Theme.accent
-                            border.width: 0
-
-                            Row {
-                                id: copiedRow
-                                anchors.centerIn: parent
-                                spacing: 4
-
-                                Text {
-                                    text: Icons.check || "✓"
-                                    font.family: Icons.effectiveFont(text)
-                                    font.pixelSize: 11
-                                    color: Theme.darker_background
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-
-                                Text {
-                                    text: "Copied"
-                                    font.family: root.fontFamily
-                                    font.pixelSize: 11
-                                    font.weight: Fonts.weightBold
-                                    color: Theme.darker_background
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                        }
-
-                        // Pin Action Button (34x34)
-                        Rectangle {
-                            id: pinBtn
-                            visible: !itemDelegate.isCopiedFlash && (itemDelegate.isPinned || itemDelegate.isHovered)
-                            Layout.alignment: Qt.AlignVCenter
-                            width: 34
-                            height: 34
-                            radius: 17
-                            color: itemDelegate.isPinned
-                                ? (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.accent, 0.35) : Theme.withAlpha(Theme.accent, 0.18))
-                                : (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.40) : "transparent")
-                            border.width: 0
-
-                            Behavior on color { ColorAnimation { duration: 120 } }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: Icons.pin || "󰐃"
-                                font.family: Icons.effectiveFont(text)
-                                font.pixelSize: 16
-                                color: itemDelegate.isPinned ? Theme.accent : (pinBtnMouse.containsMouse ? Theme.bright_foreground : Theme.muted)
-                            }
-
-                            MouseArea {
-                                id: pinBtnMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                preventStealing: true
-                                propagateComposedEvents: false
-                                onClicked: function(mouse) {
-                                    mouse.accepted = true
-                                    if (root.clipboardService) {
-                                        root.clipboardService.togglePin(itemDelegate.realIndex)
-                                    }
-                                }
-                            }
-                        }
-
-                        // Remove Action Button (34x34)
-                        Rectangle {
-                            id: removeBtn
-                            visible: !itemDelegate.isCopiedFlash && itemDelegate.isHovered
-                            Layout.alignment: Qt.AlignVCenter
-                            width: 34
-                            height: 34
-                            radius: 17
-                            color: removeBtnMouse.containsMouse
-                                ? Theme.withAlpha(Theme.urgent, 0.22)
-                                : "transparent"
-                            border.width: 0
-
-                            Behavior on color { ColorAnimation { duration: 120 } }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: Icons.close || "󰅖"
-                                font.family: Icons.effectiveFont(text)
-                                font.pixelSize: 15
-                                color: removeBtnMouse.containsMouse ? Theme.urgent : Theme.muted
-                            }
-
-                            MouseArea {
-                                id: removeBtnMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                preventStealing: true
-                                propagateComposedEvents: false
-                                onClicked: function(mouse) {
-                                    mouse.accepted = true
-                                    if (root.clipboardService) {
-                                        root.clipboardService.removeItem(itemDelegate.realIndex)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Dedicated Item Selection Click Area:
-                // Only covers the text preview area and stops before the action buttons
+                // Whole-Item Click Area (Selecting / Copying text)
                 MouseArea {
                     id: itemMouse
-                    anchors {
-                        left: parent.left
-                        top: parent.top
-                        bottom: parent.bottom
-                        right: actionsRowContainer.left
-                        rightMargin: 6
-                    }
+                    anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         clipboardListView.currentIndex = itemDelegate.index
                         root.applySelection(itemDelegate.index)
+                    }
+                }
+
+                // Text Preview & Metadata Column
+                ColumnLayout {
+                    id: textCol
+                    anchors {
+                        left: parent.left
+                        leftMargin: 14
+                        right: actionsRowContainer.left
+                        rightMargin: 12
+                        verticalCenter: parent.verticalCenter
+                    }
+                    spacing: 2
+
+                    // Primary Text Preview (1st non-empty line)
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.formatPreview(itemDelegate.rawText)
+                        font.family: (itemDelegate.category === "code" || itemDelegate.category === "command" || itemDelegate.category === "url")
+                            ? root.monoFont
+                            : root.fontFamily
+                        font.pixelSize: 13
+                        font.weight: itemDelegate.isSelected ? Fonts.weightBold : Fonts.weightMedium
+                        color: itemDelegate.isSelected ? Theme.bright_foreground : Theme.foreground
+                        elide: Text.ElideRight
+                    }
+
+                    // Secondary Row: Time Ago & Pinned label
+                    RowLayout {
+                        spacing: 6
+
+                        Text {
+                            text: root.formatTimeAgo(itemDelegate.itemTs)
+                            font.family: root.fontFamily
+                            font.pixelSize: 10
+                            color: Theme.withAlpha(Theme.muted, 0.85)
+                        }
+
+                        Text {
+                            visible: itemDelegate.isPinned
+                            text: "• Pinned"
+                            font.family: root.fontFamily
+                            font.pixelSize: 10
+                            font.weight: Fonts.weightMedium
+                            color: Theme.accent
+                        }
+                    }
+                }
+
+                // Right Side Actions Row (Fixed anchor at right edge, higher Z order so clicks never hit itemMouse)
+                Row {
+                    id: actionsRowContainer
+                    anchors {
+                        right: parent.right
+                        rightMargin: 10
+                        verticalCenter: parent.verticalCenter
+                    }
+                    spacing: 6
+                    z: 50
+
+                    // Copied! Feedback Badge
+                    Rectangle {
+                        visible: itemDelegate.isCopiedFlash
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: copiedRow.implicitWidth + 14
+                        height: 28
+                        radius: 14
+                        color: Theme.accent
+                        border.width: 0
+
+                        Row {
+                            id: copiedRow
+                            anchors.centerIn: parent
+                            spacing: 4
+
+                            Text {
+                                text: Icons.check || "✓"
+                                font.family: Icons.effectiveFont(text)
+                                font.pixelSize: 11
+                                color: Theme.darker_background
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: "Copied"
+                                font.family: root.fontFamily
+                                font.pixelSize: 11
+                                font.weight: Fonts.weightBold
+                                color: Theme.darker_background
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
+
+                    // Pin / Unpin Action Button (34x34)
+                    // Visible when: pinned (idle indicator) OR when card is hovered
+                    Rectangle {
+                        id: pinBtn
+                        visible: !itemDelegate.isCopiedFlash && (itemDelegate.isPinned || itemDelegate.isHovered)
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 34
+                        height: 34
+                        radius: 17
+                        color: itemDelegate.isPinned
+                            ? (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.accent, 0.35) : Theme.withAlpha(Theme.accent, 0.18))
+                            : (pinBtnMouse.containsMouse ? Theme.withAlpha(Theme.lighter_background, 0.40) : "transparent")
+                        border.width: 0
+
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: itemDelegate.isPinned
+                                ? (itemDelegate.isHovered ? (Icons.unpin || "󰐄") : (Icons.pin || "󰐃"))
+                                : (Icons.pin || "󰐃")
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 16
+                            color: itemDelegate.isPinned ? Theme.accent : (pinBtnMouse.containsMouse ? Theme.bright_foreground : Theme.muted)
+                        }
+
+                        MouseArea {
+                            id: pinBtnMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            preventStealing: true
+                            propagateComposedEvents: false
+                            onPressed: function(mouse) { mouse.accepted = true }
+                            onReleased: function(mouse) { mouse.accepted = true }
+                            onClicked: function(mouse) {
+                                mouse.accepted = true
+                                if (root.clipboardService) {
+                                    root.clipboardService.togglePin(itemDelegate.realIndex)
+                                }
+                            }
+                        }
+                    }
+
+                    // Remove Action Button (34x34)
+                    // Visible when: card is hovered
+                    Rectangle {
+                        id: removeBtn
+                        visible: !itemDelegate.isCopiedFlash && itemDelegate.isHovered
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 34
+                        height: 34
+                        radius: 17
+                        color: removeBtnMouse.containsMouse
+                            ? Theme.withAlpha(Theme.urgent, 0.22)
+                            : "transparent"
+                        border.width: 0
+
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Icons.close || "󰅖"
+                            font.family: Icons.effectiveFont(text)
+                            font.pixelSize: 15
+                            color: removeBtnMouse.containsMouse ? Theme.urgent : Theme.muted
+                        }
+
+                        MouseArea {
+                            id: removeBtnMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            preventStealing: true
+                            propagateComposedEvents: false
+                            onPressed: function(mouse) { mouse.accepted = true }
+                            onReleased: function(mouse) { mouse.accepted = true }
+                            onClicked: function(mouse) {
+                                mouse.accepted = true
+                                if (root.clipboardService) {
+                                    root.clipboardService.removeItem(itemDelegate.realIndex)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -533,7 +536,19 @@ Item {
                     Keys.onEscapePressed: root.requestClose()
 
                     Keys.onPressed: function(event) {
-                        if (event.key === Qt.Key_PageDown) {
+                        if (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)) {
+                            if (clipboardListView.currentIndex >= 0 && clipboardListView.currentIndex < root.filteredIndices.length) {
+                                var realIdx = root.filteredIndices[clipboardListView.currentIndex]
+                                if (root.clipboardService) root.clipboardService.togglePin(realIdx)
+                            }
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Delete && searchInput.text.length === 0) {
+                            if (clipboardListView.currentIndex >= 0 && clipboardListView.currentIndex < root.filteredIndices.length) {
+                                var realIdx = root.filteredIndices[clipboardListView.currentIndex]
+                                if (root.clipboardService) root.clipboardService.removeItem(realIdx)
+                            }
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_PageDown) {
                             if (clipboardListView.count > 0) {
                                 clipboardListView.currentIndex = Math.min(clipboardListView.count - 1, clipboardListView.currentIndex + 5)
                                 clipboardListView.positionViewAtIndex(clipboardListView.currentIndex, ListView.Contain)

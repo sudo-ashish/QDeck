@@ -46,6 +46,7 @@ QtObject {
     readonly property string clipboard: root.useMaterialSymbols ? "content_paste" : "󰅍"
     readonly property string copy: root.useMaterialSymbols ? "content_copy" : "󰆏"
     readonly property string pin: root.useMaterialSymbols ? "push_pin" : "󰐃"
+    readonly property string unpin: root.useMaterialSymbols ? "keep_off" : "󰐄"
     readonly property string trash: root.useMaterialSymbols ? "delete" : "󰆴"
     readonly property string link: root.useMaterialSymbols ? "link" : "󰌹"
     readonly property string code: root.useMaterialSymbols ? "code" : "󰅩"
