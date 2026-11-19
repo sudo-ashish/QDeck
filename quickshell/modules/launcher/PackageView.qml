@@ -447,9 +447,12 @@ Item {
 
                         ColumnLayout {
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
+                            Layout.alignment: Qt.AlignVCenter
                             spacing: 2
 
                             Text {
+                                Layout.fillWidth: true
                                 text: root.installSuccess
                                     ? ("Successfully installed " + root.activePackage)
                                     : (root.installFailed
@@ -459,9 +462,11 @@ Item {
                                 font.pixelSize: 14
                                 font.bold: true
                                 color: root.installSuccess ? Theme.green : (root.installFailed ? Theme.red : Theme.bright_foreground)
+                                elide: Text.ElideRight
                             }
 
                             Text {
+                                Layout.fillWidth: true
                                 text: root.installSuccess
                                     ? "Package is now installed and ready to use."
                                     : (root.installFailed
@@ -470,18 +475,25 @@ Item {
                                 font.family: root.fontFamily
                                 font.pixelSize: 11
                                 color: Theme.muted
+                                elide: Text.ElideRight
                             }
                         }
 
                         // Cancel / Back Button inside Header
                         Rectangle {
+                            id: headerActionBtn
                             radius: 8
                             border.width: 0
                             color: root.isInstalling
-                                ? Theme.withAlpha(Theme.red, 0.20)
-                                : Theme.withAlpha(Theme.surfaceContainerHighest, 0.8)
+                                ? (headerActionMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.35) : Theme.withAlpha(Theme.red, 0.20))
+                                : (headerActionMouse.containsMouse ? Theme.withAlpha(Theme.surfaceContainerHighest, 1.0) : Theme.withAlpha(Theme.surfaceContainerHighest, 0.8))
                             implicitWidth: actionBtnText.implicitWidth + 18
                             implicitHeight: 28
+                            Layout.alignment: Qt.AlignVCenter
+
+                            Behavior on color {
+                                ColorAnimation { duration: 120 }
+                            }
 
                             Text {
                                 id: actionBtnText
@@ -494,6 +506,7 @@ Item {
                             }
 
                             MouseArea {
+                                id: headerActionMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
@@ -673,12 +686,16 @@ Item {
                 id: bottomCancelBtn
                 radius: 10
                 border.width: 0
-                color: bottomCancelMouse.hovered
+                color: bottomCancelMouse.containsMouse
                     ? Theme.withAlpha(Theme.surfaceContainerHighest, 0.9)
                     : Theme.withAlpha(Theme.surfaceContainerHigh, 0.7)
                 implicitWidth: bottomCancelText.implicitWidth + 20
                 implicitHeight: 34
                 Layout.alignment: Qt.AlignVCenter
+
+                Behavior on color {
+                    ColorAnimation { duration: 120 }
+                }
 
                 Text {
                     id: bottomCancelText
