@@ -277,7 +277,7 @@ Item {
                     border.width: 0
 
                     readonly property bool isSelected: index === root.selectedIndex
-                    readonly property bool isHovered: itemMouse.hovered
+                    readonly property bool isHovered: itemMouse.containsMouse || actionBtnMouse.containsMouse
                     readonly property bool isOfficial: model.source === "official"
 
                     color: isSelected
@@ -286,6 +286,23 @@ Item {
 
                     Behavior on color {
                         ColorAnimation { duration: 120 }
+                    }
+
+                    // Whole-card MouseArea for hover & selection
+                    MouseArea {
+                        id: itemMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onPositionChanged: {
+                            if (root.selectedIndex !== index) {
+                                root.selectedIndex = index
+                            }
+                        }
+                        onClicked: {
+                            root.selectedIndex = index
+                            root.installPackage(model.name)
+                        }
                     }
 
                     RowLayout {
@@ -379,13 +396,21 @@ Item {
 
                         // Right action pill
                         Rectangle {
+                            id: actionBtnPill
                             visible: delegateRoot.isSelected || delegateRoot.isHovered
                             radius: 8
                             border.width: 0
-                            color: Theme.accent
+                            color: actionBtnMouse.containsMouse
+                                ? Qt.lighter(Theme.accent, 1.15)
+                                : Theme.accent
                             implicitWidth: actionText.implicitWidth + 14
                             implicitHeight: 26
                             Layout.alignment: Qt.AlignVCenter
+                            z: 10
+
+                            Behavior on color {
+                                ColorAnimation { duration: 120 }
+                            }
 
                             Text {
                                 id: actionText
@@ -396,17 +421,22 @@ Item {
                                 font.bold: true
                                 color: Theme.background
                             }
-                        }
-                    }
 
-                    MouseArea {
-                        id: itemMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.selectedIndex = index
-                            root.installPackage(model.name)
+                            MouseArea {
+                                id: actionBtnMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                preventStealing: true
+                                propagateComposedEvents: false
+                                onPressed: function(mouse) { mouse.accepted = true }
+                                onReleased: function(mouse) { mouse.accepted = true }
+                                onClicked: function(mouse) {
+                                    mouse.accepted = true
+                                    root.selectedIndex = index
+                                    root.installPackage(model.name)
+                                }
+                            }
                         }
                     }
                 }
