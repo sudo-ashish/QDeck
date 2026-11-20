@@ -1,11 +1,12 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import "../../../theme"
-import "../../../components"
-import "../../../services"
+import Quickshell.Wayland
+import "../../theme"
+import "../../components"
+import "../../services"
 
-Item {
+PanelWindow {
     id: root
 
     required property PackageService packageService
@@ -14,167 +15,232 @@ Item {
     readonly property bool installSuccess: packageService ? packageService.installSuccess : false
     readonly property bool installFailed: packageService ? packageService.installFailed : false
     readonly property string activePackage: packageService ? packageService.activePackage : ""
-    readonly property bool hasActive: isInstalling || installSuccess || installFailed
-    readonly property bool popupOpen: installPopup.open
+    readonly property bool shouldShow: packageService ? packageService.showPill : false
+
+    property bool isExpanded: false
 
     readonly property string pillLabel: {
-        if (!root.activePackage) return ""
+        if (!root.activePackage) return "Package"
         if (root.installSuccess) return root.activePackage + " ✓"
         if (root.installFailed) return root.activePackage + " ✕"
         return root.activePackage
     }
 
-    implicitHeight: Math.max(26, Appearance.barHeight - 8)
-    implicitWidth: hasActive ? Math.min(240, Math.max(120, labelMeasure.implicitWidth + 62)) : 0
-    height: implicitHeight
-    width: implicitWidth
-    visible: width > 0 || opacity > 0
-
-    opacity: hasActive ? 1.0 : 0.0
-
-    Behavior on implicitWidth {
-        NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
-    }
-
-    Behavior on opacity {
-        NumberAnimation { duration: 200 }
-    }
-
-    function toggle() {
-        installPopup.toggle()
-    }
-
-    // Inform packageService whether the popup is open so auto-dismiss waits
-    onPopupOpenChanged: {
+    // Keep packageService informed so auto-dismiss timer does not fire while expanded
+    onIsExpandedChanged: {
         if (root.packageService) {
-            root.packageService.isPopupOpen = root.popupOpen
+            root.packageService.isPopupOpen = root.isExpanded
         }
     }
 
-    // Off-screen text measure for dynamic width expansion
+    Connections {
+        target: root.packageService
+        function onRequestToggle() {
+            root.isExpanded = !root.isExpanded
+        }
+    }
+
+    visible: root.shouldShow
+
+    WlrLayershell.namespace: "quickshell-pkg-pill"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: root.isExpanded ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    exclusionMode: ExclusionMode.Ignore
+    color: "transparent"
+
+    anchors {
+        top: true
+        bottom: true
+        left: true
+        right: true
+    }
+
+    // When collapsed: only containerCard receives pointer events.
+    // When expanded: full screen captures clicks outside to collapse.
+    mask: Region {
+        item: root.isExpanded ? screenScrim : containerCard
+    }
+
+    // Full screen scrim (active only when expanded to allow clicking outside to collapse)
+    Item {
+        id: screenScrim
+        anchors.fill: parent
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: root.isExpanded
+            onClicked: {
+                root.isExpanded = false
+            }
+        }
+
+        Shortcut {
+            enabled: root.isExpanded
+            sequence: "Escape"
+            onActivated: {
+                root.isExpanded = false
+            }
+        }
+    }
+
+    // Text measure for dynamic pill width
     Text {
         id: labelMeasure
         text: root.pillLabel
         font.family: Fonts.uiFont
-        font.pixelSize: Fonts.scale(11)
+        font.pixelSize: Fonts.scale(12)
         font.weight: Fonts.weightBold
         visible: false
     }
 
-    // Outer Capsule Pill Container in Bar
+    // Floating Overlay Card at Top-Right of the Screen
     Rectangle {
-        id: pillBg
-        anchors.fill: parent
-        anchors.verticalCenter: parent.verticalCenter
-        radius: height / 2
+        id: containerCard
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 14
+        anchors.rightMargin: 16
+
+        // Collapsed: pill dimensions. Expanded: full console card dimensions.
+        readonly property real collapsedW: Math.min(280, Math.max(140, labelMeasure.implicitWidth + 68))
+        readonly property real collapsedH: 38
+        readonly property real expandedW: 540
+        readonly property real expandedH: 420
+
+        width: root.isExpanded ? expandedW : collapsedW
+        height: root.isExpanded ? expandedH : collapsedH
+        radius: root.isExpanded ? 16 : (height / 2)
+
+        Behavior on width {
+            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        }
+        Behavior on height {
+            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        }
+        Behavior on radius {
+            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        }
 
         color: {
             if (root.installSuccess) {
-                return pillMouse.containsMouse ? Theme.withAlpha(Theme.green, 0.30) : Theme.withAlpha(Theme.green, 0.20)
+                return root.isExpanded
+                    ? Theme.withAlpha(Theme.surfaceBase, 0.96)
+                    : (pillHoverArea.containsMouse ? Theme.withAlpha(Theme.green, 0.32) : Theme.withAlpha(Theme.dark_background, 0.94))
             }
             if (root.installFailed) {
-                return pillMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.30) : Theme.withAlpha(Theme.red, 0.20)
+                return root.isExpanded
+                    ? Theme.withAlpha(Theme.surfaceBase, 0.96)
+                    : (pillHoverArea.containsMouse ? Theme.withAlpha(Theme.red, 0.32) : Theme.withAlpha(Theme.dark_background, 0.94))
             }
-            return pillMouse.containsMouse
-                ? Theme.withAlpha(Theme.accent, 0.30)
-                : Theme.withAlpha(Theme.accent, 0.18)
+            return root.isExpanded
+                ? Theme.withAlpha(Theme.surfaceBase, 0.96)
+                : (pillHoverArea.containsMouse ? Theme.withAlpha(Theme.accent, 0.30) : Theme.withAlpha(Theme.dark_background, 0.94))
         }
 
         border.color: {
-            if (root.installSuccess) return Theme.withAlpha(Theme.green, 0.60)
-            if (root.installFailed) return Theme.withAlpha(Theme.red, 0.60)
-            return root.popupOpen ? Theme.accent : Theme.withAlpha(Theme.accent, 0.45)
+            if (root.installSuccess) return Theme.withAlpha(Theme.green, 0.70)
+            if (root.installFailed) return Theme.withAlpha(Theme.red, 0.70)
+            return root.isExpanded ? Theme.accent : Theme.withAlpha(Theme.accent, 0.55)
         }
         border.width: 1
+
+        clip: true
 
         Behavior on color { ColorAnimation { duration: 150 } }
         Behavior on border.color { ColorAnimation { duration: 150 } }
 
-        RowLayout {
+        // ═════════════════════════════════════════════════════════════════════
+        // VIEW 1: Collapsed Pill State
+        // ═════════════════════════════════════════════════════════════════════
+        Item {
+            id: collapsedView
             anchors.fill: parent
-            anchors.leftMargin: 9
-            anchors.rightMargin: 9
-            spacing: 6
+            visible: !root.isExpanded || containerCard.height < 60
+            opacity: root.isExpanded ? 0.0 : 1.0
 
-            // Status Icon (Spinning when installing, checkmark when success, cross when failed)
-            Item {
-                Layout.preferredWidth: 16
-                Layout.preferredHeight: 16
-                Layout.alignment: Qt.AlignVCenter
+            Behavior on opacity {
+                NumberAnimation { duration: 140 }
+            }
 
-                Text {
-                    id: statusIcon
-                    anchors.centerIn: parent
-                    text: root.installSuccess ? "✓" : (root.installFailed ? "✕" : "󰑓")
-                    font.family: Icons.effectiveFont(text)
-                    font.pixelSize: Fonts.scale(12)
-                    font.bold: true
-                    color: root.installSuccess ? Theme.green : (root.installFailed ? Theme.red : Theme.accent)
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                spacing: 8
 
-                    RotationAnimation on rotation {
-                        running: root.isInstalling
-                        loops: Animation.Infinite
-                        from: 0
-                        to: 360
-                        duration: 1000
+                // Status Icon
+                Item {
+                    Layout.preferredWidth: 18
+                    Layout.preferredHeight: 18
+                    Layout.alignment: Qt.AlignVCenter
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.installSuccess ? "✓" : (root.installFailed ? "✕" : "󰑓")
+                        font.family: Icons.effectiveFont(text)
+                        font.pixelSize: Fonts.scale(13)
+                        font.bold: true
+                        color: root.installSuccess ? Theme.green : (root.installFailed ? Theme.red : Theme.accent)
+
+                        RotationAnimation on rotation {
+                            running: root.isInstalling
+                            loops: Animation.Infinite
+                            from: 0
+                            to: 360
+                            duration: 1000
+                        }
                     }
+                }
+
+                // Package Label
+                Text {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    text: root.pillLabel
+                    font.family: Fonts.uiFont
+                    font.pixelSize: Fonts.scale(12)
+                    font.weight: Fonts.weightBold
+                    color: root.installSuccess
+                        ? Theme.green
+                        : (root.installFailed ? Theme.red : Theme.bright_foreground)
+                    elide: Text.ElideRight
+                }
+
+                // Expand indicator icon
+                Text {
+                    Layout.preferredWidth: 12
+                    Layout.alignment: Qt.AlignVCenter
+                    text: "󰅀"
+                    font.family: Icons.effectiveFont("󰅀")
+                    font.pixelSize: Fonts.scale(11)
+                    color: Theme.muted
                 }
             }
 
-            // Package Name
-            Text {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignVCenter
-                text: root.pillLabel
-                font.family: Fonts.uiFont
-                font.pixelSize: Fonts.scale(11)
-                font.weight: Fonts.weightBold
-                color: root.installSuccess
-                    ? Theme.green
-                    : (root.installFailed ? Theme.red : Theme.bright_foreground)
-                elide: Text.ElideRight
-            }
-
-            // Expand indicator icon
-            Text {
-                Layout.preferredWidth: 10
-                Layout.alignment: Qt.AlignVCenter
-                text: root.popupOpen ? "󰅃" : "󰅀"
-                font.family: Icons.effectiveFont("󰅀")
-                font.pixelSize: Fonts.scale(10)
-                color: Theme.muted
+            MouseArea {
+                id: pillHoverArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    root.isExpanded = true
+                }
             }
         }
 
-        MouseArea {
-            id: pillMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                root.toggle()
-            }
-        }
-    }
-
-    // Expanded Aqua Dynamics / Popup Card showing Live Install Instance
-    PopupCard {
-        id: installPopup
-        anchorItem: root
-        showDefaultHeader: false
-        contentWidth: 540
-        contentHeight: 400
-
-        onOpenChanged: {
-            if (open && logListView.count > 0) {
-                Qt.callLater(function() {
-                    logListView.positionViewAtEnd()
-                })
-            }
-        }
-
+        // ═════════════════════════════════════════════════════════════════════
+        // VIEW 2: Expanded Live Installation Instance
+        // ═════════════════════════════════════════════════════════════════════
         Item {
+            id: expandedView
             anchors.fill: parent
+            anchors.margins: 14
+            visible: root.isExpanded && containerCard.height > 60
+            opacity: root.isExpanded ? 1.0 : 0.0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 180 }
+            }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -305,37 +371,37 @@ Item {
                                     if (root.isInstalling) {
                                         if (root.packageService) root.packageService.cancelInstall()
                                     } else {
-                                        installPopup.open = false
+                                        root.isExpanded = false
                                         if (root.packageService) root.packageService.dismiss()
                                     }
                                 }
                             }
                         }
 
-                        // Close "X" Button
+                        // Collapse Button
                         Rectangle {
                             radius: 6
                             border.width: 0
-                            color: closeMouse.containsMouse ? Theme.withAlpha(Theme.surfaceContainerHighest, 0.8) : "transparent"
+                            color: collapseMouse.containsMouse ? Theme.withAlpha(Theme.surfaceContainerHighest, 0.8) : "transparent"
                             implicitWidth: 26
                             implicitHeight: 26
                             Layout.alignment: Qt.AlignVCenter
 
                             Text {
                                 anchors.centerIn: parent
-                                text: "✕"
-                                font.family: Fonts.uiFont
-                                font.pixelSize: 12
+                                text: "󰅃"
+                                font.family: Icons.effectiveFont("󰅃")
+                                font.pixelSize: 14
                                 color: Theme.muted
                             }
 
                             MouseArea {
-                                id: closeMouse
+                                id: collapseMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    installPopup.open = false
+                                    root.isExpanded = false
                                 }
                             }
                         }

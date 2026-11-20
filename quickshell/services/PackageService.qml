@@ -98,6 +98,7 @@ Item {
     signal packageInstalled(string name)
     signal packageFailed(string name, int exitCode)
     signal installedRefreshed()
+    signal requestToggle()
 
     // Public methods
     function installPackage(pkgName) {
@@ -217,6 +218,10 @@ Item {
         }
         function dismiss(): string {
             root.dismiss()
+            return "ok"
+        }
+        function toggle(): string {
+            root.requestToggle()
             return "ok"
         }
         function status(): string {

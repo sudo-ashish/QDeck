@@ -20,7 +20,6 @@ PanelWindow {
     required property BluetoothService bluetoothService
     required property PowerService powerService
     required property SysmonService sysmonService
-    required property PackageService packageService
 
     property bool sysmonOpen: false
     onSysmonOpenChanged: {
@@ -99,10 +98,9 @@ PanelWindow {
         || (bluetoothWidget && bluetoothWidget.popupOpen)
         || (monitorWidget && monitorWidget.popupOpen)
         || (networkWidget && networkWidget.popupOpen)
-        || (pkgInstallPill && pkgInstallPill.popupOpen)
 
-    // In clock mode, expand when hovered or when any popup is open, sysmon is open, or an install is active
-    readonly property bool isExpanded: !isClockMode || isHovered || anyPopupOpen || sysmonOpen || (pkgInstallPill && pkgInstallPill.hasActive)
+    // In clock mode, expand when hovered or when any popup is open or sysmon is open
+    readonly property bool isExpanded: !isClockMode || isHovered || anyPopupOpen || sysmonOpen
 
     readonly property real totalContentWidth: leftSection.width + clockWidget.width + rightSection.width + (Appearance.barSectionSpacing * 4)
 
@@ -286,11 +284,6 @@ PanelWindow {
                     batteryService: root.batteryService
                     powerService: root.powerService
                 }
-
-                PkgInstallPill {
-                    id: pkgInstallPill
-                    packageService: root.packageService
-                }
             }
         }
 
@@ -321,7 +314,6 @@ PanelWindow {
             else if (name === "network") networkWidget.toggle()
             else if (name === "audio") audioWidget.toggle()
             else if (name === "bluetooth") bluetoothWidget.toggle()
-            else if (name === "pkg" || name === "package" || name === "install") pkgInstallPill.toggle()
             else if (name === "sysmon" || name === "monitoring" || name === "system") root.toggleSysmon()
             return "ok"
         }

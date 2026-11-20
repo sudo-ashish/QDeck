@@ -32,16 +32,42 @@ elif command -v qdeck-ipc >/dev/null 2>&1; then
 fi
 
 # ── Feature 1: Installation Cancellation ─────────────────────────────────────
+kill_child_processes() {
+  local parent_pid="$1"
+  local sig="${2:-TERM}"
+  local child
+  for child in $(pgrep -P "$parent_pid" 2>/dev/null || true); do
+    kill_child_processes "$child" "$sig"
+    kill -"$sig" "$child" 2>/dev/null || true
+  done
+}
+
 cancel_install() {
   if [[ -f "$PID_FILE" ]]; then
-    TARGET_PGID="$(cat "$PID_FILE" 2>/dev/null | tr -d '[:space:]' || true)"
-    if [[ -n "$TARGET_PGID" && "$TARGET_PGID" =~ ^[0-9]+$ ]]; then
-      echo "==> Cancelling installation (PGID: $TARGET_PGID)..."
-      kill -INT -- "-$TARGET_PGID" 2>/dev/null || true
-      sleep 0.5
-      kill -TERM -- "-$TARGET_PGID" 2>/dev/null || true
-    fi
+    TARGET_PID="$(cat "$PID_FILE" 2>/dev/null | tr -d '[:space:]' || true)"
     rm -f "$PID_FILE" 2>/dev/null || true
+
+    if [[ -n "$TARGET_PID" && "$TARGET_PID" =~ ^[0-9]+$ && "$TARGET_PID" -gt 1 ]]; then
+      # Safeguard: verify TARGET_PID is not quickshell daemon or PID 1
+      local QS_PIDS
+      QS_PIDS="$(pgrep -x quickshell 2>/dev/null || true)"
+      local IS_QS=0
+      for qpid in $QS_PIDS; do
+        if [[ "$TARGET_PID" -eq "$qpid" ]]; then
+          IS_QS=1
+          break
+        fi
+      done
+
+      if [[ "$IS_QS" -eq 0 ]]; then
+        echo "==> Cancelling installation (PID: $TARGET_PID)..."
+        kill_child_processes "$TARGET_PID" "INT"
+        kill -INT "$TARGET_PID" 2>/dev/null || true
+        sleep 0.2
+        kill_child_processes "$TARGET_PID" "TERM"
+        kill -TERM "$TARGET_PID" 2>/dev/null || true
+      fi
+    fi
   fi
   pkill -TERM -f "yay.*-S" 2>/dev/null || true
   exit 0
@@ -68,9 +94,8 @@ run_install() {
     exit 127
   fi
 
-  # Record PGID so cancel can terminate cleanly
-  MY_PGID="$(ps -o pgid= -p "$$" 2>/dev/null | tr -d '[:space:]' || echo "$$")"
-  echo "$MY_PGID" > "$PID_FILE"
+  # Record process PID so cancel can terminate cleanly without affecting parent session
+  echo "$$" > "$PID_FILE"
   cleanup() {
     rm -f "$PID_FILE" 2>/dev/null || true
   }

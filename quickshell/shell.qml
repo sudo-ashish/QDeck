@@ -11,6 +11,7 @@ import "modules/launcher"
 import "modules/osd"
 import "modules/notifications"
 import "modules/polkit"
+import "modules/pkg"
 
 ShellRoot {
     id: root
@@ -143,6 +144,16 @@ ShellRoot {
             bluetoothService: root.bluetoothService
             powerService: root.powerService
             sysmonService: root.sysmonService
+        }
+    }
+
+    // Mount Standalone Package Installation Pill Overlay on each screen
+    Variants {
+        model: Quickshell.screens
+
+        PkgOverlay {
+            required property var modelData
+            screen: modelData
             packageService: root.packageService
         }
     }
