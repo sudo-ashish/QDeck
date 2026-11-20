@@ -77,5 +77,12 @@ fi
 mkdir -p "$HOME/.local/state/quickshell"
 mkdir -p "$HOME/.config/quickshell"
 
+# 5. Pacman post-transaction hook for Quickshell package sync
+PACMAN_HOOK="$REPO_ROOT/assets/pacman/99-quickshell-pkg-sync.hook"
+if [[ -f "$PACMAN_HOOK" ]] && command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+  echo "==> [03-quickshell] Installing Pacman post-transaction hook for Quickshell..."
+  sudo install -Dm644 "$PACMAN_HOOK" /etc/pacman.d/hooks/99-quickshell-pkg-sync.hook 2>/dev/null || true
+fi
+
 echo "==> [QDeck:03-quickshell] QDeck Quickshell environment prepared successfully."
 exit 0

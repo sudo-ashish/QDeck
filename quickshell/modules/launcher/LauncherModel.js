@@ -506,3 +506,137 @@ function parseFiles(rawLines, query) {
 
     return results;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Package Manager In-Memory Cache & Filtering
+// ─────────────────────────────────────────────────────────────────────────────
+
+function parsePackageIndex(rawTsv) {
+    if (!rawTsv) return [];
+    var lines = rawTsv.split("\n");
+    var items = [];
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (!line) continue;
+        var tab1 = line.indexOf("\t");
+        if (tab1 === -1) continue;
+        var tab2 = line.indexOf("\t", tab1 + 1);
+        if (tab2 === -1) continue;
+        var tab3 = line.indexOf("\t", tab2 + 1);
+
+        var src = line.substring(0, tab1);
+        var repo = line.substring(tab1 + 1, tab2);
+        var name = tab3 === -1 ? line.substring(tab2 + 1) : line.substring(tab2 + 1, tab3);
+        var ver = tab3 === -1 ? "" : line.substring(tab3 + 1);
+        if (!name) continue;
+
+        items.push({
+            source: src,
+            repo: repo,
+            name: name,
+            nameLower: name.toLowerCase(),
+            version: ver
+        });
+    }
+    return items;
+}
+
+function parseInstalledPackages(rawText) {
+    var map = {};
+    if (!rawText) return map;
+    var lines = rawText.split("\n");
+    for (var i = 0; i < lines.length; i++) {
+        var pkg = lines[i].trim();
+        if (pkg) {
+            map[pkg] = true;
+        }
+    }
+    return map;
+}
+
+function filterPackages(items, query, installedMap, maxResults) {
+    if (!query) return [];
+    var q = String(query).toLowerCase().trim();
+    if (!q) return [];
+    var tokens = q.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return [];
+
+    var numTokens = tokens.length;
+    var singleToken = numTokens === 1;
+    var t0 = tokens[0];
+    var limit = maxResults || 80;
+
+    var exactOff = [];
+    var exactAur = [];
+    var prefixOff = [];
+    var prefixAur = [];
+    var subOff = [];
+    var subAur = [];
+
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var nl = item.nameLower || item.name.toLowerCase();
+        var isOff = item.source === "official";
+
+        if (nl === q) {
+            if (isOff) exactOff.push(item);
+            else exactAur.push(item);
+        } else if (nl.startsWith(q)) {
+            if (isOff) prefixOff.push(item);
+            else prefixAur.push(item);
+        } else {
+            // If prefix matches already fill the slice limit, no substring match can enter top results
+            if (prefixOff.length + prefixAur.length >= limit) continue;
+
+            var matched = false;
+            if (singleToken) {
+                matched = (nl.indexOf(t0) !== -1);
+            } else {
+                matched = true;
+                for (var t = 0; t < numTokens; t++) {
+                    if (nl.indexOf(tokens[t]) === -1) {
+                        matched = false;
+                        break;
+                    }
+                }
+            }
+            if (matched) {
+                if (isOff) {
+                    if (subOff.length < limit * 2) subOff.push(item);
+                } else {
+                    if (subAur.length < limit * 2) subAur.push(item);
+                }
+            }
+        }
+    }
+
+    function sortTie(a, b) {
+        var diff = a.name.length - b.name.length;
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+    }
+
+    exactOff.sort(sortTie);
+    exactAur.sort(sortTie);
+    prefixOff.sort(sortTie);
+    prefixAur.sort(sortTie);
+    subOff.sort(sortTie);
+    subAur.sort(sortTie);
+
+    var ranked = exactOff.concat(exactAur, prefixOff, prefixAur, subOff, subAur);
+    if (ranked.length > limit) {
+        ranked = ranked.slice(0, limit);
+    }
+
+    var results = [];
+    for (var j = 0; j < ranked.length; j++) {
+        var r = ranked[j];
+        results.push({
+            source: r.source,
+            repo: r.repo,
+            name: r.name,
+            version: r.version || "",
+            installed: !!(installedMap && installedMap[r.name] === true)
+        });
+    }
+    return results;
+}

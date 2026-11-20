@@ -3,6 +3,8 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import "../../theme"
+import "../../services"
+import "LauncherModel.js" as LauncherModel
 
 Item {
     id: root
@@ -12,27 +14,281 @@ Item {
 
     signal requestClose()
 
+    property PackageService packageService: null
     property string filterText: ""
-    property bool isSearching: false
-    property bool isInstalling: false
-    property bool installSuccess: false
-    property bool installFailed: false
-    property string activePackage: ""
-    property int activeExitCode: 0
-    property int searchGen: 0
-    property bool pendingSearchRestart: false
-    property string pendingSearchQuery: ""
-    property string lastSearchedQuery: ""
     readonly property int resultCount: resultsModel.count
 
     property int selectedIndex: 0
+    property alias resultsModel: resultsModel
+
+    property var pkgIndexList: []
+    property var installedMap: (root.packageService && root.packageService.installedMap) ? root.packageService.installedMap : ({})
+    property var descCache: ({})
+    property string pkgStampPath: ""
+    property bool isRefreshingInstalled: false
+    property bool installedRefreshPending: false
+
+    readonly property string cacheDir: {
+        var xdg = Quickshell.env("XDG_CACHE_HOME")
+        if (xdg && xdg.length > 0) return xdg + "/qdeck"
+        var home = Quickshell.env("HOME") || ""
+        return home + "/.cache/qdeck"
+    }
+    readonly property string indexFilePath: cacheDir + "/pkg-index.tsv"
 
     ListModel {
         id: resultsModel
     }
 
-    ListModel {
-        id: logModel
+    Connections {
+        target: root.packageService
+        function onInstalledRefreshed() {
+            if (root.packageService) {
+                root.installedMap = root.packageService.installedMap
+                for (var i = 0; i < resultsModel.count; i++) {
+                    var pkgName = resultsModel.get(i).name
+                    var isInst = !!(root.installedMap && root.installedMap[pkgName])
+                    if (resultsModel.get(i).installed !== isInst) {
+                        resultsModel.setProperty(i, "installed", isInst)
+                    }
+                }
+            }
+        }
+    }
+
+    FileView {
+        id: indexFileView
+        path: root.indexFilePath
+        printErrors: false
+        watchChanges: true
+        onLoaded: {
+            var raw = text()
+            if (raw && raw.length > 0) {
+                root.loadIndexData(raw)
+            }
+        }
+    }
+
+    Process {
+        id: indexSyncProc
+        command: ["qdeck-pkg", "index"]
+        onExited: function(exitCode, exitStatus) {
+            if (root.pkgIndexList.length === 0) {
+                var raw = indexFileView.text()
+                if (raw && raw.length > 0) {
+                    root.loadIndexData(raw)
+                }
+            }
+        }
+    }
+
+    FileView {
+        id: pkgStampView
+        path: root.pkgStampPath
+        watchChanges: true
+        preload: false
+        printErrors: false
+        onFileChanged: reloadDebounce.restart()
+    }
+
+    Timer {
+        id: reloadDebounce
+        interval: 800
+        repeat: false
+        onTriggered: {
+            root.refreshInstalledPackages()
+        }
+    }
+
+    Process {
+        id: initStampProc
+        command: ["touch", "/tmp/qs-pkg-stamp"]
+        onExited: function(exitCode, exitStatus) {
+            root.pkgStampPath = "/tmp/qs-pkg-stamp"
+        }
+    }
+
+    Process {
+        id: installedProc
+        command: ["pacman", "-Qq"]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                root.installedMap = LauncherModel.parseInstalledPackages(text)
+                for (var i = 0; i < resultsModel.count; i++) {
+                    var pkgName = resultsModel.get(i).name
+                    var isInst = !!(root.installedMap && root.installedMap[pkgName])
+                    if (resultsModel.get(i).installed !== isInst) {
+                        resultsModel.setProperty(i, "installed", isInst)
+                    }
+                }
+            }
+        }
+        onExited: function(exitCode, exitStatus) {
+            root.isRefreshingInstalled = false
+            if (root.installedRefreshPending) {
+                root.installedRefreshPending = false
+                Qt.callLater(function() {
+                    root.refreshInstalledPackages()
+                })
+            }
+        }
+    }
+
+    Timer {
+        id: descTimer
+        interval: 150
+        repeat: false
+        onTriggered: {
+            root.fetchDescriptionForCurrent()
+        }
+    }
+
+    Process {
+        id: infoProc
+        running: false
+        property string targetName: ""
+
+        stdout: SplitParser {
+            onRead: function(line) {
+                var clean = line.trim()
+                if (!clean) return
+                try {
+                    var data = JSON.parse(clean)
+                    if (!data || !data.name) return
+                    var name = data.name
+                    var desc = data.description || ""
+                    var ver = data.version || ""
+
+                    root.descCache[name] = {
+                        description: desc,
+                        version: ver
+                    }
+
+                    for (var i = 0; i < resultsModel.count; i++) {
+                        var cur = resultsModel.get(i)
+                        if (cur.name === name) {
+                            if (desc) {
+                                resultsModel.setProperty(i, "description", desc)
+                            }
+                            if (ver && (!cur.version || cur.version.length === 0)) {
+                                resultsModel.setProperty(i, "version", ver)
+                            }
+                            break
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    function refreshInstalledPackages() {
+        if (root.isRefreshingInstalled || installedProc.running) {
+            root.installedRefreshPending = true
+            return
+        }
+        root.isRefreshingInstalled = true
+        root.installedRefreshPending = false
+        installedProc.running = true
+    }
+
+    function loadIndexData(rawTsv) {
+        if (!rawTsv) return
+        root.pkgIndexList = LauncherModel.parsePackageIndex(rawTsv)
+        if (root.filterText.trim().length > 0) {
+            root.applyFilter()
+        }
+    }
+
+    function ensureLoaded() {
+        if (root.pkgIndexList.length === 0) {
+            var raw = indexFileView.text()
+            if (raw && raw.length > 0) {
+                root.loadIndexData(raw)
+            } else if (!indexSyncProc.running) {
+                indexSyncProc.running = true
+            }
+        }
+        if (Object.keys(root.installedMap).length === 0) {
+            root.refreshInstalledPackages()
+        }
+    }
+
+    function applyFilter() {
+        var q = root.filterText.trim()
+        root.selectedIndex = 0
+        if (q.length === 0) {
+            resultsModel.clear()
+            if (infoProc.running) infoProc.running = false
+            descTimer.stop()
+            return
+        }
+
+        var matches = LauncherModel.filterPackages(root.pkgIndexList, q, root.installedMap, 80)
+        resultsModel.clear()
+        for (var i = 0; i < matches.length; i++) {
+            var m = matches[i]
+            var cached = root.descCache[m.name]
+            resultsModel.append({
+                name: m.name,
+                version: (cached && cached.version) ? cached.version : m.version,
+                source: m.source,
+                repo: m.repo,
+                installed: m.installed,
+                description: (cached && cached.description) ? cached.description : ""
+            })
+        }
+
+        if (resultsModel.count > 0) {
+            var first = resultsModel.get(0)
+            if (first && root.descCache[first.name]) {
+                var c = root.descCache[first.name]
+                if (c.description) resultsModel.setProperty(0, "description", c.description)
+                if (c.version && (!first.version || first.version.length === 0)) resultsModel.setProperty(0, "version", c.version)
+            } else {
+                descTimer.restart()
+            }
+        }
+    }
+
+    function fetchDescriptionForCurrent() {
+        if (root.selectedIndex < 0 || root.selectedIndex >= resultsModel.count) return
+        var item = resultsModel.get(root.selectedIndex)
+        if (!item || !item.name) return
+        var name = item.name
+        var source = item.source || "official"
+
+        if (root.descCache[name]) {
+            var cached = root.descCache[name]
+            if (cached.description && item.description !== cached.description) {
+                resultsModel.setProperty(root.selectedIndex, "description", cached.description)
+            }
+            if (cached.version && item.version !== cached.version) {
+                resultsModel.setProperty(root.selectedIndex, "version", cached.version)
+            }
+            return
+        }
+
+        if (infoProc.running) {
+            infoProc.running = false
+        }
+
+        infoProc.targetName = name
+        infoProc.command = ["qdeck-pkg", "info", source, name]
+        infoProc.running = true
+    }
+
+    onSelectedIndexChanged: {
+        if (resultsModel.count > 0 && selectedIndex >= 0 && selectedIndex < resultsModel.count) {
+            var item = resultsModel.get(selectedIndex)
+            if (item && item.name && root.descCache[item.name]) {
+                var cached = root.descCache[item.name]
+                if (cached.description) resultsModel.setProperty(selectedIndex, "description", cached.description)
+                if (cached.version && (!item.version || item.version.length === 0)) resultsModel.setProperty(selectedIndex, "version", cached.version)
+            } else {
+                descTimer.restart()
+            }
+        }
     }
 
     function focusSearch() {
@@ -42,201 +298,53 @@ Item {
     function setInitialQuery(q) {
         var query = (typeof q === "string") ? q.trim() : ""
         resetState()
+        ensureLoaded()
         root.filterText = query
         searchInput.text = query
-        if (query.length > 0) {
-            root.triggerSearch()
-        }
+        root.applyFilter()
         Qt.callLater(function() {
             searchInput.forceActiveFocus()
         })
     }
 
     function resetState() {
-        if (installProc.running) {
-            cancelInstall()
+        if (infoProc.running) {
+            infoProc.running = false
         }
-        if (searchProc.running) {
-            searchProc.running = false
-        }
-        pendingSearchRestart = false
-        pendingSearchQuery = ""
-        lastSearchedQuery = ""
+        descTimer.stop()
         filterText = ""
         searchInput.text = ""
         resultsModel.clear()
         selectedIndex = 0
-        isSearching = false
-        isInstalling = false
-        installSuccess = false
-        installFailed = false
-        activePackage = ""
-        activeExitCode = 0
-        logModel.clear()
-    }
-
-    function insertRankedResult(item) {
-        var newRank = (item.rank !== undefined) ? item.rank : 99
-        var newLen = item.name.length
-        for (var i = 0; i < resultsModel.count; i++) {
-            var cur = resultsModel.get(i)
-            if (cur.name === item.name) return // deduplicate
-            var curRank = (cur.rank !== undefined) ? cur.rank : 99
-            if (newRank < curRank || (newRank === curRank && newLen < cur.name.length)) {
-                resultsModel.insert(i, item)
-                return
-            }
-        }
-        resultsModel.append(item)
-    }
-
-    function triggerSearch() {
-        var q = root.filterText.trim()
-        root.lastSearchedQuery = q
-        root.searchGen += 1
-        resultsModel.clear()
-        root.selectedIndex = 0
-
-        if (q.length === 0) {
-            root.pendingSearchRestart = false
-            root.pendingSearchQuery = ""
-            root.isSearching = false
-            if (searchProc.running) {
-                searchProc.running = false
-            }
-            return
-        }
-
-        root.isSearching = true
-        if (searchProc.running) {
-            // Wait for onExited before spawning the next process
-            root.pendingSearchQuery = q
-            root.pendingSearchRestart = true
-            searchProc.running = false
-        } else {
-            root.pendingSearchRestart = false
-            searchProc.command = ["qdeck-pkg", "search", "--gen", String(root.searchGen), q]
-            searchProc.running = true
-        }
     }
 
     function installPackage(pkgName) {
         if (!pkgName || pkgName.trim().length === 0) return
         var name = pkgName.trim()
-        root.activePackage = name
-        root.isInstalling = true
-        root.installSuccess = false
-        root.installFailed = false
-        root.activeExitCode = 0
-        logModel.clear()
-        logModel.append({ text: "==> Initiating installation of: " + name })
-
-        installProc.command = ["qdeck-pkg", "install", name]
-        installProc.running = true
+        if (root.packageService) {
+            root.packageService.installPackage(name)
+        }
+        root.requestClose()
     }
 
     function cancelInstall() {
-        Quickshell.execDetached(["qdeck-pkg", "cancel"])
-        if (installProc.running) {
-            installProc.running = false
+        if (root.packageService) {
+            root.packageService.cancelInstall()
         }
-        logModel.append({ text: "==> Installation cancelled by user." })
-        root.isInstalling = false
-        root.installSuccess = false
-        root.installFailed = false
     }
 
     function handleConfirmKey() {
-        if (root.isInstalling) return
-        if (root.installSuccess || root.installFailed) {
-            root.resetState()
-            return
-        }
-        var q = root.filterText.trim()
-        if (q.length === 0) {
-            resultsModel.clear()
-            root.lastSearchedQuery = ""
-            root.selectedIndex = 0
-            root.isSearching = false
-            if (searchProc.running) {
-                searchProc.running = false
-            }
-            return
-        }
-
-        // If results are already loaded for the current query and an item is selected, install it
-        if (resultsModel.count > 0 && q === root.lastSearchedQuery && root.selectedIndex >= 0 && root.selectedIndex < resultsModel.count) {
+        if (resultsModel.count > 0 && root.selectedIndex >= 0 && root.selectedIndex < resultsModel.count) {
             var item = resultsModel.get(root.selectedIndex)
             if (item && item.name) {
                 root.installPackage(item.name)
             }
-            return
-        }
-
-        // Otherwise, pressing Enter starts the search
-        root.triggerSearch()
-    }
-
-    Process {
-        id: searchProc
-        running: false
-        stdout: SplitParser {
-            onRead: function(line) {
-                var clean = line.trim()
-                if (!clean) return
-                try {
-                    var item = JSON.parse(clean)
-                    if (!item || !item.name) return
-                    if (item.gen !== undefined && item.gen !== root.searchGen) return
-                    root.insertRankedResult(item)
-                } catch (e) {}
-            }
-        }
-        onExited: function(exitCode, exitStatus) {
-            if (root.pendingSearchRestart && root.pendingSearchQuery.length > 0) {
-                var nextQ = root.pendingSearchQuery
-                root.pendingSearchRestart = false
-                root.pendingSearchQuery = ""
-                root.isSearching = true
-                searchProc.command = ["qdeck-pkg", "search", "--gen", String(root.searchGen), nextQ]
-                searchProc.running = true
-            } else {
-                root.isSearching = false
-            }
         }
     }
 
-    Process {
-        id: installProc
-        running: false
-        stdout: SplitParser {
-            onRead: function(line) {
-                if (line && line.length > 0) {
-                    if (logModel.count >= 400) {
-                        logModel.remove(0, 50)
-                    }
-                    logModel.append({ text: line })
-                    if (logListView.count > 0) {
-                        logListView.positionViewAtEnd()
-                    }
-                }
-            }
-        }
-        onExited: function(exitCode, exitStatus) {
-            root.isInstalling = false
-            root.activeExitCode = exitCode
-            if (exitCode === 0) {
-                root.installSuccess = true
-                for (var i = 0; i < resultsModel.count; i++) {
-                    if (resultsModel.get(i).name === root.activePackage) {
-                        resultsModel.setProperty(i, "installed", true)
-                        break
-                    }
-                }
-            } else {
-                root.installFailed = true
-            }
-        }
+    Component.onCompleted: {
+        initStampProc.running = true
+        root.ensureLoaded()
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -255,19 +363,14 @@ Item {
             rightMargin: 14
         }
 
-        // ── View A: Search & Package List ─────────────────────────────────────
-        Item {
+        // ── Search & Package List ──────────────────────────────────────────
+        ListView {
+            id: resultsListView
             anchors.fill: parent
-            visible: !root.isInstalling && !root.installSuccess && !root.installFailed
-
-            // Results List
-            ListView {
-                id: resultsListView
-                anchors.fill: parent
-                clip: true
-                spacing: 4
-                model: resultsModel
-                currentIndex: root.selectedIndex
+            clip: true
+            spacing: 4
+            model: resultsModel
+            currentIndex: root.selectedIndex
 
                 delegate: Rectangle {
                     id: delegateRoot
@@ -386,7 +489,15 @@ Item {
                             // Bottom line: Description
                             Text {
                                 Layout.fillWidth: true
-                                text: model.description || "No description provided."
+                                text: {
+                                    if (model.description && model.description.length > 0) {
+                                        return model.description
+                                    }
+                                    if (delegateRoot.isSelected && infoProc.running && infoProc.targetName === model.name) {
+                                        return "Loading description..."
+                                    }
+                                    return "No description provided."
+                                }
                                 font.family: root.fontFamily
                                 font.pixelSize: 11
                                 color: Theme.muted
@@ -443,148 +554,6 @@ Item {
             }
         }
 
-        // ── View B: Live Installation Console ────────────────────────────────
-        Item {
-            anchors.fill: parent
-            visible: root.isInstalling || root.installSuccess || root.installFailed
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 10
-
-                // Installation Status Header
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 48
-                    radius: 12
-                    border.width: 0
-                    color: root.installSuccess
-                        ? Theme.withAlpha(Theme.green, 0.15)
-                        : (root.installFailed ? Theme.withAlpha(Theme.red, 0.15) : Theme.surfaceContainer)
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 16
-                        anchors.rightMargin: 16
-                        spacing: 12
-
-                        Text {
-                            text: root.installSuccess ? "✓" : (root.installFailed ? "✕" : "󱑑")
-                            font.family: root.fontFamily
-                            font.pixelSize: 20
-                            color: root.installSuccess ? Theme.green : (root.installFailed ? Theme.red : Theme.accent)
-                        }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 0
-                            Layout.alignment: Qt.AlignVCenter
-                            spacing: 2
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.installSuccess
-                                    ? ("Successfully installed " + root.activePackage)
-                                    : (root.installFailed
-                                        ? ("Failed to install " + root.activePackage + " (Exit code: " + root.activeExitCode + ")")
-                                        : ("Installing " + root.activePackage + "..."))
-                                font.family: root.fontFamily
-                                font.pixelSize: 14
-                                font.bold: true
-                                color: root.installSuccess ? Theme.green : (root.installFailed ? Theme.red : Theme.bright_foreground)
-                                elide: Text.ElideRight
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.installSuccess
-                                    ? "Package is now installed and ready to use."
-                                    : (root.installFailed
-                                        ? "Review log output below for details."
-                                        : "Processing dependencies, build files, and package installation via yay...")
-                                font.family: root.fontFamily
-                                font.pixelSize: 11
-                                color: Theme.muted
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        // Cancel / Back Button inside Header
-                        Rectangle {
-                            id: headerActionBtn
-                            radius: 8
-                            border.width: 0
-                            color: root.isInstalling
-                                ? (headerActionMouse.containsMouse ? Theme.withAlpha(Theme.red, 0.35) : Theme.withAlpha(Theme.red, 0.20))
-                                : (headerActionMouse.containsMouse ? Theme.withAlpha(Theme.surfaceContainerHighest, 1.0) : Theme.withAlpha(Theme.surfaceContainerHighest, 0.8))
-                            implicitWidth: actionBtnText.implicitWidth + 18
-                            implicitHeight: 28
-                            Layout.alignment: Qt.AlignVCenter
-
-                            Behavior on color {
-                                ColorAnimation { duration: 120 }
-                            }
-
-                            Text {
-                                id: actionBtnText
-                                anchors.centerIn: parent
-                                text: root.isInstalling ? "Cancel" : "Back to Search"
-                                font.family: root.fontFamily
-                                font.pixelSize: 12
-                                font.bold: true
-                                color: root.isInstalling ? Theme.red : Theme.bright_foreground
-                            }
-
-                            MouseArea {
-                                id: headerActionMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (root.isInstalling) {
-                                        root.cancelInstall()
-                                    } else {
-                                        root.resetState()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Log Box Container
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    radius: 12
-                    border.width: 0
-                    color: Theme.withAlpha(Theme.dark_background, 0.98)
-                    clip: true
-
-                    ListView {
-                        id: logListView
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 2
-                        model: logModel
-
-                        delegate: Text {
-                            width: logListView.width
-                            text: model.text || ""
-                            font.family: root.monoFont
-                            font.pixelSize: 12
-                            readonly property bool isErrorLine: /^(error:|==> ERROR:|:: error|fatal:|Failed to )/i.test(text.trim())
-                            readonly property bool isHeaderLine: /^(==>|->)/.test(text.trim())
-
-                            color: isErrorLine ? Theme.red : (isHeaderLine ? Theme.accent : Theme.foreground)
-                            wrapMode: Text.WrapAnywhere
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // Bottom Search Bar & Simple Cancel Button
     // ─────────────────────────────────────────────────────────────────────────
@@ -611,7 +580,7 @@ Item {
                 text: ""
                 font.family: root.fontFamily
                 font.pixelSize: 18
-                color: root.isSearching ? Theme.accent : Theme.muted
+                color: (indexSyncProc.running && root.pkgIndexList.length === 0) ? Theme.accent : Theme.muted
                 Layout.alignment: Qt.AlignVCenter
             }
 
@@ -622,7 +591,7 @@ Item {
                 Text {
                     anchors.fill: parent
                     verticalAlignment: Text.AlignVCenter
-                    text: "Search packages from Arch & AUR (Press Enter)..."
+                    text: "Search packages from Arch & AUR..."
                     font.family: root.fontFamily
                     font.pixelSize: 15
                     color: Theme.muted
@@ -644,17 +613,7 @@ Item {
 
                     onTextChanged: {
                         root.filterText = text
-                        if (text.trim().length === 0) {
-                            resultsModel.clear()
-                            root.lastSearchedQuery = ""
-                            root.selectedIndex = 0
-                            root.pendingSearchRestart = false
-                            root.pendingSearchQuery = ""
-                            root.isSearching = false
-                            if (searchProc.running) {
-                                searchProc.running = false
-                            }
-                        }
+                        root.applyFilter()
                     }
 
                     Keys.onDownPressed: {
@@ -675,11 +634,7 @@ Item {
                     Keys.onEnterPressed: root.handleConfirmKey()
 
                     Keys.onEscapePressed: {
-                        if (root.isInstalling) {
-                            root.cancelInstall()
-                        } else if (root.installSuccess || root.installFailed) {
-                            root.resetState()
-                        } else if (searchInput.text.length > 0) {
+                        if (searchInput.text.length > 0) {
                             searchInput.text = ""
                             root.filterText = ""
                             resultsModel.clear()
@@ -687,12 +642,68 @@ Item {
                             root.requestClose()
                         }
                     }
+
+                    Keys.onPressed: function(event) {
+                        if (event.key === Qt.Key_PageDown) {
+                            if (resultsModel.count > 0) {
+                                root.selectedIndex = Math.min(resultsModel.count - 1, root.selectedIndex + 5)
+                                resultsListView.positionViewAtIndex(root.selectedIndex, ListView.Contain)
+                            }
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_PageUp) {
+                            if (resultsModel.count > 0) {
+                                root.selectedIndex = Math.max(0, root.selectedIndex - 5)
+                                resultsListView.positionViewAtIndex(root.selectedIndex, ListView.Contain)
+                            }
+                            event.accepted = true
+                        }
+                    }
                 }
             }
 
-            // Searching indicator badge
+            // Background installation badge
             Rectangle {
-                visible: !root.isInstalling && root.isSearching
+                visible: root.packageService && root.packageService.isInstalling
+                radius: 8
+                border.width: 0
+                color: Theme.withAlpha(Theme.accent, 0.20)
+                implicitWidth: installingBadgeContent.implicitWidth + 16
+                implicitHeight: 24
+                Layout.alignment: Qt.AlignVCenter
+
+                RowLayout {
+                    id: installingBadgeContent
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    Text {
+                        text: "󰑓"
+                        font.family: Icons.effectiveFont("󰑓")
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: Theme.accent
+                        RotationAnimation on rotation {
+                            running: root.packageService && root.packageService.isInstalling
+                            loops: Animation.Infinite
+                            from: 0
+                            to: 360
+                            duration: 1000
+                        }
+                    }
+
+                    Text {
+                        text: "Installing " + (root.packageService ? root.packageService.activePackage : "") + " (in bar)"
+                        font.family: root.fontFamily
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: Theme.accent
+                    }
+                }
+            }
+
+            // Indexing indicator badge
+            Rectangle {
+                visible: (indexSyncProc.running && root.pkgIndexList.length === 0)
                 radius: 8
                 border.width: 0
                 color: Theme.withAlpha(Theme.surfaceContainerHighest, 0.7)
@@ -703,7 +714,7 @@ Item {
                 Text {
                     id: searchBadgeText
                     anchors.centerIn: parent
-                    text: "Searching..."
+                    text: "Indexing..."
                     font.family: root.fontFamily
                     font.pixelSize: 11
                     font.bold: true
@@ -711,7 +722,7 @@ Item {
                 }
             }
 
-            // Simple Bottom Cancel Button
+            // Simple Bottom Close Button
             Rectangle {
                 id: bottomCancelBtn
                 radius: 10
@@ -730,11 +741,11 @@ Item {
                 Text {
                     id: bottomCancelText
                     anchors.centerIn: parent
-                    text: root.isInstalling ? "Cancel Install" : "Cancel"
+                    text: "Close"
                     font.family: root.fontFamily
                     font.pixelSize: 13
                     font.bold: true
-                    color: root.isInstalling ? Theme.red : Theme.foreground
+                    color: Theme.foreground
                 }
 
                 MouseArea {
@@ -743,11 +754,7 @@ Item {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if (root.isInstalling) {
-                            root.cancelInstall()
-                        } else {
-                            root.requestClose()
-                        }
+                        root.requestClose()
                     }
                 }
             }

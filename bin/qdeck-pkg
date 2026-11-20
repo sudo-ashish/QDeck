@@ -6,6 +6,10 @@
 #   qdeck-pkg open [<query>]             - Open package manager (optional query)
 #   qdeck-pkg toggle                     - Toggle package manager view
 #   qdeck-pkg close                      - Close package manager
+#   qdeck-pkg sync [--force]             - Sync package index (official & AUR)
+#   qdeck-pkg index [--stream]           - Print or stream package index
+#   qdeck-pkg installed                  - Output list of installed packages
+#   qdeck-pkg info <source> <name>       - Single-package metadata fetcher (JSON)
 #   qdeck-pkg search [--gen N] <query>   - Run parallel Arch & AUR search engine (JSON stream)
 #   qdeck-pkg install <pkg>              - Run non-interactive yay package installation
 #   qdeck-pkg cancel                     - Terminate ongoing installation process group
@@ -14,6 +18,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/qdeck-pkg-install.pid"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/qdeck"
+INDEX_FILE="$CACHE_DIR/pkg-index.tsv"
+AUR_GZ="$CACHE_DIR/aur-packages.gz"
 
 # Source shared IPC helper
 if [[ -f "$SCRIPT_DIR/lib/qdeck-ipc.sh" ]]; then
@@ -354,6 +361,134 @@ if __name__ == "__main__":
 PYEOF
 }
 
+# ── Feature 4: Local Index Builder, Installed List & Package Info ───────────
+sync_index() {
+  local force=false
+  for arg in "$@"; do
+    if [[ "$arg" == "--force" || "$arg" == "-f" ]]; then
+      force=true
+    fi
+  done
+
+  mkdir -p "$CACHE_DIR"
+  local now
+  now="$(date +%s)"
+  local aur_mtime=0
+  if [[ -f "$AUR_GZ" ]]; then
+    aur_mtime="$(stat -c %Y "$AUR_GZ" 2>/dev/null || echo 0)"
+  fi
+  local aur_age=$(( now - aur_mtime ))
+
+  # Fetch aur-packages.gz if missing, older than 4 hours (14400s), or force
+  if [[ "$force" == true || ! -f "$AUR_GZ" || $aur_age -ge 14400 ]]; then
+    local aur_tmp="$CACHE_DIR/aur-packages.gz.tmp.$$"
+    if curl -fsSL -4 --connect-timeout 4 --max-time 10 -o "$aur_tmp" "https://aur.archlinux.org/packages.gz"; then
+      mv -f "$aur_tmp" "$AUR_GZ"
+    else
+      rm -f "$aur_tmp" 2>/dev/null || true
+    fi
+  fi
+
+  local tmp_index="$CACHE_DIR/pkg-index.tsv.tmp"
+  pacman -Sl 2>/dev/null | awk '{print "official\t" $1 "\t" $2 "\t" $3}' > "$tmp_index"
+  if [[ -f "$AUR_GZ" ]]; then
+    gzip -dc "$AUR_GZ" 2>/dev/null | awk '!/^#/ && NF {print "aur\taur\t" $1 "\t"}' >> "$tmp_index" || true
+  fi
+  mv -f "$tmp_index" "$INDEX_FILE"
+}
+
+get_index() {
+  mkdir -p "$CACHE_DIR"
+  if [[ ! -f "$INDEX_FILE" ]]; then
+    sync_index
+  fi
+
+  local now
+  now="$(date +%s)"
+  local index_mtime=0
+  if [[ -f "$INDEX_FILE" ]]; then
+    index_mtime="$(stat -c %Y "$INDEX_FILE" 2>/dev/null || echo 0)"
+  fi
+  local index_age=$(( now - index_mtime ))
+
+  if (( index_age >= 14400 )); then
+    ( sync_index >/dev/null 2>&1 & )
+  fi
+
+  if [[ "${1:-}" == "--stream" || "${1:-}" == "--cat" ]]; then
+    cat "$INDEX_FILE"
+  else
+    echo "$INDEX_FILE"
+  fi
+}
+
+run_installed() {
+  pacman -Qq 2>/dev/null || true
+}
+
+get_info() {
+  if [[ $# -eq 0 ]]; then
+    echo '{"name":"","version":"","description":""}'
+    return 0
+  fi
+  local source="${1:-}"
+  local name="${2:-}"
+  if [[ -z "$name" ]]; then
+    name="$source"
+    source="official"
+  fi
+
+  if [[ "$source" == "official" ]]; then
+    local ver="" desc=""
+    if out="$(LC_ALL=C pacman -Si "$name" 2>/dev/null)"; then
+      {
+        read -r ver
+        read -r desc
+      } < <(printf "%s\n" "$out" | awk -F": " '
+        /^Version/ { sub(/^[ \t]+/, "", $2); ver=$2 }
+        /^Description/ { in_desc=1; sub(/^[ \t]+/, "", $2); desc=$2; next }
+        /^[A-Za-z]/ { in_desc=0 }
+        in_desc && /^[ \t]/ { sub(/^[ \t]+/, ""); desc = desc " " $0 }
+        END { print ver; print desc }
+      ')
+    fi
+    if command -v jq >/dev/null 2>&1; then
+      jq -n -c --arg name "$name" --arg version "${ver:-}" --arg description "${desc:-}" '{$name, $version, $description}'
+    else
+      python3 -c 'import json, sys; print(json.dumps({"name": sys.argv[1], "version": sys.argv[2], "description": sys.argv[3]}))' "$name" "${ver:-}" "${desc:-}"
+    fi
+  else
+    local encoded_name="$name"
+    if command -v jq >/dev/null 2>&1; then
+      encoded_name="$(jq -rn --arg x "$name" '$x|@uri')"
+    fi
+    local res=""
+    res="$(curl -fsSL -4 --max-time 4 "https://aur.archlinux.org/rpc/v5/info?arg[]=${encoded_name}" 2>/dev/null || true)"
+    if [[ -n "$res" ]]; then
+      if command -v jq >/dev/null 2>&1; then
+        echo "$res" | jq -c --arg name "$name" '{name: $name, version: (.results[0].Version // ""), description: (.results[0].Description // "")}' 2>/dev/null || jq -n -c --arg name "$name" '{name: $name, version: "", description: ""}'
+      else
+        python3 -c '
+import json, sys
+name = sys.argv[1]
+try:
+    data = json.loads(sys.argv[2])
+    res = data.get("results", [{}])[0]
+    print(json.dumps({"name": name, "version": res.get("Version", ""), "description": res.get("Description", "") or ""}))
+except Exception:
+    print(json.dumps({"name": name, "version": "", "description": ""}))
+' "$name" "$res"
+      fi
+    else
+      if command -v jq >/dev/null 2>&1; then
+        jq -n -c --arg name "$name" '{name: $name, version: "", description: ""}'
+      else
+        python3 -c 'import json, sys; print(json.dumps({"name": sys.argv[1], "version": "", "description": ""}))' "$name"
+      fi
+    fi
+  fi
+}
+
 # ── Dispatching ──────────────────────────────────────────────────────────────
 CALLER="$(basename "$0")"
 
@@ -374,6 +509,21 @@ if [[ $# -eq 0 ]]; then
 fi
 
 case "$1" in
+  sync)
+    shift || true
+    sync_index "$@"
+    ;;
+  index)
+    shift || true
+    get_index "$@"
+    ;;
+  installed)
+    run_installed
+    ;;
+  info)
+    shift || true
+    get_info "$@"
+    ;;
   search)
     shift || true
     run_search "$@"
@@ -408,7 +558,11 @@ Usage:
   qdeck-pkg open [<query>]             Open package manager (optional query)
   qdeck-pkg toggle                     Toggle package manager
   qdeck-pkg close                      Close package manager
-  qdeck-pkg search [--gen N] <query>   Run package search engine (JSON stream)
+  qdeck-pkg sync [--force]             Sync package index from official repos & AUR
+  qdeck-pkg index [--stream]           Get or print index path (triggers background sync if stale)
+  qdeck-pkg installed                  Output newline-separated list of installed packages
+  qdeck-pkg info <source> <name>       Fetch metadata JSON for package (lazy descriptions)
+  qdeck-pkg search [--gen N] <query>   Run package search engine (legacy JSON stream)
   qdeck-pkg install <package>          Install package non-interactively
   qdeck-pkg cancel                     Cancel active installation
 EOF

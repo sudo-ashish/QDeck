@@ -21,6 +21,7 @@ PanelWindow {
     property WallpaperSwitcherService wallpaperService: null
     property ShelfService shelfService: null
     property ClipboardService clipboardService: null
+    property PackageService packageService: null
 
     property bool isOpen: false
     property string currentView: "apps" // "apps" | "power" | "theme" | "wallpaper" | "shelf" | "clipboard" | "packages"
@@ -93,9 +94,6 @@ PanelWindow {
 
     readonly property real targetHeight: {
         if (root.currentView === "packages") {
-            if (packageView && (packageView.isInstalling || packageView.installSuccess || packageView.installFailed)) {
-                return 560
-            }
             var pkgCount = packageView ? packageView.resultCount : 0
             if (pkgCount <= 0) {
                 return 84
@@ -2132,6 +2130,7 @@ PanelWindow {
         PackageView {
             id: packageView
             anchors.fill: parent
+            packageService: root.packageService
             visible: root.currentView === "packages"
             onRequestClose: root.close()
         }

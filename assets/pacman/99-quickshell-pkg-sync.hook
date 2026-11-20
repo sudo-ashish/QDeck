@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = Notify Quickshell of package changes
+When = PostTransaction
+Exec = /usr/bin/sh -c 'date +%s > /tmp/qs-pkg-stamp'

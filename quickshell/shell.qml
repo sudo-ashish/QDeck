@@ -50,6 +50,7 @@ ShellRoot {
     property ShelfService shelfService: ShelfService { id: shelfService }
     property ClipboardService clipboardService: ClipboardService { id: clipboardService }
     property SysmonService sysmonService: SysmonService { id: sysmonService }
+    property PackageService packageService: PackageService { id: packageService }
 
     IpcHandler {
         target: "bar"
@@ -94,6 +95,7 @@ ShellRoot {
         wallpaperService: root.wallpaperSwitcherService
         shelfService: root.shelfService
         clipboardService: root.clipboardService
+        packageService: root.packageService
     }
 
     // Power Confirmation Dialog (centered overlay)
@@ -141,6 +143,7 @@ ShellRoot {
             bluetoothService: root.bluetoothService
             powerService: root.powerService
             sysmonService: root.sysmonService
+            packageService: root.packageService
         }
     }
 }

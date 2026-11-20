@@ -167,5 +167,12 @@ echo "==> [01-deps] Enabling user services..."
 systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
 systemctl --user mask hyprpolkitagent.service 2>/dev/null || true
 
+# 5. Pacman post-transaction hook for Quickshell package sync
+PACMAN_HOOK="$REPO_ROOT/assets/pacman/99-quickshell-pkg-sync.hook"
+if [[ -f "$PACMAN_HOOK" ]]; then
+  echo "==> [01-deps] Installing Pacman post-transaction hook for Quickshell..."
+  sudo install -Dm644 "$PACMAN_HOOK" /etc/pacman.d/hooks/99-quickshell-pkg-sync.hook
+fi
+
 echo "==> [QDeck:01-deps] Dependencies and system services configured successfully for QDeck."
 exit 0
