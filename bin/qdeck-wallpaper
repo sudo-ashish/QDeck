@@ -31,6 +31,18 @@ get_active_wallpaper() {
 
 CACHE_THUMB_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/qdeck/wallpaper-thumbnails"
 
+generate_thumbnail() {
+    local img="$1"
+    local thumb="$2"
+    if command -v magick >/dev/null 2>&1; then
+        magick "$img" -thumbnail 320x196^ -gravity center -extent 320x196 -quality 82 "$thumb" 2>/dev/null || true
+    elif command -v convert >/dev/null 2>&1; then
+        convert "$img" -thumbnail 320x196^ -gravity center -extent 320x196 -quality 82 "$thumb" 2>/dev/null || true
+    elif command -v ffmpeg >/dev/null 2>&1; then
+        ffmpeg -v error -y -i "$img" -vf "scale=320:196:force_original_aspect_ratio=increase,crop=320:196" -frames:v 1 -q:v 3 "$thumb" 2>/dev/null || true
+    fi
+}
+
 get_thumbnail() {
     local img="$1"
     local base="${img##*/}"
@@ -42,12 +54,12 @@ get_thumbnail() {
         return 0
     fi
     mkdir -p "$CACHE_THUMB_DIR"
-    if command -v magick >/dev/null 2>&1; then
-        magick "$img" -thumbnail 320x196^ -gravity center -extent 320x196 -quality 82 "$thumb" 2>/dev/null &
-    elif command -v convert >/dev/null 2>&1; then
-        convert "$img" -thumbnail 320x196^ -gravity center -extent 320x196 -quality 82 "$thumb" 2>/dev/null &
+    generate_thumbnail "$img" "$thumb"
+    if [[ -f "$thumb" ]]; then
+        echo "$thumb"
+    else
+        echo ""
     fi
-    echo "$thumb"
 }
 
 list_wallpapers_json() {
@@ -60,48 +72,78 @@ list_wallpapers_json() {
         return 0
     fi
 
-    local items=()
+    local files=()
     shopt -s nullglob
     for file in "$bg_dir"/*; do
         [[ -f "$file" ]] || continue
         case "${file,,}" in
             *.png|*.jpg|*.jpeg|*.webp|*.avif|*.bmp)
-                local filename="${file##*/}"
-                local stem="${filename%.*}"
-                local raw_name="${stem#[0-9]*-}"
-                raw_name="${raw_name#[0-9]*_}"
-                raw_name="${raw_name//[-_]/ }"
-                local clean_name
-                clean_name="$(echo "$raw_name" | sed -E 's/\b([a-z])/\U\1/g')"
-
-                local canon_file
-                canon_file="$(readlink -f "$file" 2>/dev/null || echo "$file")"
-
-                local is_active=false
-                if [[ -n "$active_target" && "$canon_file" == "$active_target" ]]; then
-                    is_active=true
-                fi
-
-                local thumb
-                thumb="$(get_thumbnail "$file")"
-
-                items+=( "$(jq -n \
-                    --arg path "$file" \
-                    --arg thumb "$thumb" \
-                    --arg name "$clean_name" \
-                    --arg filename "$filename" \
-                    --argjson isActive "$is_active" \
-                    '{path: $path, thumb: $thumb, name: $name, filename: $filename, isActive: $isActive}')" )
+                files+=( "$file" )
                 ;;
         esac
     done
     shopt -u nullglob
 
-    if [[ ${#items[@]} -eq 0 ]]; then
+    if [[ ${#files[@]} -eq 0 ]]; then
         echo "[]"
-    else
-        printf "%s\n" "${items[@]}" | jq -s .
+        return 0
     fi
+
+    # Ensure thumbnail cache directory exists and generate missing thumbnails in parallel
+    mkdir -p "$CACHE_THUMB_DIR"
+    local bg_pids=()
+    for file in "${files[@]}"; do
+        local base="${file##*/}"
+        local hash
+        hash="$(echo -n "$file" | md5sum | cut -d' ' -f1)"
+        local thumb="$CACHE_THUMB_DIR/${hash}_${base}.jpg"
+        if [[ ! -f "$thumb" ]]; then
+            generate_thumbnail "$file" "$thumb" &
+            bg_pids+=( $! )
+        fi
+    done
+
+    if [[ ${#bg_pids[@]} -gt 0 ]]; then
+        wait "${bg_pids[@]}" 2>/dev/null || true
+    fi
+
+    local items=()
+    for file in "${files[@]}"; do
+        local filename="${file##*/}"
+        local stem="${filename%.*}"
+        local raw_name="${stem#[0-9]*-}"
+        raw_name="${raw_name#[0-9]*_}"
+        raw_name="${raw_name//[-_]/ }"
+        local clean_name
+        clean_name="$(echo "$raw_name" | sed -E 's/\b([a-z])/\U\1/g')"
+
+        local canon_file
+        canon_file="$(readlink -f "$file" 2>/dev/null || echo "$file")"
+
+        local is_active=false
+        if [[ -n "$active_target" && "$canon_file" == "$active_target" ]]; then
+            is_active=true
+        fi
+
+        local base="${file##*/}"
+        local hash
+        hash="$(echo -n "$file" | md5sum | cut -d' ' -f1)"
+        local thumb_file="$CACHE_THUMB_DIR/${hash}_${base}.jpg"
+        local thumb=""
+        if [[ -f "$thumb_file" ]]; then
+            thumb="$thumb_file"
+        fi
+
+        items+=( "$(jq -n \
+            --arg path "$file" \
+            --arg thumb "$thumb" \
+            --arg name "$clean_name" \
+            --arg filename "$filename" \
+            --argjson isActive "$is_active" \
+            '{path: $path, thumb: $thumb, name: $name, filename: $filename, isActive: $isActive}')" )
+    done
+
+    printf "%s\n" "${items[@]}" | jq -s .
 }
 
 switch_wallpaper() {

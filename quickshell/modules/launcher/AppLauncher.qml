@@ -2042,10 +2042,33 @@ PanelWindow {
                             mipmap: false
                             sourceSize: Qt.size(320, 196)
 
+                            onStatusChanged: {
+                                if (status === Image.Error && wallCardItem.modelData.path) {
+                                    var origPath = "file://" + wallCardItem.modelData.path
+                                    if (source !== origPath) {
+                                        source = origPath
+                                    }
+                                }
+                            }
+
                             layer.enabled: true
                             layer.effect: MultiEffect {
                                 maskEnabled: true
                                 maskSource: wallMask
+                            }
+                        }
+
+                        // Fallback icon if wallpaper loading error
+                        Item {
+                            anchors.fill: parent
+                            visible: !wallCardItem.modelData.path || previewImg.status === Image.Error
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "󰸉"
+                                font.family: Icons.effectiveFont("󰸉")
+                                font.pixelSize: 28
+                                color: Theme.muted
                             }
                         }
 

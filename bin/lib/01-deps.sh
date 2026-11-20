@@ -33,6 +33,7 @@ CORE_PACKAGES=(
   wl-clipboard
   imv
   pinta
+  imagemagick
   gnome-themes-extra
 
   # Terminal, shell & monitor
